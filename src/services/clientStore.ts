@@ -114,14 +114,16 @@ export function mutateProducts(action: string, product: Partial<Product> & { id?
       varies: product.varies || [],
     });
 
-  } else if (action === "edit" && product.id) {
+  } else if ((action === "edit" || action === "update") && (product.id || (product as any).id)) {
+    const targetId = product.id || (product as any).id;
+    const patch = (product as any).product ? { ...(product as any).product, id: targetId } : product;
     state.products = state.products.map((p) =>
-      p.id === product.id
+      p.id === targetId
         ? {
             ...p,
-            ...product,
-            price: Number(product.price) ?? p.price,
-            stock: Number(product.stock) ?? p.stock,
+            ...patch,
+            price: patch.price !== undefined ? Number(patch.price) : p.price,
+            stock: patch.stock !== undefined ? Number(patch.stock) : p.stock,
           }
         : p
     );

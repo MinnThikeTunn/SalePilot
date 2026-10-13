@@ -17,19 +17,24 @@ import {
   Zap,
   Loader2,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 import {
   getAgentRoster,
   getDataFreshnessStatus,
   getShopBusinessPolicies,
   updateShopBusinessPolicies,
-  getPendingApprovalsCount,
   type AgentRosterInfo,
   type DataFreshnessStatus,
 } from "../services/salesTeamApi";
+import {
+  getPendingApprovals,
+  createPendingApproval,
+} from "../services/approvalService";
 import { ShopPoliciesDrawer } from "./ShopPoliciesDrawer";
 import { SingleAgentInquiryDrawer } from "./SingleAgentInquiryDrawer";
 import { StrategyDecisionCard } from "./StrategyDecisionCard";
+import { ActionCenterDrawer } from "./ActionCenterDrawer";
 import {
   runCouncilDeliberation,
   type CouncilDeliberationResult,
@@ -48,6 +53,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   const [policies, setPolicies] = useState(() => getShopBusinessPolicies(shopId));
   const [selectedAgent, setSelectedAgent] = useState<AgentRosterInfo | null>(null);
   const [inquiryDrawerOpen, setInquiryDrawerOpen] = useState<boolean>(false);
+  const [actionCenterOpen, setActionCenterOpen] = useState<boolean>(false);
 
   // Council Deliberation State
   const [isDeliberating, setIsDeliberating] = useState<boolean>(false);
@@ -57,10 +63,14 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     "Maximize revenue for upcoming Thadingyut Lighting Festival without sacrificing contribution margin"
   );
 
+  const refreshApprovals = () => {
+    setPendingApprovalsCount(getPendingApprovals(shopId).length);
+  };
+
   useEffect(() => {
     setRoster(getAgentRoster());
     setFreshness(getDataFreshnessStatus(shopId));
-    setPendingApprovalsCount(getPendingApprovalsCount(shopId));
+    refreshApprovals();
   }, [shopId]);
 
   const handleSavePolicies = (newPolicies: any) => {
@@ -71,6 +81,20 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   const handleAgentClick = (agent: AgentRosterInfo) => {
     setSelectedAgent(agent);
     setInquiryDrawerOpen(true);
+  };
+
+  const handleActionSubmit = (action: any) => {
+    createPendingApproval({
+      shopId,
+      decisionId: councilResult?.decision.id || "decision_default",
+      actionType: action.type,
+      payload: {
+        ...(action.payload || {}),
+        description: action.description,
+      },
+    });
+    refreshApprovals();
+    setActionCenterOpen(true);
   };
 
   const handleConveneCouncil = () => {
@@ -149,14 +173,18 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               </span>
             </button>
 
-            {/* Pending Approvals Badge */}
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-100 border border-stone-200/80 text-xs font-bold text-stone-800">
-              <span className="w-2 h-2 rounded-full bg-stone-900" />
+            {/* Pending Approvals Badge (Clickable to open Action Center) */}
+            <button
+              type="button"
+              onClick={() => setActionCenterOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200/80 border border-stone-200/80 text-xs font-bold text-stone-800 cursor-pointer transition-colors shadow-2xs"
+            >
+              <Lock size={13} className="text-amber-600" />
               <span>Pending Approvals:</span>
-              <span className="font-mono font-bold text-xs bg-white px-2 py-0.5 rounded-md border border-stone-300">
+              <span className="font-mono font-bold text-xs bg-white px-2 py-0.5 rounded-md border border-stone-300 text-stone-900">
                 {pendingApprovalsCount}
               </span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -438,6 +466,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
             proposals={councilResult.proposals}
             debates={councilResult.debates}
             evidence={councilResult.evidence}
+            onActionClick={handleActionSubmit}
           />
         </div>
       )}
@@ -455,6 +484,18 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         agent={selectedAgent}
         shopId={shopId}
         onClose={() => setInquiryDrawerOpen(false)}
+      />
+
+      <ActionCenterDrawer
+        isOpen={actionCenterOpen}
+        shopId={shopId}
+        onClose={() => {
+          setActionCenterOpen(false);
+          refreshApprovals();
+        }}
+        onActionExecuted={() => {
+          refreshApprovals();
+        }}
       />
     </div>
   );

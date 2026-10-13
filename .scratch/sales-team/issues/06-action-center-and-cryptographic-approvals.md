@@ -4,11 +4,11 @@
 
 **Blocked by:** 05: Full Council Deliberation & 5-Agent Debate Loop
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Apply database migration creating `team_approvals` table storing `decision_id`, `approved_by`, `approved_payload_hash`, and status
-- [ ] Build Action Center UI listing proposed actions with channel, target audience, exact copy, product availability, and expected outcome
-- [ ] Allow merchant to edit action details, reject with feedback reason, or trigger 1-click approval
-- [ ] Implement server-side canonical JSON SHA-256 payload hashing and validation on approval
-- [ ] Implement pre-execution guard: if underlying catalog price or stock mutates, invalidate the approval and require re-confirmation
-- [ ] Add automated test verifying that payload hashing works and that modifying product stock invalidates the approval
+- [x] Apply database migration creating `team_approvals` table storing `decision_id`, `approved_by`, `approved_payload_hash`, and status
+- [x] Build Action Center UI listing proposed actions with channel, target audience, exact copy, product availability, and expected outcome
+- [x] Allow merchant to edit action details, reject with feedback reason, or trigger 1-click approval
+- [x] Implement server-side canonical JSON SHA-256 payload hashing and validation on approval
+- [x] Implement pre-execution guard: if underlying catalog price or stock mutates, invalidate the approval and require re-confirmation
+- [x] Add automated test verifying that payload hashing works and that modifying product stock invalidates the approval
