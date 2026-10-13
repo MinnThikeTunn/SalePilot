@@ -19,6 +19,14 @@ async function fallbackLocalAction<T>(
       const status = body.status as any;
       state.orders = state.orders.map((o) => (o.id === orderId ? { ...o, status } : o));
       await saveShopState(userId, state);
+      try {
+        await supabase
+          .from("orders")
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq("id", orderId);
+      } catch (err) {
+        console.warn("Error updating orders table in fallbackLocalAction:", err);
+      }
     }
     return { success: true } as T;
   }
