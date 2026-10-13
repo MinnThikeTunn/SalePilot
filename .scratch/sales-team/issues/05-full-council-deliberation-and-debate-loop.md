@@ -4,12 +4,12 @@
 
 **Blocked by:** 03: Echo Friction Inquiry & Privacy Signals, 04: Guardian Profit Policies & Margin Engine
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Apply database migration creating `team_proposals`, `team_debates`, and `team_decisions` tables with tenant RLS
-- [ ] Implement Muse agent runner drafting marketing copy, bundles, and campaigns bounded by verified catalog stock and Guardian limits
-- [ ] Implement Commander agent runner calculating ICE scores (Impact, Confidence, Ease), synthesizing executive summaries, and formulating next actions
-- [ ] Implement the 5-phase sequential state machine orchestrator with a strict cap of 2 revisions between Muse and Guardian
-- [ ] Render the Sales Council debate UI showing real-time agent progression, structured challenge records, and expandable citations
-- [ ] Render the synthesized Strategy Decision Card with executive summary, ICE breakdown, alternatives, and action drafts
-- [ ] Add automated integration test driving the complete 5-agent deliberation loop through to decision synthesis
+- [x] Apply database migration creating `team_proposals`, `team_debates`, and `team_decisions` tables with tenant RLS
+- [x] Implement Muse agent runner drafting marketing copy, bundles, and campaigns bounded by verified catalog stock and Guardian limits
+- [x] Implement Commander agent runner calculating ICE scores (Impact, Confidence, Ease), synthesizing executive summaries, and formulating next actions
+- [x] Implement the 5-phase sequential state machine orchestrator with a strict cap of 2 revisions between Muse and Guardian
+- [x] Render the Sales Council debate UI showing real-time agent progression, structured challenge records, and expandable citations
+- [x] Render the synthesized Strategy Decision Card with executive summary, ICE breakdown, alternatives, and action drafts
+- [x] Add automated integration test driving the complete 5-agent deliberation loop through to decision synthesis

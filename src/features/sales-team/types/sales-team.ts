@@ -74,13 +74,16 @@ export interface TeamProposal {
 export interface TeamDebate {
   id: string;
   session_id: string;
+  shop_id?: string;
   proposal_id: string;
   challenger: AgentRoleKey;
   objection_code: string;
   evidence_refs: string[];
   notes: string;
   revision_attempt: number;
-  resolution: "pending" | "revised" | "escalated_to_owner" | "withdrawn";
+  resolution: "pending" | "revised" | "escalated_to_owner" | "withdrawn" | "consensus";
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TeamDecision {

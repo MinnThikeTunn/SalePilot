@@ -15,6 +15,8 @@ import {
   Coins,
   Bot,
   Zap,
+  Loader2,
+  RotateCcw,
 } from "lucide-react";
 import {
   getAgentRoster,
@@ -27,6 +29,11 @@ import {
 } from "../services/salesTeamApi";
 import { ShopPoliciesDrawer } from "./ShopPoliciesDrawer";
 import { SingleAgentInquiryDrawer } from "./SingleAgentInquiryDrawer";
+import { StrategyDecisionCard } from "./StrategyDecisionCard";
+import {
+  runCouncilDeliberation,
+  type CouncilDeliberationResult,
+} from "../services/councilOrchestrator";
 
 interface TeamRoomProps {
   shopId?: string;
@@ -41,7 +48,14 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   const [policies, setPolicies] = useState(() => getShopBusinessPolicies(shopId));
   const [selectedAgent, setSelectedAgent] = useState<AgentRosterInfo | null>(null);
   const [inquiryDrawerOpen, setInquiryDrawerOpen] = useState<boolean>(false);
-  const [inquiryNotice, setInquiryNotice] = useState<string | null>(null);
+
+  // Council Deliberation State
+  const [isDeliberating, setIsDeliberating] = useState<boolean>(false);
+  const [deliberationStep, setDeliberationStep] = useState<string>("idle");
+  const [councilResult, setCouncilResult] = useState<CouncilDeliberationResult | null>(null);
+  const [councilGoal, setCouncilGoal] = useState<string>(
+    "Maximize revenue for upcoming Thadingyut Lighting Festival without sacrificing contribution margin"
+  );
 
   useEffect(() => {
     setRoster(getAgentRoster());
@@ -59,6 +73,27 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     setInquiryDrawerOpen(true);
   };
 
+  const handleConveneCouncil = () => {
+    setIsDeliberating(true);
+    setDeliberationStep("investigating");
+
+    // Sequential stepper animation for UX feedback
+    setTimeout(() => {
+      setDeliberationStep("debating");
+      setTimeout(() => {
+        setDeliberationStep("synthesizing");
+        setTimeout(() => {
+          const result = runCouncilDeliberation({
+            shopId,
+            goal: councilGoal,
+          });
+          setCouncilResult(result);
+          setIsDeliberating(false);
+          setDeliberationStep("completed");
+        }, 400);
+      }, 400);
+    }, 450);
+  };
 
   const getAgentIcon = (key: string) => {
     switch (key) {
@@ -118,85 +153,68 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
             <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-100 border border-stone-200/80 text-xs font-bold text-stone-800">
               <span className="w-2 h-2 rounded-full bg-stone-900" />
               <span>Pending Approvals:</span>
-              <span className="font-mono font-black text-stone-900 bg-white px-2 py-0.5 rounded-md border border-stone-300">
+              <span className="font-mono font-bold text-xs bg-white px-2 py-0.5 rounded-md border border-stone-300">
                 {pendingApprovalsCount}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Data Quality & Coverage Banner */}
-        {freshness && (
-          <div
-            className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
-              freshness.dataCoverageStatus === "good"
-                ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
-                : freshness.dataCoverageStatus === "limited"
-                ? "bg-amber-50/80 border-amber-200 text-amber-950"
-                : "bg-rose-50/80 border-rose-200 text-rose-950"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                  freshness.dataCoverageStatus === "good"
-                    ? "bg-emerald-600 text-white"
-                    : freshness.dataCoverageStatus === "limited"
-                    ? "bg-amber-600 text-white"
-                    : "bg-rose-600 text-white"
-                }`}
-              >
-                {freshness.dataCoverageStatus === "good" ? (
-                  <CheckCircle2 size={16} />
-                ) : (
-                  <AlertCircle size={16} />
-                )}
-              </div>
-              <div>
-                <p className="font-bold">
-                  Evidence Status:{" "}
-                  {freshness.dataCoverageStatus === "good"
-                    ? "Verified High Quality"
-                    : freshness.dataCoverageStatus === "limited"
-                    ? "Limited Evidence Sample"
-                    : "Insufficient Evidence (Data Scarcity Mode)"}
-                </p>
-                <p className="text-[11px] opacity-80">
-                  {freshness.limitations.length > 0
-                    ? freshness.limitations.join(" • ")
-                    : "All calculations backed by complete product costs and order records."}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-[11px] font-mono shrink-0">
-              <span>Catalog: <strong>{freshness.totalProducts} items</strong></span>
-              <span>Orders: <strong>{freshness.completedOrders} completed</strong></span>
+        {/* Telemetry Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-stone-100 text-xs">
+          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
+            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Catalog Coverage</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-base font-black text-stone-900 font-mono">
+                {freshness?.totalProducts || 0}
+              </span>
+              <span className="text-[10px] text-stone-500">
+                ({freshness?.costedProducts || 0} costed)
+              </span>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Inquiry Notice Banner */}
-      {inquiryNotice && (
-        <div className="p-4 bg-stone-900 text-white rounded-2xl flex items-center justify-between text-xs font-medium animate-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-2">
-            <Zap size={14} className="text-amber-400" />
-            <span>{inquiryNotice}</span>
+          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
+            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Verified Orders</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-base font-black text-stone-900 font-mono">
+                {freshness?.completedOrders || 0}
+              </span>
+              <span className="text-[10px] text-stone-500">transactions</span>
+            </div>
           </div>
-          <span className="text-[10px] font-mono text-stone-400">Targeted Mode</span>
+
+          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
+            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Floor Margin</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-base font-black text-amber-700 font-mono">
+                {policies.min_contribution_margin_pct}%
+              </span>
+              <span className="text-[10px] text-stone-500">contribution</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
+            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Discount Ceiling</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-base font-black text-stone-900 font-mono">
+                {policies.max_discount_pct}%
+              </span>
+              <span className="text-[10px] text-stone-500">max cap</span>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* 2. Interactive Agent Roster */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
           <div>
             <h2 className="text-lg font-black text-stone-900 tracking-tight">
-              Specialist Agent Roster
+              Agent Roster &amp; Single-Agent Inquiries
             </h2>
             <p className="text-xs text-stone-500">
-              Click any agent to launch a targeted Single-Agent Inquiry or view specialist persona guardrails
+              Click any agent to interrogate specific domain hypotheses or request focused analysis.
             </p>
           </div>
           <span className="text-[11px] font-mono text-stone-400">
@@ -250,7 +268,6 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
                 <p className="text-[11px] text-stone-600 leading-relaxed line-clamp-2">
                   {agent.description}
                 </p>
-
               </div>
 
               <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-[10px]">
@@ -264,7 +281,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         </div>
       </div>
 
-      {/* 3. Main War Room Action Deck */}
+      {/* 3. Main War Room Action Deck & Deliberation Trigger */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Deliberation Launch & Flow */}
         <div className="lg:col-span-2 p-6 sm:p-8 bg-white border border-stone-200/90 rounded-[32px] shadow-xs space-y-6">
@@ -282,9 +299,24 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
             </span>
           </div>
 
+          {/* Goal Input */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-stone-700 uppercase font-mono">
+              Council Objective / Seasonal Focus:
+            </label>
+            <input
+              type="text"
+              value={councilGoal}
+              onChange={(e) => setCouncilGoal(e.target.value)}
+              disabled={isDeliberating}
+              placeholder="e.g. Maximize revenue for upcoming festival without sacrificing contribution margin..."
+              className="w-full px-4 py-2.5 rounded-2xl bg-[#FAF8F5] border border-stone-200 text-xs text-stone-800 placeholder-stone-400 focus:outline-hidden focus:ring-2 focus:ring-stone-900/10"
+            />
+          </div>
+
           {/* 5-Phase Loop Visualization */}
           <div className="grid grid-cols-5 gap-2 text-center text-[10px] py-4 bg-[#FAF8F5] border border-stone-200/70 rounded-2xl">
-            <div className="space-y-1 px-1">
+            <div className={`space-y-1 px-1 transition-colors ${deliberationStep === "investigating" ? "text-blue-600 font-bold" : ""}`}>
               <span className="font-mono font-bold text-stone-400">01</span>
               <p className="font-bold text-stone-900">Investigate</p>
               <p className="text-[9px] text-stone-500">Scout &amp; Echo</p>
@@ -299,12 +331,12 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               <p className="font-bold text-stone-900">Draft Offers</p>
               <p className="text-[9px] text-stone-500">Muse</p>
             </div>
-            <div className="space-y-1 px-1 border-l border-stone-200">
+            <div className={`space-y-1 px-1 border-l border-stone-200 transition-colors ${deliberationStep === "debating" ? "text-amber-600 font-bold" : ""}`}>
               <span className="font-mono font-bold text-stone-400">04</span>
               <p className="font-bold text-stone-900">Profit Audit</p>
               <p className="text-[9px] text-stone-500">Guardian Veto</p>
             </div>
-            <div className="space-y-1 px-1 border-l border-stone-200">
+            <div className={`space-y-1 px-1 border-l border-stone-200 transition-colors ${deliberationStep === "synthesizing" ? "text-rose-600 font-bold" : ""}`}>
               <span className="font-mono font-bold text-stone-400">05</span>
               <p className="font-bold text-stone-900">Decision Card</p>
               <p className="text-[9px] text-stone-500">Commander</p>
@@ -314,18 +346,27 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
           {/* Primary Convene Action */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
             <div className="text-xs text-stone-500">
-              Ready to evaluate store data over the last 30 days and discover verified opportunities.
+              {isDeliberating
+                ? "Council in session: Synthesizing real catalog stock, customer friction, and margin floors..."
+                : "Ready to evaluate store data and synthesize an empirical Strategy Decision Card."}
             </div>
             <button
               type="button"
-              onClick={() => {
-                setInquiryNotice("Launching Full Council Deliberation session. Running Scout and Echo evidence discovery...");
-                setTimeout(() => setInquiryNotice(null), 3000);
-              }}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-full text-xs font-black bg-stone-900 hover:bg-stone-800 text-white flex items-center justify-center gap-2.5 cursor-pointer shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
+              onClick={handleConveneCouncil}
+              disabled={isDeliberating}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full text-xs font-black bg-stone-900 hover:bg-stone-800 text-white flex items-center justify-center gap-2.5 cursor-pointer shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              <Bot size={15} className="text-amber-400" />
-              <span>Convene Full Sales Council</span>
+              {isDeliberating ? (
+                <>
+                  <Loader2 size={15} className="animate-spin text-amber-400" />
+                  <span>Deliberating ({deliberationStep})...</span>
+                </>
+              ) : (
+                <>
+                  <Bot size={15} className="text-amber-400" />
+                  <span>Convene Full Sales Council</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -370,6 +411,37 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         </div>
       </div>
 
+      {/* 4. Synthesized Strategy Decision Card (When Deliberation Completes) */}
+      {councilResult && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black text-stone-900 tracking-tight">
+                Synthesized Strategy Decision
+              </h3>
+              <span className="text-xs font-mono text-stone-400">
+                Session {councilResult.session.id}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleConveneCouncil}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw size={13} />
+              <span>Re-run Deliberation</span>
+            </button>
+          </div>
+
+          <StrategyDecisionCard
+            decision={councilResult.decision}
+            proposals={councilResult.proposals}
+            debates={councilResult.debates}
+            evidence={councilResult.evidence}
+          />
+        </div>
+      )}
+
       {/* Drawers */}
       <ShopPoliciesDrawer
         isOpen={policiesOpen}
@@ -387,4 +459,3 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     </div>
   );
 }
-
