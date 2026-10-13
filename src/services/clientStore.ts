@@ -5,9 +5,22 @@ import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from 
 import { invokeApi } from "./api";
 import { getDefaultSessions } from "./defaults";
 
-const STORAGE_KEY = "sales_brain_state_v2";
+const STORAGE_KEY = "sales_brain_state_v3";
 
 let memoryState: SystemState | null = null;
+
+function sanitizeSessionsToEnglish(sessions: Record<string, TelegramSession>): Record<string, TelegramSession> {
+  const defaults = getDefaultSessions();
+  const sanitized = { ...sessions };
+  // If default_customer has old Burmese text, replace with updated English defaults
+  if (sanitized.default_customer && sanitized.default_customer.messages.some(m => m.content.includes("မင်္ဂလာပါ") || m.content.includes("hoke ke par"))) {
+    sanitized.default_customer = defaults.default_customer;
+  }
+  if (sanitized.sess_aung_tg && sanitized.sess_aung_tg.messages.some(m => m.content.includes("KPay") && m.content.includes("ရပါတယ်"))) {
+    sanitized.sess_aung_tg = defaults.sess_aung_tg;
+  }
+  return sanitized;
+}
 
 function load(): SystemState {
   if (memoryState) return memoryState;
@@ -15,7 +28,10 @@ function load(): SystemState {
     if (typeof localStorage !== "undefined" && localStorage.getItem("sales_brain_state_v1")) {
       localStorage.removeItem("sales_brain_state_v1");
     }
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    // Check v3 first, then fallback to migrating v2
+    const raw = typeof localStorage !== "undefined" 
+      ? (localStorage.getItem(STORAGE_KEY) || localStorage.getItem("sales_brain_state_v2")) 
+      : null;
     if (raw) {
       memoryState = { ...cloneDefaultState(), ...JSON.parse(raw) };
       if (!Array.isArray(memoryState.deliveryZones)) {
@@ -23,7 +39,10 @@ function load(): SystemState {
       }
       if (!memoryState.sessions || Object.keys(memoryState.sessions).length === 0) {
         memoryState.sessions = getDefaultSessions();
+      } else {
+        memoryState.sessions = sanitizeSessionsToEnglish(memoryState.sessions);
       }
+      save();
       return memoryState;
     }
   } catch {
@@ -260,13 +279,13 @@ export function createSimulationCustomer(name?: string): TelegramSession {
       {
         id: `msg-${Date.now()}`,
         sender: "customer",
-        content: "မင်္ဂလာပါ! ပစ္စည်းအသစ်တွေ စုံစမ်းချင်လို့ပါ (Hi! I'd like to ask about new products).",
+        content: "Hi! I would like to inquire about your new arrivals and pricing.",
         timestamp: new Date().toISOString(),
       },
       {
         id: `msg-${Date.now() + 1}`,
         sender: "bot",
-        content: "မင်္ဂလာပါရှင်! Candy မှ ကူညီပေးပါရစေရှင့်။ ဘာပစ္စည်းများ စိတ်ဝင်စားပါသလဲရှင် (Welcome! Candy is happy to help you. Which items are you interested in)?",
+        content: "Welcome! Candy is happy to assist you. Which items or categories are you looking for today?",
         timestamp: new Date().toISOString(),
       },
     ],
