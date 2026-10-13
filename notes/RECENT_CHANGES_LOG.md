@@ -339,3 +339,5 @@
 - [2026-10-13T17:59:16.358Z] Modified file: `src\features\sales-team\components\TeamRoom.tsx` - Pending specialist committee & Ultimate Judge review.
 - [2026-10-13T18:00:17.907Z] Modified file: `src\features\sales-team\types\sales-team.ts` - Pending specialist committee & Ultimate Judge review.
 - [2026-10-13T18:01:28.563Z] Modified file: `.scratch\sales-team\issues\08-business-memory-and-feedback-learning.md` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T18:02:22.334Z] Modified file: `.scratch\sales-team\issues\01-sales-team-workspace-shell.md` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T18:02:26.913Z] Modified file: `.scratch\sales-team\issues\02-scout-inquiry-and-core-evidence-schema.md` - Pending specialist committee & Ultimate Judge review.
