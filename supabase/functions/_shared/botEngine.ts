@@ -120,10 +120,10 @@ export async function processCustomerMessage(
   if (checkoutOption) {
     session.currentStep = "selecting_township";
     session.tempPayMethod = checkoutOption;
-    const townshipsList = ctx.state.deliveryZones.map(z => z.township);
+    const townshipsList = ctx.state.deliveryZones.map(z => z.township_name || (z as any).township || "");
 
     // Auto-generate inline keyboard for townships
-    const inlineKeyboard = townshipsList.map(t => [{ text: `🛵 ${t}`, callback_data: `township_${t}` }]);
+    const inlineKeyboard = townshipsList.filter(Boolean).map(t => [{ text: `🛵 ${t}`, callback_data: `township_${t}` }]);
 
     await addBotReply(
       `Sweet choice! 🌸 You chose: **${checkoutOption === "prepay" ? "Prepay" : "Cash on Delivery"}**.\n\nNow, please tell me your township in Yangon so I can accurately calculate delivery fees! (e.g., Sanchaung, Kamayut, Yankin...) Or tap one of the options below! 👇`,
@@ -135,9 +135,12 @@ export async function processCustomerMessage(
 
   // 4. Township specification
   if (township) {
-    const matchedZone = ctx.state.deliveryZones.find(z => z.township.toLowerCase().includes(township.toLowerCase()));
-    const finalTownship = matchedZone ? matchedZone.township : "General Yangon";
-    const deliveryCost = matchedZone ? matchedZone.rate : 3000;
+    const matchedZone = ctx.state.deliveryZones.find(z => {
+      const name = (z.township_name || (z as any).township || "").toLowerCase();
+      return name && township.toLowerCase().includes(name);
+    });
+    const finalTownship = matchedZone ? (matchedZone.township_name || (matchedZone as any).township) : (township || "General Yangon");
+    const deliveryCost = matchedZone ? Number(matchedZone.rate) || 0 : 3000;
 
     let cartTotal = 0;
     const itemsList = session.cart.map(item => {
@@ -191,6 +194,7 @@ export async function processCustomerMessage(
       session.cart = [];
     } else {
       session.currentStep = "prepayment_pending";
+      session.cart = [];
       const ownerPhone = ctx.state.config.phone || "our payment account";
       const ownerName = ctx.state.config.ownerName || "the owner";
       await addBotReply(

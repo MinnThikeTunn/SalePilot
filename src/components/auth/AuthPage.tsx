@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useLanguage } from "../../contexts/LanguageContext";
 import {
   Eye,
   EyeOff,
@@ -20,8 +19,6 @@ interface AuthPageProps {
 
 export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps) {
   const { signIn, signUp } = useAuth();
-  const { lang, setLang } = useLanguage();
-  const isMy = lang === "my";
 
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
@@ -55,20 +52,12 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
 
     // Client-side confirmation check for signup
     if (mode === "signup" && password !== confirmPassword) {
-      setError(
-        isMy
-          ? "စကားဝှက်များ ကိုက်ညီမှု မရှိပါ။ ပြန်လည်စစ်ဆေးပေးပါ။"
-          : "Passwords do not match. Please re-enter both passwords."
-      );
+      setError("Passwords do not match. Please re-enter both passwords.");
       return;
     }
 
     if (password.length < 6) {
-      setError(
-        isMy
-          ? "စကားဝှက်သည် အနည်းဆုံး ၆ လုံး ရှိရပါမည်။"
-          : "Password must be at least 6 characters long."
-      );
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
@@ -86,9 +75,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
         setError(result.error);
       } else if (result.needsEmailConfirmation) {
         setInfo(
-          isMy
-            ? "ဆိုင်အကောင့် မှတ်ပုံတင်ခြင်း အောင်မြင်ပါသည်။ အကောင့်အတည်ပြုရန် သင့်အီးမေးလ်ကို စစ်ဆေးပြီး အောက်တွင် အကောင့်ဝင်ပါ။"
-            : "Shop account registered! Please check your email inbox to confirm your account, then sign in below."
+          "Shop account registered! Please check your email inbox to confirm your account, then sign in below."
         );
         setMode("login");
       }
@@ -98,7 +85,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
   };
 
   return (
-    <div className={`min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col justify-between selection:bg-[#0069FF] selection:text-white font-sans antialiased ${isMy ? "lang-my" : ""}`}>
+    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col justify-between selection:bg-[#0069FF] selection:text-white font-sans antialiased">
       {/* Top Header Navigation */}
       <header className="max-w-6xl w-full mx-auto px-6 pt-6 sm:pt-8 flex items-center justify-between">
         {onBackToHome ? (
@@ -108,45 +95,17 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
             className="group inline-flex items-center gap-2 text-xs font-medium text-stone-600 hover:text-stone-950 transition-colors py-2 px-3 rounded-full hover:bg-stone-200/50 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-            <span>{isMy ? "ပင်မစာမျက်နှာသို့ ပြန်သွားမည်" : "Back to Home & Workflows"}</span>
+            <span>Back to Home & Workflows</span>
           </button>
         ) : (
           <div />
         )}
 
         <div className="flex items-center gap-3">
-          {/* Header Language Switcher Pill */}
-          <div className="flex items-center bg-stone-100 p-0.5 rounded-full border border-stone-200/80 shadow-xs">
-            <button
-              type="button"
-              onClick={() => setLang("en")}
-              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                lang === "en"
-                  ? "bg-white text-stone-900 shadow-xs"
-                  : "text-stone-500 hover:text-stone-900"
-              }`}
-              title="Switch to English"
-            >
-              EN
-            </button>
-            <button
-              type="button"
-              onClick={() => setLang("my")}
-              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                lang === "my"
-                  ? "bg-[#0069FF] text-white shadow-xs"
-                  : "text-stone-500 hover:text-stone-900"
-              }`}
-              title="မြန်မာဘာသာသို့ ပြောင်းမည်"
-            >
-              မြန်မာ
-            </button>
-          </div>
-
           <div className="hidden sm:flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-[11px] font-mono tracking-wider uppercase text-stone-500">
-              {isMy ? "AI ကူးသန်းရောင်းဝယ်ရေး စင်တာ" : "Autonomous Commerce Hub"}
+              Autonomous Commerce Hub
             </span>
           </div>
         </div>
@@ -159,21 +118,15 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
           <div className="text-center mb-8">
             <span className="text-[11px] font-mono font-semibold tracking-[0.2em] uppercase text-[#0069FF] inline-flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-[#0069FF]" />
-              {isMy ? "လုပ်ငန်းရှင် စင်တာ" : "Merchant Sanctuary"}
+              Merchant Sanctuary
             </span>
             <h1 className="font-serif text-3xl sm:text-4xl text-stone-900 font-normal tracking-tight mt-2.5">
-              {mode === "login"
-                ? (isMy ? "သင့်ဆိုင်သို့ ပြန်လည်ကြိုဆိုပါသည်" : "Welcome Back")
-                : (isMy ? "ဆိုင်အကောင့် အသစ်ပြုလုပ်ပါ" : "Create Your Shop")}
+              {mode === "login" ? "Welcome Back" : "Create Your Shop"}
             </h1>
             <p className="text-stone-500 text-sm mt-2 font-normal">
               {mode === "login"
-                ? (isMy
-                    ? "အော်ဒါများ၊ ငွေလွှဲစလစ်များနှင့် AI အရောင်းလက်ထောက်ကို စီမံရန် အကောင့်ဝင်ပါ။"
-                    : "Sign in to manage your orders, slips, and AI sales agent.")
-                : (isMy
-                    ? "မြန်မာနိုင်ငံအတွက် အလိုအလျောက် လူမှုစီးပွားရေး စနစ်ကို စတင်လိုက်ပါ။"
-                    : "Launch automated social commerce workflows for Myanmar.")}
+                ? "Sign in to manage your orders, slips, and AI sales agent."
+                : "Launch automated social commerce workflows for Myanmar."}
             </p>
           </div>
 
@@ -194,7 +147,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                   : "text-stone-600 hover:text-stone-900"
               }`}
             >
-              {isMy ? "အကောင့်ဝင်မည်" : "Sign In"}
+              Sign In
             </button>
             <button
               type="button"
@@ -207,7 +160,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                   : "text-stone-600 hover:text-stone-900"
               }`}
             >
-              {isMy ? "အကောင့်ဖွင့်မည်" : "Create Account"}
+              Create Account
             </button>
           </div>
 
@@ -239,7 +192,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                 htmlFor="auth-email"
                 className="block text-xs font-medium text-stone-700 mb-1.5"
               >
-                {isMy ? "အီးမေးလ် လိပ်စာ" : "Email Address"}
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
@@ -264,11 +217,11 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                   htmlFor="auth-password"
                   className="block text-xs font-medium text-stone-700"
                 >
-                  {isMy ? "စကားဝှက်" : "Password"}
+                  Password
                 </label>
                 {mode === "login" && (
                   <span className="text-[11px] text-stone-400 font-normal">
-                    {isMy ? "အနည်းဆုံး ၆ လုံး" : "Min. 6 characters"}
+                    Min. 6 characters
                   </span>
                 )}
               </div>
@@ -304,7 +257,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                   htmlFor="auth-confirm-password"
                   className="block text-xs font-medium text-stone-700 mb-1.5"
                 >
-                  {isMy ? "စကားဝှက် အတည်ပြုပါ" : "Confirm Password"}
+                  Confirm Password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
@@ -339,10 +292,10 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
               className="w-full mt-2 py-3.5 px-4 rounded-xl text-xs font-semibold tracking-wider uppercase text-white bg-[#0069FF] hover:bg-[#0052CC] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
             >
               {busy
-                ? (isMy ? "လုပ်ဆောင်နေပါသည်..." : "Processing...")
+                ? "Processing..."
                 : mode === "login"
-                ? (isMy ? "လုပ်ငန်းခွင်သို့ ဝင်မည်" : "Sign In to Dashboard")
-                : (isMy ? "ဆိုင်အကောင့် ဖွင့်မည်" : "Create Merchant Account")}
+                ? "Sign In to Dashboard"
+                : "Create Merchant Account"}
             </button>
           </form>
 
@@ -350,7 +303,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
           <div className="mt-8 pt-6 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
             <span className="flex items-center gap-1.5 text-[11px] text-stone-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              {isMy ? "လုံခြုံရေး အပြည့်အဝ အကာအကွယ်ပေးထားပါသည်" : "End-to-End Encrypted"}
+              End-to-End Encrypted
             </span>
 
             <button
@@ -359,8 +312,8 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
               className="text-stone-700 hover:text-[#0069FF] font-medium transition cursor-pointer"
             >
               {mode === "login"
-                ? (isMy ? "အကောင့် အသစ်ဖွင့်ရန်" : "Need an account? Sign up")
-                : (isMy ? "အကောင့် ရှိပြီးသားလား? ဝင်ရောက်ပါ" : "Already have an account? Sign in")}
+                ? "Need an account? Sign up"
+                : "Already have an account? Sign in"}
             </button>
           </div>
         </div>

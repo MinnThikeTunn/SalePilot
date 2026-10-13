@@ -6,23 +6,18 @@ import {
   Plus,
   Minus,
   Trash2,
-  CheckCircle,
-  Truck,
-  Phone,
-  User,
   MapPin,
   CreditCard,
   X,
   ChevronRight,
   ArrowRight,
-  Check,
   Sparkles,
-  ExternalLink,
 } from "lucide-react";
 import { supabase } from "../utils/supabase";
 import { Product, DeliveryZone, Order, OrderItem } from "../types";
-import { addOrder } from "../services/clientStore";
-import { loadTownships } from "../data/townships";
+import { addOrder, clearSessionCart, getState } from "../services/clientStore";
+import { getShopState, saveShopState } from "../services/shopState";
+import { cleanNormalText } from "../utils/textUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,108 +42,56 @@ interface UserPrefs {
   likedProducts: string[];
   dislikedProducts: string[];
   pastOrders: string[];
-  preferredLanguage: "en" | "my";
+  preferredLanguage: "en";
   lastVisit: string;
 }
 
 interface ShopChatbotProps {
   shopId: string;
   businessName: string;
+  ownerName?: string;
   phone?: string;
+  address?: string;
+  businessCategory?: string;
+  paymentInfo?: string;
+  deliveryInfo?: string;
   fullPage?: boolean;
   suggestedPrompts?: string[];
   products?: Product[];
   deliveryZones?: DeliveryZone[];
   onOpenInfo?: () => void;
-  language?: Language;
-  onLanguageChange?: (lang: Language) => void;
+  language?: "en";
+  onLanguageChange?: (lang: "en") => void;
 }
 
-type Language = "en" | "my";
+// ─── Copy Dictionary ──────────────────────────────────────────────────────────
 
-// ─── Bilingual Copy Dictionary ───────────────────────────────────────────────
-
-const COPY: Record<Language, {
-  eyebrow: string;
-  online: string;
-  candyTitle: string;
-  candyRole: string;
-  greeting: string;
-  helper: string;
-  placeholder: string;
-  send: string;
-  thinking: string;
-  error: string;
-  connectionError: string;
-  quickPrompts: string;
-  productsTitle: string;
-  productsHint: string;
-  info: string;
-  language: string;
-  openChat: string;
-  closeChat: string;
-  addToCart: string;
-  addedToCart: string;
-  viewCart: string;
-  checkout: string;
-  items: string;
-  inStock: string;
-  soldOut: string;
-}> = {
-  en: {
-    eyebrow: "Artisanal Sales Concierge",
-    online: "Online",
-    candyTitle: "Candy",
-    candyRole: "AI Sales Concierge",
-    greeting: "Welcome to our sanctuary. What may I curate for you today?",
-    helper: "Ask about handcrafted pieces, township courier rates, and mobile payment, or add items directly to your shopping basket.",
-    placeholder: "Inquire with Candy or search curated pieces...",
-    send: "Send",
-    thinking: "Candy is composing a response...",
-    error: "My apologies, I could not complete that request. Please try again.",
-    connectionError: "Connection issue detected. Please retry.",
-    quickPrompts: "Inquiry Prompts",
-    productsTitle: "Featured Pieces",
-    productsHint: "Add pieces directly to your order.",
-    info: "Shop Details",
-    language: "Language",
-    openChat: "Open concierge",
-    closeChat: "Close concierge",
-    addToCart: "Add",
-    addedToCart: "Added",
-    viewCart: "View Basket",
-    checkout: "Checkout",
-    items: "items",
-    inStock: "in stock",
-    soldOut: "Sold out",
-  },
-  my: {
-    eyebrow: "Candy • အရောင်းအကူအညီပေးသူ",
-    online: "အဆင်သင့်ရှိပါသည်",
-    candyTitle: "Candy",
-    candyRole: "AI အရောင်းလက်ထောက်",
-    greeting: "ကြိုဆိုပါတယ်ရှင့်။ ဘာများ ကူညီပေးရမလဲရှင့်?",
-    helper: "ဆိုင်ရှိပစ္စည်းများ၊ ရန်ကုန်မြို့နယ်အလိုက် ပို့ဆောင်ခနှင့် KPay/Wave ငွေလွှဲအကြောင်း မေးမြန်းနိုင်ပြီး ခြင်းတောင်းထဲသို့ တိုက်ရိုက်ထည့်သွင်းနိုင်ပါတယ်ရှင့်။",
-    placeholder: "Candy ကို မေးမြန်းရန် (သို့) ပစ္စည်းရှာရန်...",
-    send: "ပို့မည်",
-    thinking: "Candy အကြောင်းပြန်ကြားနေပါသည်...",
-    error: "တောင်းပန်ပါတယ်ရှင့်၊ တုန့်ပြန်မှုမရရှိပါ။ ထပ်မံကြိုးစားပေးပါရှင့်။",
-    connectionError: "လိုင်းအဆင်မပြေဖြစ်နေပါသည်။ ပြန်လည်စမ်းသပ်ကြည့်ပါ။",
-    quickPrompts: "အမေးများသော မေးခွန်းများ",
-    productsTitle: "ရွေးချယ်ထားသော ပစ္စည်းများ",
-    productsHint: "ခြင်းတောင်းထဲသို့ တိုက်ရိုက်ထည့်ဝယ်ယူနိုင်ပါသည်။",
-    info: "ဆိုင်အချက်အလက်",
-    language: "ဘာသာစကား",
-    openChat: "စကားပြောရန်",
-    closeChat: "ပိတ်မည်",
-    addToCart: "ထည့်မည်",
-    addedToCart: "ထည့်ပြီးပါပြီ",
-    viewCart: "ခြင်းတောင်းကြည့်မည်",
-    checkout: "ငွေရှင်းမည်",
-    items: "ခု",
-    inStock: "လက်ကျန်ရှိ",
-    soldOut: "ပစ္စည်းကုန်",
-  },
+const COPY = {
+  eyebrow: "Artisanal Sales Concierge",
+  online: "Online",
+  candyTitle: "Candy",
+  candyRole: "AI Sales Concierge",
+  greeting: "Welcome to our sanctuary. What may I curate for you today?",
+  helper: "Ask about handcrafted pieces, township courier rates, and mobile payment, or add items directly to your shopping basket.",
+  placeholder: "Inquire with Candy or search curated pieces...",
+  send: "Send",
+  thinking: "Candy is composing a response...",
+  error: "My apologies, I could not complete that request. Please try again.",
+  connectionError: "Connection issue detected. Please retry.",
+  quickPrompts: "Inquiry Prompts",
+  productsTitle: "Featured Pieces",
+  productsHint: "Add pieces directly to your order.",
+  info: "Shop Details",
+  language: "Language",
+  openChat: "Open concierge",
+  closeChat: "Close concierge",
+  addToCart: "Add",
+  addedToCart: "Added",
+  viewCart: "View Basket",
+  checkout: "Checkout",
+  items: "items",
+  inStock: "in stock",
+  soldOut: "Sold out",
 };
 
 // ─── Memory helpers ───────────────────────────────────────────────────────────
@@ -185,87 +128,132 @@ function buildLocalReply(
   cart: { productId: string; quantity: number }[],
   state: ConvState,
   businessName: string,
-  language: Language
+  deliveryZones?: DeliveryZone[],
+  paymentInfo?: string,
+  deliveryInfo?: string,
+  phone?: string,
+  address?: string,
+  ownerName?: string,
+  businessCategory?: string
 ): string {
   const t = text.toLowerCase();
-  const isMy = language === "my" || /[\u1000-\u109F]/.test(text);
 
-  // Delivery question
-  if (/deliver|shipping|township|ပို့|ပို့ဆောင်|မြို့နယ်/.test(t)) {
-    if (isMy) {
-      return `ကျွန်မတို့ ${businessName} ဆိုင်တွင် ရန်ကုန်မြို့တွင်း အိမ်ရောက်ငွေချေ (COD) ဖြင့် ပို့ဆောင်ပေးပြီး အခြားမြို့များအတွက် KPay / WavePay ဖြင့် ပို့ဆောင်ပေးပါသည်ရှင့်။ ပို့ဆောင်ခကို မြို့နယ်အလိုက် တွက်ချက်ပေးပါသည်ရှင့်။ [STATE:intent_classification]`;
+  // 1. Delivery question - check specific township first
+  if (deliveryZones && deliveryZones.length > 0) {
+    const matchedZone = deliveryZones.find((z) => {
+      const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
+      return name && name.length >= 3 && t.includes(name);
+    });
+
+    if (matchedZone) {
+      const name = matchedZone.township_name || (matchedZone as any).township;
+      const rate = (Number(matchedZone.rate) || 0).toLocaleString();
+      const timeline = matchedZone.estimated_transit_timeline ? ` (${matchedZone.estimated_transit_timeline})` : "";
+      return `Delivery to ${name} is ${rate} MMK${timeline}. Would you like to proceed with your order? [STATE:intent_classification]`;
     }
-    return `Our shop ${businessName} provides Cash on Delivery (COD) across Yangon townships and mobile payment (KPay / WavePay) for regional courier dispatch. Shipping fees are calculated by township rate. [STATE:intent_classification]`;
   }
 
-  // Payment question
-  if (/pay|payment|kpay|wavepay|cod|prepay|ငွေ|ငွေချေ|လွှဲ/.test(t)) {
-    if (isMy) {
-      return `ငွေပေးချေမှုအတွက် ရန်ကုန်မြို့တွင်း အိမ်ရောက်ငွေချေ (COD) အပြင် KPay / WavePay မိုဘိုင်းငွေလွှဲဖြင့်လည်း လက်ခံပါသည်ရှင့်။ [STATE:intent_classification]`;
+  // General delivery & courier schedule
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost/.test(t)) {
+    if (deliveryZones && deliveryZones.length > 0) {
+      const list = deliveryZones
+        .map((z) => `${z.township_name || (z as any).township || ""}: ${(Number(z.rate) || 0).toLocaleString()} MMK${z.estimated_transit_timeline ? ` (${z.estimated_transit_timeline})` : ""}`)
+        .filter(Boolean)
+        .join(" • ");
+      return `Delivery rates for ${businessName}:\n${list}${deliveryInfo ? `\nDispatch Policy: ${deliveryInfo}` : ""} [STATE:intent_classification]`;
+    } else if (deliveryInfo) {
+      return `Delivery information for ${businessName}: ${deliveryInfo} [STATE:intent_classification]`;
+    } else {
+      return `Delivery arrangements for ${businessName} will be confirmed upon order. Please inquire directly with the store. [STATE:intent_classification]`;
     }
-    return `For settlement, we accept Cash on Delivery (COD) within Yangon as well as direct KPay and WavePay mobile transfers. [STATE:intent_classification]`;
   }
 
-  // Add to cart or buy intent
-  if (/add|buy|pack|order|ဝယ်|ယူ|ထည့်/.test(t)) {
+  // 2. Payment options & mobile wallet accounts
+  if (/pay|payment|kpay|kbzpay|wave|wavepay|cod|prepay|cash|banking|account|transfer|qr/.test(t)) {
+    const payMethods = paymentInfo || "Cash on Delivery (COD) and Mobile Wallets (KBZPay / WavePay)";
+    const phoneNote = phone ? ` For KBZPay or WavePay remittances, our shop account number is: ${phone}.` : "";
+    return `Payment options for ${businessName}: ${payMethods}.${phoneNote} You can select your preferred payment method during checkout! [STATE:intent_classification]`;
+  }
+
+  // 3. Contact & Phone hotline
+  if (/phone|contact|call|number|reach|support|hotline/.test(t)) {
+    if (phone) {
+      return `You can reach ${businessName} directly at ${phone}. Our team is always delighted to assist you! [STATE:intent_classification]`;
+    } else {
+      return `You can message us directly here in the chat, or complete your order at checkout and our concierge team will reach out to you. [STATE:intent_classification]`;
+    }
+  }
+
+  // 4. Store Address & Physical Location
+  if (/address|location|where|located|store address|shop address|visit|pickup/.test(t)) {
+    if (address) {
+      return `${businessName} is located at: ${address}. Orders can also be dispatched across our delivery townships directly to your doorstep! [STATE:intent_classification]`;
+    } else {
+      return `${businessName} operates as an online boutique sanctuary with direct courier delivery across all serviced townships. [STATE:intent_classification]`;
+    }
+  }
+
+  // 5. About Us / Boutique Story
+  if (/about|who are you|story|brand|what do you sell/.test(t)) {
+    const catNote = businessCategory ? ` specializing in ${businessCategory}` : "";
+    const founderNote = ownerName ? ` Founded by ${ownerName}.` : "";
+    return `${businessName} is a curated boutique${catNote}.${founderNote} How may I curate a piece for you today? [STATE:intent_classification]`;
+  }
+
+  // 6. How to order guide
+  if (/how to order|how to buy|order guide/.test(t)) {
+    return `To place an order: 1. Click "Add to Bag" on any featured piece or ask me to add it. 2. Tap "Bag" or "Checkout" to select your township and payment method. 3. Confirm your order! [STATE:intent_classification]`;
+  }
+
+  // Order confirmed status inquiries
+  if (/order (is )?confirmed|confirm order|order status|track order|my order|order receipt|placed order/i.test(t)) {
+    return `Your order has been received and confirmed! Our team will dispatch your package shortly. Your shopping cart has been cleared. Feel free to explore other pieces in our catalog. [STATE:intent_classification]`;
+  }
+
+  // Add to cart or buy intent (requires explicit purchase/add intent)
+  if (/(add to (cart|bag|basket)|add .* to|buy |want to order|want to buy|purchase)/i.test(t)) {
     for (const p of products) {
       const pFirst = p.name.toLowerCase().split(" ")[0];
-      if (t.includes(pFirst) || t.includes(p.name.toLowerCase()) || t.includes(p.id.toLowerCase())) {
-        if (isMy) {
-          return `✅ "${p.name}" ကို ခြင်းတောင်းထဲ ထည့်ပြီးပါပြီရှင့်! ဈေးနှုန်း: ${p.price.toLocaleString()} MMK ဖြစ်ပါသည်ရှင့်။ အော်ဒါတင်ရန် အောက်ပါ "ငွေရှင်းမည်" ကို နှိပ်နိုင်ပါသည်ရှင့်။ [ACTION:ADD, ID:${p.id}][STATE:will_it_buy]`;
-        }
+      if (t.includes(p.name.toLowerCase()) || (pFirst.length >= 3 && t.includes(pFirst)) || t.includes(p.id.toLowerCase())) {
         return `✅ Added "${p.name}" to your basket! Price: ${p.price.toLocaleString()} MMK. Click Checkout below whenever you are ready! [ACTION:ADD, ID:${p.id}][STATE:will_it_buy]`;
       }
     }
   }
 
-  // Checkout intent
-  if (/checkout|cart|ငွေရှင်း|ခြင်းတောင်း/.test(t)) {
+  // Checkout and cart intent
+  if (/checkout|cart|basket/i.test(t)) {
     if (cart.length === 0) {
-      if (isMy) {
-        return `မည်သည့်ပစ္စည်းကို မှာယူလိုပါသလဲရှင့်? Candy ကူညီရှာဖွေပေးပါမည်။ [STATE:show_product]`;
-      }
-      return `Which curated piece would you like to order? I am delighted to help you find it. [STATE:show_product]`;
-    }
-    if (isMy) {
-      return `ခြင်းတောင်းထဲရှိ ပစ္စည်းများကို အော်ဒါတင်ရန် အသင့်ဖြစ်ပါပြီရှင့်။ ပို့ဆောင်မည့်လိပ်စာ ဖြည့်သွင်းရန် အောက်ပါ "ငွေရှင်းမည်" ခလုတ်ကို နှိပ်ပါရှင့်။ [ACTION:CHECKOUT][STATE:transaction]`;
+      return `Your shopping basket is currently empty (0 items). Which curated piece would you like to explore or order today? [STATE:show_product]`;
     }
     return `Your order is ready for checkout! Click the Checkout button below to provide your delivery township and address. [ACTION:CHECKOUT][STATE:transaction]`;
   }
 
   // Product name match
   for (const p of products) {
-    if (t.includes(p.name.toLowerCase().split(" ")[0])) {
-      if (isMy) {
-        const stockNote = p.stock > 0 ? `လက်ကျန် ${p.stock} ခု ရှိပါသည်ရှင့်။` : `လောလောဆယ် ပစ္စည်းကုန်နေပါသည်ရှင့်။ [STATE:terminate_notify]`;
-        return `"${p.name}" — ${p.price.toLocaleString()} MMK။ ${p.description || ""} ${stockNote} ခြင်းတောင်းထဲသို့ ထည့်သွင်းလိုပါသလားရှင့်? [STATE:will_it_buy][PREF:LIKE, ID:${p.id}]`;
-      }
+    const pLower = p.name.toLowerCase().trim();
+    const words = pLower.split(/\s+/).filter((w) => w.length >= 3);
+    const matches = t.includes(pLower) || words.some((w) => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, "i").test(t));
+    if (matches) {
       const stockNote = p.stock > 0 ? `In stock (${p.stock} units available).` : `Currently sold out. [STATE:terminate_notify]`;
-      return `"${p.name}" — ${p.price.toLocaleString()} MMK. ${p.description || ""} ${stockNote} Would you like to add it to your basket? [STATE:will_it_buy][PREF:LIKE, ID:${p.id}]`;
+      return `${p.name} — ${p.price.toLocaleString()} MMK. ${p.description ? `${p.description} ` : ""}${stockNote} Would you like to add it to your basket? [STATE:will_it_buy][PREF:LIKE, ID:${p.id}]`;
     }
   }
 
   // Greeting
-  if (state === "introduction" || /hello|hi|hey|good morning|good afternoon|မင်္ဂလာပါ/.test(t)) {
+  if (state === "introduction" || /hello|hi|hey|good morning|good afternoon/.test(t)) {
     const highlights = products.slice(0, 2).map((p) => `${p.name} (${p.price.toLocaleString()} MMK)`).join(", ");
-    if (isMy) {
-      return `မင်္ဂလာပါရှင့်! ${businessName} မှ နွေးထွေးစွာ ကြိုဆိုပါတယ်ရှင့်။ ${highlights ? `ယနေ့ မိတ်ဆက်ပစ္စည်းများမှာ ${highlights} ဖြစ်ပါသည်ရှင့်။` : ""} ဘာများ ကူညီပေးရမလဲရှင့်? [STATE:intent_classification]`;
-    }
     return `Hello and welcome to ${businessName}. ${highlights ? `Today's featured pieces are: ${highlights}.` : ""} How may I assist your inquiry today? [STATE:intent_classification]`;
   }
 
   // Browse catalog
-  if (/product|catalog|show|list|menu|ပစ္စည်း|စာရင်း/.test(t)) {
-    const list = products.map((p) => `• ${p.name} — ${p.price.toLocaleString()} MMK`).join("\n");
-    if (isMy) {
-      return `လက်ရှိရရှိနိုင်သော ပစ္စည်းစာရင်းများဖြစ်ပါသည်ရှင့်:\n${list}\n\nမည်သည့်ပစ္စည်းကို စိတ်ဝင်စားပါသလဲရှင့်? [STATE:show_product]`;
+  if (/product|catalog|show|list|menu/.test(t)) {
+    if (products.length === 0) {
+      return `Our catalog will appear here once published. Please ask about any specific pieces! [STATE:show_product]`;
     }
+    const list = products.map((p) => `• ${p.name} — ${p.price.toLocaleString()} MMK`).join("\n");
     return `Here is our current catalog of curated pieces:\n${list}\n\nWhich piece would you like to explore? [STATE:show_product]`;
   }
 
-  if (isMy) {
-    return `ကျွန်မ ${businessName} ၏ အရောင်းလက်ထောက် Candy ဖြစ်ပါသည်ရှင့်။ ဆိုင်ရှိပစ္စည်းများအကြောင်း မေးမြန်းနိုင်ပြီး "ထည့်မည်" ခလုတ်ဖြင့်လည်း တိုက်ရိုက်မှာယူနိုင်ပါသည်ရှင့်! [STATE:intent_classification]`;
-  }
   return `I am Candy from ${businessName}. Feel free to ask about our curated collection or click "Add" to order directly! [STATE:intent_classification]`;
 }
 
@@ -274,59 +262,95 @@ function buildLocalReply(
 export function ShopChatbot({
   shopId,
   businessName,
+  ownerName,
   phone,
+  address,
+  businessCategory,
+  paymentInfo = "",
+  deliveryInfo = "",
   fullPage = false,
   suggestedPrompts = [],
   products = [],
   deliveryZones = [],
   onOpenInfo,
-  language: propLang,
-  onLanguageChange,
 }: ShopChatbotProps) {
+  const local = getState();
+  const effectiveBusinessName = businessName || local.config.shopName || "Official Store";
+  const effectivePhone = phone || local.config.phone || (local as any).onboardingProfile?.phone || "";
+  const effectiveAddress = address || (local as any).onboardingProfile?.business_address || "";
+  const effectiveOwner = ownerName || local.config.ownerName || (local as any).onboardingProfile?.owner_name || "";
+  const effectiveCategory = businessCategory || (local as any).onboardingProfile?.business_category || (local as any).onboardingProfile?.mainly_sell || "";
+  const effectivePayment = paymentInfo || (local as any).onboardingProfile?.payment_method || "";
+  const effectiveDelivery = deliveryInfo || (local as any).onboardingProfile?.delivery_method || "";
+
   const [open, setOpen] = useState(fullPage);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [internalLang, setInternalLang] = useState<Language>("en");
-  const language = propLang ?? internalLang;
-  const setLanguage = (updater: Language | ((prev: Language) => Language)) => {
-    const next = typeof updater === "function" ? updater(language) : updater;
-    if (onLanguageChange) {
-      onLanguageChange(next);
-    }
-    setInternalLang(next);
-  };
   const [composerExpanded, setComposerExpanded] = useState(false);
 
   // Conversation state machine
   const [convState, setConvState] = useState<ConvState>("introduction");
-  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
+  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>(() => {
+    try {
+      const stored = localStorage.getItem(`shop_cart_${shopId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
   const [prefs, setPrefs] = useState<UserPrefs>(() => loadPrefs(shopId));
+
+  // Sync cart changes to localStorage during shopping, remove key when empty
+  useEffect(() => {
+    try {
+      if (cart.length > 0) {
+        localStorage.setItem(`shop_cart_${shopId}`, JSON.stringify(cart));
+      } else {
+        localStorage.removeItem(`shop_cart_${shopId}`);
+      }
+    } catch {
+      // ignore
+    }
+  }, [cart, shopId]);
 
   // Checkout Modal State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [selectedTownship, setSelectedTownship] = useState("Kamayut");
+  const activeZones = useMemo(() => {
+    if (deliveryZones && deliveryZones.length > 0) return deliveryZones;
+    const local = getState();
+    if (Array.isArray(local.deliveryZones) && local.deliveryZones.length > 0) {
+      return local.deliveryZones;
+    }
+    return [];
+  }, [deliveryZones]);
+
+  const [selectedTownship, setSelectedTownship] = useState<string>(() => {
+    return deliveryZones?.[0]?.township_name || getState().deliveryZones?.[0]?.township_name || "";
+  });
+
+  useEffect(() => {
+    if (!selectedTownship && activeZones.length > 0) {
+      setSelectedTownship(activeZones[0]?.township_name || "");
+    }
+  }, [activeZones, selectedTownship]);
   const [addressDetails, setAddressDetails] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "prepay">("cod");
   const [prepayTransactionId, setPrepayTransactionId] = useState("");
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
 
-  const allTownships = useMemo(() => {
-    try {
-      const list = loadTownships();
-      return Array.from(new Set(list));
-    } catch {
-      return ["Kamayut", "Hlaing", "Sanchaung", "Bahan", "Yankin"];
-    }
-  }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const hasStarted = messages.length > 0;
-  const copy = COPY[language];
+  const copy = COPY;
 
   const featuredProducts = useMemo(() => (products || []).slice(0, 10), [products]);
 
@@ -344,16 +368,16 @@ export function ShopChatbot({
     [cart]
   );
 
-  // Calculate delivery fee dynamically based on selected township
+  // Calculate delivery fee dynamically based on user input delivery zones
   const deliveryFee = useMemo(() => {
-    if (!selectedTownship) return 2000;
-    const match = (deliveryZones || []).find(
+    if (!selectedTownship || !activeZones || activeZones.length === 0) return 0;
+    const match = activeZones.find(
       (z) =>
         (z?.township_name || (z as any)?.township || "").toLowerCase() ===
         selectedTownship.toLowerCase()
     );
-    return match ? (Number(match.rate) || 2000) : 2000;
-  }, [selectedTownship, deliveryZones]);
+    return match ? (Number(match.rate) || 0) : 0;
+  }, [selectedTownship, activeZones]);
 
   // Session ID initialization
   useEffect(() => {
@@ -397,81 +421,82 @@ export function ShopChatbot({
       return [...curr, { productId: product.id, quantity: 1 }];
     });
 
-    // Provide friendly bot feedback in conversation
-    const confirmMsg = `🛒 Added "${product.name}" to cart! (${product.price.toLocaleString()} MMK)`;
-
-    setMessages((curr) => [
-      ...curr,
-      { role: "assistant", content: confirmMsg },
-    ]);
-  }
-
-  function handleUpdateQuantity(productId: string, delta: number) {
-    setCart((curr) => {
-      return curr
-        .map((item) => {
-          if (item.productId === productId) {
-            const nextQty = item.quantity + delta;
-            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as { productId: string; quantity: number }[];
-    });
+    const isFirstTime = !prefs.likedProducts.includes(product.id);
+    if (isFirstTime) {
+      setPrefs((prev) => ({
+        ...prev,
+        likedProducts: [...prev.likedProducts, product.id],
+      }));
+    }
   }
 
   function handleRemoveFromCart(productId: string) {
     setCart((curr) => curr.filter((c) => c.productId !== productId));
   }
 
-  // Parse action tags
-  function applyTags(
-    botText: string,
-    currentPrefs: UserPrefs
-  ): { cleanText: string; newPrefs: UserPrefs } {
-    let newPrefs = { ...currentPrefs };
-
-    const stateMatch = botText.match(/\[STATE:([a-z_]+)\]/);
-    if (stateMatch) {
-      setConvState(stateMatch[1] as ConvState);
-    }
-
-    const addMatch = botText.match(/\[ACTION:ADD, ID:([^\]]+)\]/);
-    if (addMatch) {
-      const prodId = addMatch[1].trim();
-      setCart((curr) => {
-        const existing = curr.find((c) => c.productId === prodId);
-        if (existing) {
-          return curr.map((c) =>
-            c.productId === prodId ? { ...c, quantity: c.quantity + 1 } : c
-          );
-        }
-        return [...curr, { productId: prodId, quantity: 1 }];
-      });
-    }
-
-    const checkoutMatch = botText.match(/\[ACTION:CHECKOUT\]/);
-    if (checkoutMatch) {
-      setIsCheckoutOpen(true);
-    }
-
-    const cleanText = botText
-      .replace(/\[STATE:[a-z_]+\]/g, "")
-      .replace(/\[ACTION:[^\]]+\]/g, "")
-      .replace(/\[PREF:[^\]]+\]/g, "")
-      .trim();
-
-    return { cleanText, newPrefs };
+  function handleUpdateQuantity(productId: string, delta: number) {
+    setCart((curr) =>
+      curr
+        .map((c) => {
+          if (c.productId === productId) {
+            const newQty = c.quantity + delta;
+            return newQty > 0 ? { ...c, quantity: newQty } : null;
+          }
+          return c;
+        })
+        .filter(Boolean) as { productId: string; quantity: number }[]
+    );
   }
 
-  // Send message handler
-  async function sendMessage(text: string) {
-    const trimmed = text.trim();
+  // Parse action tags from AI response
+  function applyTags(raw: string, currentPrefs: UserPrefs) {
+    let clean = raw;
+    let nextPrefs = { ...currentPrefs };
+
+    const stateMatch = clean.match(/\[STATE:(\w+)\]/);
+    if (stateMatch) {
+      setConvState(stateMatch[1] as ConvState);
+      clean = clean.replace(/\[STATE:\w+\]/g, "");
+    }
+
+    const actionMatches = [...clean.matchAll(/\[ACTION:([A-Z_]+)(?:,\s*ID:([a-zA-Z0-9_-]+))?\]/g)];
+    for (const match of actionMatches) {
+      const actionType = match[1];
+      const targetId = match[2];
+
+      if (actionType === "ADD" && targetId) {
+        const prod = products.find((p) => p.id === targetId);
+        if (prod) handleAddToCart(prod);
+      } else if (actionType === "CHECKOUT") {
+        setIsCheckoutOpen(true);
+      }
+    }
+    clean = clean.replace(/\[ACTION:[A-Z_]+(?:,\s*ID:[a-zA-Z0-9_-]+)?\]/g, "");
+
+    const prefMatches = [...clean.matchAll(/\[PREF:(LIKE|DISLIKE),\s*ID:([a-zA-Z0-9_-]+)\]/g)];
+    for (const match of prefMatches) {
+      const prefType = match[1];
+      const targetId = match[2];
+      if (prefType === "LIKE") {
+        nextPrefs.likedProducts = Array.from(new Set([...nextPrefs.likedProducts, targetId]));
+      } else if (prefType === "DISLIKE") {
+        nextPrefs.dislikedProducts = Array.from(new Set([...nextPrefs.dislikedProducts, targetId]));
+      }
+    }
+    clean = clean.replace(/\[PREF:(LIKE|DISLIKE),\s*ID:[a-zA-Z0-9_-]+\]/g, "");
+
+    return { cleanText: cleanNormalText(clean), newPrefs: nextPrefs };
+  }
+
+  async function sendMessage(textToSend: string) {
+    const trimmed = textToSend.trim();
     if (!trimmed || loading) return;
 
     setInput("");
-    setComposerExpanded(false);
-    if (composerInputRef.current) composerInputRef.current.style.height = "44px";
+    if (composerInputRef.current) {
+      composerInputRef.current.style.height = "44px";
+      setComposerExpanded(false);
+    }
 
     if (convState === "introduction") setConvState("intent_classification");
 
@@ -490,6 +515,29 @@ export function ShopChatbot({
           const candidateModels = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
           let botText: string | null = null;
 
+          const storeKnowledge = [
+            `- Boutique Name: ${effectiveBusinessName}`,
+            effectiveOwner ? `- Founder / Owner: ${effectiveOwner}` : "",
+            effectiveCategory ? `- Category & Offerings: ${effectiveCategory}` : "",
+            effectivePhone ? `- Direct Phone / Hotline: ${effectivePhone}` : "",
+            effectiveAddress ? `- Boutique Address: ${effectiveAddress}` : "",
+          ].filter(Boolean).join("\n");
+
+          const paymentKnowledge = [
+            effectivePayment ? `Accepted Payment Methods: ${effectivePayment}` : "Payment methods: Cash on Delivery (COD) and Mobile Prepayment (KBZPay / WavePay).",
+            effectivePhone ? `Mobile Wallet Account (KPay / WavePay): ${effectivePhone}` : "",
+            "Settlement: Cash on Delivery is paid to the rider upon receipt. For mobile prepayment, customer provides Transaction ID and receipt proof.",
+          ].filter(Boolean).join("\n");
+
+          const deliveryScheduleText = activeZones.length > 0
+            ? `Township Delivery Rates:\n${activeZones.map(z => `- ${z.township_name || (z as any).township}: ${(Number(z.rate) || 0).toLocaleString()} MMK (Estimated timeline: ${z.estimated_transit_timeline || "1-2 Days"})`).join("\n")}`
+            : "";
+
+          const deliveryKnowledge = [
+            effectiveDelivery ? `Dispatch Policy: ${effectiveDelivery}` : "Delivery: Direct doorstep courier.",
+            deliveryScheduleText || "Township delivery fees are calculated at checkout based on address.",
+          ].filter(Boolean).join("\n\n");
+
           for (const model of candidateModels) {
             try {
               const response = await fetch(
@@ -502,16 +550,49 @@ export function ShopChatbot({
                       {
                         parts: [
                           {
-                            text: `You are "Candy", an artisanal, warm, and attentive AI sales concierge for ${businessName}.
-Customer Language Preference: ${language === "my" ? "Burmese (Myanmar Unicode)" : "English"}.
-Language instruction: ${
-  language === "my" || /[\u1000-\u109F]/.test(trimmed)
-    ? "Respond warmly, politely, and respectfully in natural Burmese (Myanmar Unicode script)."
-    : "Respond in welcoming, polite, and refined English."
-}
+                            text: `You are "Candy", an artisanal, warm, and attentive AI sales concierge for ${effectiveBusinessName}.
+Customer Language Preference: English.
+Language instruction: Respond in welcoming, polite, and refined English.
+
+Store Profile & Contact Information:
+${storeKnowledge}
 
 Available Products in Catalog:
 ${productList}
+
+Payment Options & Mobile Wallet Accounts:
+${paymentKnowledge}
+
+Delivery Schedule & Township Rates:
+${deliveryKnowledge}
+
+Current Customer Shopping Basket Status:
+${cart.length === 0 ? "- The customer's shopping basket is currently completely EMPTY (0 items). Any confirmed order has been processed and the basket cleared." : `- Active Basket (${cart.length} items): ${cart.map(c => { const p = products.find(prod => prod.id === c.productId); return `${p?.name || 'Item'} x${c.quantity}`; }).join(', ')}`}
+
+AUTHORITATIVE STORE KNOWLEDGE INSTRUCTIONS:
+- You have complete, direct knowledge of ${effectiveBusinessName}'s entire store: product catalog, stock, prices, payment methods, phone number, address, and delivery matrix above.
+- NEVER state that information is "not provided by the merchant" or "unspecified" when answering about items present in the store knowledge above.
+- When customers ask about:
+  1. Delivery / Shipping / Townships: State the exact fees and transit timelines from the delivery schedule above. If a specific township is asked, give its exact rate.
+  2. Payment / KPay / WavePay: Detail the accepted methods and mention the store account phone number (${effectivePhone || "provided at checkout"}).
+  3. Phone / Contact / Call: Provide the store phone number (${effectivePhone || "contact directly via chat"}).
+  4. Address / Location / Visit: Provide the boutique address (${effectiveAddress || "online boutique with direct courier delivery"}).
+  5. Products / Stock / Price:
+     - SINGLE PRODUCT INQUIRIES (CRITICAL): When the customer asks about ONE specific product (e.g. asks about "Lamp", "Do you have lamp?", "Is lamp in stock?", "Fan price", "Tell me about the lamp"), you MUST respond with ONLY information about THAT SPECIFIC PRODUCT! Provide that product's exact price, stock availability, and description. DO NOT mention, list, or summarize any other products from the catalog.
+     - FULL CATALOG INQUIRIES: ONLY list multiple products or the entire catalog if the customer explicitly asks a broad question like "what do you have?", "show catalog", "list all items", or "what do you sell?".
+  6. Ordering / Checkout: Guide the customer to add items to their bag and use the Checkout button.
+  7. Basket / Cart / Order status:
+     - If the customer asks about their cart or basket and it is empty: State clearly that their shopping basket is currently empty (0 items) and offer to help them find items.
+     - If the customer asks about an order that was confirmed: Reassure them that their order has been received and confirmed, and that their shopping basket is now clean.
+- Be proactive, warm, and elegant.
+- FORMATTING & PLAIN TEXT RULES:
+  * Write in normal, clean plain conversational text.
+  * NEVER use markdown asterisks (no "**" or "*"), hashtags ("#"), or bolding syntax in your response.
+  * When showing a single product:
+    Lamp — 4,500 MMK (10 pieces available). Handcrafted desk lamp with warm glow. Would you like to add it to your bag?
+  * If broad catalog is requested:
+    • Lamp — 4,500 MMK (10 pieces available)
+    • Fan — 4,500 MMK (4 pieces available)
 
 Customer Message: ${trimmed}
 Candy:`,
@@ -548,8 +629,21 @@ Candy:`,
         }
       }
 
-      // 2. High-speed local rule-based responder (zero lag, Burmese & English)
-      const localReply = buildLocalReply(trimmed, products, cart, convState, businessName, language);
+      // 2. High-speed local rule-based responder (zero lag, strictly user input for delivery & payment)
+      const localReply = buildLocalReply(
+        trimmed,
+        products,
+        cart,
+        convState,
+        effectiveBusinessName,
+        activeZones,
+        effectivePayment,
+        effectiveDelivery,
+        effectivePhone,
+        effectiveAddress,
+        effectiveOwner,
+        effectiveCategory
+      );
       const { cleanText, newPrefs } = applyTags(localReply, prefs);
       setPrefs(newPrefs);
       setMessages((curr) => [...curr, { role: "assistant", content: cleanText }]);
@@ -563,92 +657,162 @@ Candy:`,
     }
   }
 
-  // Handle Order Placement
+  // Confirm order & sync with Supabase and local store
   async function handleConfirmOrder(e: React.FormEvent) {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      alert("Your basket is empty. Please add items to checkout.");
+      return;
+    }
     if (!customerName.trim() || !customerPhone.trim()) {
-      alert("Please provide your name and phone number");
+      alert("Please provide customer name and phone number.");
+      return;
+    }
+    if (!selectedTownship.trim()) {
+      alert("Please select or specify your delivery township.");
+      return;
+    }
+    if (!addressDetails.trim()) {
+      alert("Please provide your delivery address (Street / Building / Room Address).");
       return;
     }
 
     setOrderSubmitting(true);
-    const orderItems: OrderItem[] = cart.map((c) => {
-      const p = products.find((prod) => prod.id === c.productId);
-      return {
-        productId: c.productId,
-        productName: p?.name || "Product",
-        price: p?.price || 0,
-        quantity: c.quantity,
-      };
-    });
+    const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
+    const orderItems: OrderItem[] = cart
+      .map((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        if (!prod) return null;
+        return {
+          productId: prod.id,
+          productName: prod.name,
+          quantity: item.quantity,
+          price: Number(prod.price) || 0,
+        };
+      })
+      .filter(Boolean) as OrderItem[];
 
-    const subtotal = cartTotal;
-    const totalAmount = subtotal + deliveryFee;
-    const invoiceId = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const finalTotal = cartTotal + deliveryFee;
 
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       invoiceId,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
-      customerTelegramId: sessionId || `web_${Date.now()}`,
-      township: selectedTownship,
-      addressDetails: addressDetails.trim() || `${selectedTownship}, Yangon`,
+      customerTelegramId: sessionId || "public_chat_customer",
+      township: selectedTownship.trim(),
+      addressDetails: addressDetails.trim(),
       deliveryFee,
       paymentMethod,
-      totalAmount,
-      status: paymentMethod === "prepay" ? "verifying" : "confirmed",
+      totalAmount: finalTotal,
+      status: "pending",
       items: orderItems,
-      paymentDetails:
-        paymentMethod === "prepay"
-          ? {
-              method: "KPay",
-              transactionId: prepayTransactionId.trim() || `KP-${Date.now().toString().slice(-6)}`,
-            }
-          : undefined,
       createdAt: new Date().toISOString(),
     };
 
     try {
-      // 1. Record in local client store so merchant dashboard updates immediately
-      addOrder(newOrder);
+      let ownerId: string | null = null;
+      let targetShopId = shopId || "";
 
-      // 2. Try recording in Supabase database if available
-      try {
-        await supabase.from("orders").insert({
-          id: newOrder.id,
-          invoice_id: newOrder.invoiceId,
-          shop_id: shopId,
-          customer_name: newOrder.customerName,
-          customer_phone: newOrder.customerPhone,
-          customer_telegram_id: newOrder.customerTelegramId,
-          township: newOrder.township,
-          address_details: newOrder.addressDetails,
-          delivery_fee: newOrder.deliveryFee,
-          payment_method: newOrder.paymentMethod,
-          total_amount: newOrder.totalAmount,
-          status: newOrder.status,
-          items: newOrder.items,
-          payment_details: newOrder.paymentDetails,
-        });
-      } catch {
-        // Non-fatal if Supabase table is not yet created
+      if (shopId) {
+        const { data: currentShop } = await supabase
+          .from("shops")
+          .select("id, owner_id, shop_id")
+          .or(`shop_id.eq.${shopId},id.eq.${shopId}`)
+          .maybeSingle();
+
+        if (currentShop) {
+          ownerId = currentShop.owner_id || null;
+          targetShopId = currentShop.shop_id || shopId;
+        }
       }
 
-      // 3. Clear cart & show success
+      if (!ownerId) {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) {
+          ownerId = authData.user.id;
+        }
+      }
+
+      const { error: insertErr } = await supabase.from("orders").insert([
+        {
+          id: newOrder.id,
+          invoice_id: invoiceId,
+          customer_name: customerName.trim(),
+          customer_phone: customerPhone.trim(),
+          customer_telegram_id: sessionId || "public_chat_customer",
+          township: selectedTownship.trim(),
+          address_details: addressDetails.trim(),
+          delivery_fee: deliveryFee,
+          payment_method: paymentMethod,
+          total_amount: finalTotal,
+          status: "pending",
+          items: orderItems,
+          shop_id: targetShopId || "official-store",
+          owner_id: ownerId,
+        },
+      ]);
+
+      if (insertErr) {
+        console.warn("[ShopChatbot] Supabase order insert error:", insertErr);
+      }
+
+      // Also persist to owner's JSON state in storage if ownerId is known
+      if (ownerId) {
+        try {
+          const ownerState = await getShopState(ownerId);
+          ownerState.orders = [newOrder, ...(ownerState.orders || []).filter((o) => o.invoiceId !== invoiceId)];
+          await saveShopState(ownerId, ownerState);
+        } catch (storageErr) {
+          console.warn("[ShopChatbot] Could not sync order to owner storage JSON:", storageErr);
+        }
+      }
+
+      addOrder(newOrder);
+
+      // Dispatch browser custom event for instant live update if dashboard is open in same window
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sales_brain_order_created", { detail: newOrder }));
+      }
+
+      setPrefs((prev) => ({
+        ...prev,
+        pastOrders: [...prev.pastOrders, invoiceId],
+      }));
+
+      // 1. Wipe React cart state
       setCart([]);
+
+      // 2. Wipe persisted / cached cart keys in localStorage & sessionStorage
+      try {
+        localStorage.removeItem(`shop_cart_${shopId}`);
+        localStorage.removeItem(`sales_brain_cart_${shopId}`);
+        sessionStorage.removeItem(`shop_cart_${shopId}`);
+      } catch {
+        // ignore
+      }
+
+      // 3. Clear simulated/active session cart in clientStore
+      clearSessionCart(sessionId || undefined);
+
+      // 4. Reset checkout form fields
+      setAddressDetails("");
+      setPrepayTransactionId("");
       setIsCheckoutOpen(false);
       setOrderSuccess(newOrder);
 
-      // 4. Send confirmation message in chatbot
-      const orderConfirmedText = `🎉 Order placed successfully!\nInvoice ID: ${invoiceId}\nTotal: ${totalAmount.toLocaleString()} MMK\nTownship: ${selectedTownship}\nThe shop owner will verify and dispatch your order shortly. Thank you!`;
+      // 5. Dispatch global cart-cleared event to sync other components
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sales_brain_cart_cleared", { detail: { shopId, sessionId } }));
+      }
+
+      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : "Mobile Wallet"}.\nWe will contact you shortly at ${customerPhone.trim()}!`;
 
       setMessages((curr) => [
         ...curr,
         {
           role: "assistant",
-          content: orderConfirmedText,
+          content: confirmMessage,
           orderCard: newOrder,
         },
       ]);
@@ -668,18 +832,6 @@ Candy:`,
   }
 
   // ── JSX Elements ────────────────────────────────────────────────────────────
-
-  const languageToggle = (
-    <button
-      type="button"
-      onClick={() => setLanguage((prev) => (prev === "en" ? "my" : "en"))}
-      className="rounded-full border border-[#E7E5E4] bg-[#FFFFFF] px-3.5 py-1.5 text-xs font-semibold text-[#1C1917] hover:border-[#0069FF]/40 hover:bg-[#EFF6FF]/50 cursor-pointer shadow-xs transition-all flex items-center gap-1.5 active:scale-[0.98]"
-      title="Toggle Language / ဘာသာစကားပြောင်းရန်"
-    >
-      <span className="w-1.5 h-1.5 rounded-full bg-[#0069FF]" />
-      <span>{language === "en" ? "EN" : "မြန်မာ"}</span>
-    </button>
-  );
 
   const productCards = (
     <div className="w-full max-w-full">
@@ -751,6 +903,169 @@ Candy:`,
       </div>
     </div>
   );
+
+  function renderProductCardsForMessage(msg: Message) {
+    if (msg.role !== "assistant" || !products || products.length === 0) return null;
+
+    const lower = msg.content.toLowerCase();
+
+    // Check if this is a broad catalog request/response
+    const isCatalog =
+      /catalog|all products|our products|featured pieces|curated pieces|available pieces|what do you sell|what products do you have|browse our/i.test(
+        lower
+      );
+
+    // Identify which specific products from the merchant catalog are mentioned in the message text
+    const matchedProducts = products.filter((p) => {
+      const pName = p.name.toLowerCase().trim();
+      if (!pName) return false;
+      if (lower.includes(pName)) return true;
+      const words = pName.split(/\s+/).filter((w) => w.length >= 3);
+      for (const w of words) {
+        const re = new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, "i");
+        if (re.test(lower)) return true;
+      }
+      return false;
+    });
+
+    // 1. Single Product Inquiry: render ONLY that single product's card!
+    if (matchedProducts.length === 1 && !isCatalog) {
+      const single = matchedProducts[0];
+      return (
+        <div className="w-full max-w-sm pt-1 pl-9">
+          <div className="rounded-2xl border border-[#E7E5E4] bg-[#FFFFFF] p-3.5 shadow-2xs hover:border-[#0069FF]/50 transition-all flex items-center gap-3.5">
+            <div
+              onClick={() => void sendMessage(`Tell me about ${single.name}`)}
+              className="w-16 h-16 shrink-0 overflow-hidden rounded-xl bg-[#F3EFEA] cursor-pointer flex items-center justify-center relative group"
+            >
+              {single.image ? (
+                <img src={single.image} alt={single.name} className="h-full w-full object-cover group-hover:scale-105 transition duration-300" />
+              ) : (
+                <span className="text-[10px] text-[#78716C] font-sans px-1 text-center font-medium">
+                  {single.name}
+                </span>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p
+                  onClick={() => void sendMessage(`Tell me about ${single.name}`)}
+                  className="truncate text-sm font-sans font-semibold text-[#1C1917] cursor-pointer hover:underline tracking-tight"
+                >
+                  {single.name}
+                </p>
+                {single.stock > 0 ? (
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 shrink-0">
+                    {single.stock} in stock
+                  </span>
+                ) : (
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-mono font-semibold bg-rose-50 text-rose-800 border border-rose-200/80 shrink-0">
+                    Sold Out
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-0.5 line-clamp-1 text-xs text-[#78716C]">
+                {single.description || "Authentic quality, sustainably crafted."}
+              </p>
+
+              <div className="mt-2.5 flex items-center justify-between gap-2">
+                <span className="text-sm font-mono font-semibold text-[#1C1917]">
+                  {(Number(single.price) || 0).toLocaleString()}{" "}
+                  <span className="text-xs text-[#78716C] font-mono">MMK</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleAddToCart(single)}
+                  className="bg-[#0069FF] hover:bg-[#0052CC] text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-[0.98]"
+                >
+                  <Plus size={12} />
+                  <span>{copy.addToCart}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Multiple Products or Catalog Inquiry: render carousel for those items only
+    const displayList = matchedProducts.length > 1 ? matchedProducts : isCatalog ? featuredProducts : [];
+    if (displayList.length === 0) return null;
+
+    return (
+      <div className="w-full max-w-full pt-1 pl-9">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
+            {matchedProducts.length > 1 ? "Mentioned Pieces" : copy.productsTitle}
+          </p>
+          <span className="text-xs font-mono text-[#78716C]">
+            {displayList.length} items
+          </span>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 pt-0.5 no-scrollbar">
+          {displayList.map((product) => (
+            <div
+              key={product.id}
+              className="w-56 shrink-0 rounded-2xl border border-[#E7E5E4] bg-[#FFFFFF] p-3 shadow-2xs hover:border-stone-400 transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div
+                  onClick={() => void sendMessage(`Tell me about ${product.name}`)}
+                  className="h-28 overflow-hidden rounded-xl bg-[#F3EFEA] cursor-pointer flex items-center justify-center relative group"
+                >
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <span className="text-xs text-[#78716C] font-sans px-2 text-center font-medium">
+                      {product.name}
+                    </span>
+                  )}
+                  {product.stock > 0 ? (
+                    <span className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                      {product.stock} in stock
+                    </span>
+                  ) : (
+                    <span className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-mono font-semibold bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs">
+                      Sold Out
+                    </span>
+                  )}
+                </div>
+                <p
+                  onClick={() => void sendMessage(`Tell me about ${product.name}`)}
+                  className="mt-2 line-clamp-1 text-sm font-sans font-semibold text-[#1C1917] cursor-pointer hover:underline"
+                >
+                  {product.name}
+                </p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-[#78716C]">
+                  {product.description || "Authentic quality."}
+                </p>
+              </div>
+
+              <div className="mt-2.5 pt-2 border-t border-[#E7E5E4]/80 flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-semibold text-[#1C1917]">
+                  {(Number(product.price) || 0).toLocaleString()} MMK
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleAddToCart(product)}
+                  className="bg-[#0069FF] hover:bg-[#0052CC] text-white text-xs font-semibold px-3 py-1 rounded-full transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-[0.98]"
+                >
+                  <Plus size={12} />
+                  <span>Add</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const promptBar = suggestedPrompts.length > 0 && (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-1.5 px-1">
@@ -849,7 +1164,6 @@ Candy:`,
                 <span>{cartItemCount}</span>
               </button>
             )}
-            {languageToggle}
           </div>
         </div>
       </div>
@@ -893,7 +1207,7 @@ Candy:`,
                       : "rounded-2xl rounded-tl-xs border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] font-sans"
                   }`}
                 >
-                  <p className="whitespace-pre-line">{message.content}</p>
+                  <p className="whitespace-pre-line">{cleanNormalText(message.content)}</p>
 
                   {/* Order Card if present in assistant message */}
                   {message.orderCard && (
@@ -909,6 +1223,9 @@ Candy:`,
                       <div className="text-xs space-y-1">
                         <div><span className="text-[#78716C]">Customer:</span> {message.orderCard.customerName} ({message.orderCard.customerPhone})</div>
                         <div><span className="text-[#78716C]">Township:</span> {message.orderCard.township}</div>
+                        {message.orderCard.addressDetails && (
+                          <div><span className="text-[#78716C]">Address:</span> {message.orderCard.addressDetails}</div>
+                        )}
                         <div><span className="text-[#78716C]">Total:</span> <span className="font-bold text-[#1C1917] font-mono">{message.orderCard.totalAmount.toLocaleString()} MMK</span></div>
                       </div>
                     </div>
@@ -916,8 +1233,8 @@ Candy:`,
                 </div>
               </div>
 
-              {/* Optionally show product cards stream */}
-              {message.role === "assistant" && (message.content.includes("products") || message.content.includes("available") || message.content.includes("ပစ္စည်း")) && productCards}
+              {/* Product card stream: only show the requested product or catalog */}
+              {message.role === "assistant" && renderProductCardsForMessage(message)}
             </div>
           ))}
 
@@ -1079,41 +1396,62 @@ Candy:`,
                   </div>
                 </div>
 
-                {/* Township & Delivery Fee */}
+                {/* Township & Delivery Fee (Only from user input zones) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-bold text-[#57534E] block uppercase tracking-wider">
-                      Township (Yangon & Regional) *
+                      Township / Delivery Area *
                     </label>
-                    <span className="text-xs font-mono font-semibold text-[#0069FF]">
-                      +{deliveryFee.toLocaleString()} MMK
-                    </span>
+                    {deliveryFee > 0 && (
+                      <span className="text-xs font-mono font-semibold text-[#0069FF]">
+                        +{deliveryFee.toLocaleString()} MMK
+                      </span>
+                    )}
                   </div>
-                  <select
-                    value={selectedTownship}
-                    onChange={(e) => setSelectedTownship(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
-                  >
-                    {allTownships.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  {activeZones && activeZones.length > 0 ? (
+                    <select
+                      required
+                      value={selectedTownship}
+                      onChange={(e) => setSelectedTownship(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
+                    >
+                      <option value="">-- Select Township * --</option>
+                      {activeZones.map((z) => (
+                        <option key={z.id || z.township_name} value={z.township_name}>
+                          {z.township_name} ({(Number(z.rate) || 0).toLocaleString()} MMK)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      value={selectedTownship}
+                      onChange={(e) => setSelectedTownship(e.target.value)}
+                      placeholder="Enter your township or area *"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
+                    />
+                  )}
                 </div>
 
-                {/* Detailed Address */}
+                {/* Detailed Address (Required) */}
                 <div>
                   <label className="text-xs font-bold text-[#57534E] block mb-1 uppercase tracking-wider">
-                    Street / Building / Room Address
+                    Street / Building / Room Address *
                   </label>
                   <input
                     type="text"
+                    required
                     value={addressDetails}
                     onChange={(e) => setAddressDetails(e.target.value)}
-                    placeholder="Street name, Building number, Ward"
+                    placeholder="Street name, Building number, Ward *"
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
                   />
+                  {!addressDetails.trim() && (
+                    <p className="text-[11px] text-amber-600 mt-1 font-medium">
+                      * Address is required for courier dispatch.
+                    </p>
+                  )}
                 </div>
 
                 {/* Payment Method Selector */}
@@ -1143,17 +1481,19 @@ Candy:`,
                           : "border-[#E7E5E4] bg-[#FFFFFF] text-[#57534E] hover:border-stone-400"
                       }`}
                     >
-                      <p className="text-xs font-semibold font-sans text-[#1C1917]">KPay / WavePay</p>
-                      <p className="text-[11px] text-[#78716C] mt-0.5">Mobile wallet transfer</p>
+                      <p className="text-xs font-semibold font-sans text-[#1C1917]">Mobile Wallet Transfer</p>
+                      <p className="text-[11px] text-[#78716C] mt-0.5">Prepay via Mobile Banking</p>
                     </button>
                   </div>
 
                   {paymentMethod === "prepay" && (
                     <div className="mt-2.5 p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E7E5E4] text-xs space-y-1.5">
                       <p className="text-xs font-bold uppercase tracking-wider text-[#0069FF]">
-                        Merchant Wallet Account
+                        Merchant Account Info
                       </p>
-                      <p className="text-xs font-mono font-semibold text-[#1C1917]">{phone ? `${phone} (KPay / WavePay)` : "09971234567 (KPay / WavePay)"}</p>
+                      <p className="text-xs font-mono font-semibold text-[#1C1917]">
+                        {phone ? `${phone}` : "Please confirm account details with merchant"}
+                      </p>
                       <input
                         type="text"
                         value={prepayTransactionId}
@@ -1173,7 +1513,7 @@ Candy:`,
                   <span>{(Number(cartTotal) || 0).toLocaleString()} MMK</span>
                 </div>
                 <div className="flex justify-between text-[#57534E]">
-                  <span>Shipping ({selectedTownship}):</span>
+                  <span>Shipping ({selectedTownship || "Standard"}):</span>
                   <span>{(Number(deliveryFee) || 0).toLocaleString()} MMK</span>
                 </div>
                 <div className="flex justify-between font-semibold text-[#1C1917] text-sm pt-2 border-t border-[#E7E5E4]">
@@ -1195,100 +1535,28 @@ Candy:`,
               <button
                 type="submit"
                 form="checkout-form"
-                disabled={orderSubmitting}
-                className="flex-2 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] text-white font-semibold text-xs uppercase tracking-wider shadow-xs cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                disabled={
+                  orderSubmitting ||
+                  cart.length === 0 ||
+                  !customerName.trim() ||
+                  !customerPhone.trim() ||
+                  !selectedTownship.trim() ||
+                  !addressDetails.trim()
+                }
+                className="flex-1 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] font-semibold text-xs text-white cursor-pointer transition-all active:scale-[0.98] uppercase tracking-wider shadow-xs disabled:opacity-50"
               >
-                {orderSubmitting ? (
-                  <span>Processing...</span>
-                ) : (
-                  <>
-                    <Check size={14} />
-                    <span>Confirm Order</span>
-                  </>
-                )}
+                {orderSubmitting ? "Confirming..." : "Confirm Order"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── ORDER SUCCESS CONFIRMATION MODAL ─────────────────────────────────── */}
-      {orderSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1C1917]/50 backdrop-blur-xs">
-          <div className="bg-[#FFFFFF] max-w-md w-full rounded-3xl p-6 sm:p-7 shadow-xl text-center space-y-4 border border-[#E7E5E4] animate-in zoom-in-95">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/70 flex items-center justify-center mx-auto shadow-xs">
-              <CheckCircle size={30} />
-            </div>
-
-            <div>
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#047857]">
-                Order Confirmed
-              </span>
-              <h3 className="text-2xl font-serif text-[#1C1917] mt-1">
-                Thank You
-              </h3>
-              <p className="text-xs text-[#78716C] mt-1">
-                The merchant has received your order and will dispatch shortly.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#FAF8F5] border border-dashed border-[#E7E5E4] text-left space-y-2 text-xs font-mono">
-              <div className="flex justify-between border-b border-[#E7E5E4] pb-2">
-                <span className="text-[#78716C]">Invoice:</span>
-                <span className="font-bold text-[#0069FF]">{orderSuccess.invoiceId}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#78716C]">Customer:</span>
-                <span className="font-bold text-[#1C1917]">{orderSuccess.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#78716C]">Phone:</span>
-                <span>{orderSuccess.customerPhone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#78716C]">Township:</span>
-                <span>{orderSuccess.township}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#78716C]">Payment:</span>
-                <span className="uppercase">{orderSuccess.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between border-t border-[#E7E5E4] pt-2 font-bold text-[#1C1917] text-sm">
-                <span>Total Amount:</span>
-                <span className="text-[#0069FF]">{(Number(orderSuccess.totalAmount) || 0).toLocaleString()} MMK</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setOrderSuccess(null)}
-              className="w-full py-3 rounded-full bg-[#0069FF] hover:bg-[#0052CC] text-white font-semibold text-xs uppercase tracking-wider shadow-xs cursor-pointer transition-all active:scale-[0.98]"
-            >
-              Continue Browsing
-            </button>
           </div>
         </div>
       )}
     </div>
   );
 
-  if (fullPage) return chatShell;
-
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0069FF] hover:bg-[#0052CC] text-sm font-medium text-white shadow-md transition cursor-pointer"
-        aria-label={open ? copy.closeChat : copy.openChat}
-      >
-        {open ? <X size={20} /> : <ShoppingCart size={20} />}
-      </button>
-      {open && (
-        <div className="fixed bottom-24 right-6 z-40 h-[min(650px,calc(100dvh-8rem))] w-[min(400px,calc(100vw-3rem))] overflow-hidden rounded-3xl border border-[#E7E5E4] bg-[#FFFFFF] shadow-xl">
-          {chatShell}
-        </div>
-      )}
-    </>
+    <div className="h-full w-full">
+      {chatShell}
+    </div>
   );
 }

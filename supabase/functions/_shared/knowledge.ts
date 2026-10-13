@@ -33,37 +33,54 @@ export async function buildKnowledgeDocuments(ctx: ShopContext): Promise<Knowled
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
 
-  // Fetch detailed onboarding data
-  const { data: onboarding } = await supabase
+  // Fetch detailed onboarding data from shops table and legacy business_onboarding
+  const { data: shopRow } = await supabase
+    .from("shops")
+    .select("phone, address, shop_name, owner_name, onboarding_profile")
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  let shopProfile: any = shopRow?.onboarding_profile;
+  if (typeof shopProfile === "string") {
+    try { shopProfile = JSON.parse(shopProfile); } catch {}
+  }
+
+  const { data: legacyOnboarding } = await supabase
     .from("business_onboarding")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
 
+  const onboarding: any = { ...(legacyOnboarding || {}), ...(shopProfile || {}) };
+  const shopPhone = shopRow?.phone || onboarding?.phone || config.phone || "";
+  const shopAddress = shopRow?.address || onboarding?.business_address || "";
+
   const docs: KnowledgeDocument[] = [
     {
       sourceId: config.shopId || "main",
       sourceType: "shop_overview",
-      title: `${config.shopName} business profile`,
+      title: `${shopRow?.shop_name || config.shopName} business profile`,
       content: [
-        `Business name: ${config.shopName}`,
-        `Industry: ${onboarding?.business_category || "Retail"}`,
+        `Business name: ${shopRow?.shop_name || config.shopName}`,
+        `Industry: ${onboarding?.business_category || onboarding?.business_type || "Retail"}`,
         `Selling on: ${onboarding?.selling_platform || "Multiple Channels"}`,
         `Business Goal: ${onboarding?.business_goal || "Customer Satisfaction"}`,
         `Bot Personality: ${onboarding?.bot_personality || "Friendly"}`,
-      ].join("\n"),
+        shopPhone ? `Phone / Contact: ${shopPhone}` : null,
+        shopAddress ? `Boutique Address: ${shopAddress}` : null,
+      ].filter(Boolean).join("\n"),
       metadata: {
-        shopName: config.shopName,
+        shopName: shopRow?.shop_name || config.shopName,
       },
     },
     {
       sourceId: `${config.shopId || "main"}:operations`,
       sourceType: "payment_delivery",
-      title: `${config.shopName} operations and policies`,
+      title: `${shopRow?.shop_name || config.shopName} operations and policies`,
       content: [
-        `Payment Instructions: ${onboarding?.payment_method || "Contact us for payment details."}`,
-        `Delivery Policy: ${onboarding?.delivery_method || "Standard shipping applied."}`,
-        `Delivery Zones and Rates:\n${deliveryZones.map(z => `- ${z.township}: ${z.rate} MMK (${z.deliveryTime})`).join("\n")}`,
+        `Payment Instructions: ${onboarding?.payment_method || "Cash on Delivery and Mobile Wallets (KBZPay / WavePay)."}${shopPhone ? ` (Mobile Wallet Account: ${shopPhone})` : ""}`,
+        `Delivery Policy: ${onboarding?.delivery_method || "Standard courier delivery."}`,
+        `Delivery Zones and Rates:\n${deliveryZones.map(z => `- ${z.township_name || (z as any).township || ""}: ${(Number(z.rate) || 0).toLocaleString()} MMK (${z.estimated_transit_timeline || (z as any).deliveryTime || "1-2 days"})`).join("\n")}`,
       ].join("\n"),
       metadata: {
         deliveryZoneCount: deliveryZones.length,

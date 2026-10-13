@@ -1,4 +1,4 @@
-export type Language = "en" | "my";
+export type Language = "en";
 
 export interface Translations {
   // App & Shell
@@ -146,14 +146,6 @@ export interface Translations {
   contactPhoneLabel: string;
   telegramBotUsernameLabel: string;
   saveStoreSettingsBtn: string;
-  messengerBotActivationWorkspace: string;
-  connectMessengerBot: string;
-  connectFacebookPage: string;
-  signInFacebookFirst: string;
-  oauthCompleteChoosePage: string;
-  activateMessengerBot: string;
-  selectPageLabel: string;
-  disconnectFacebook: string;
   connectedActive: string;
   scanQrToConnect: string;
 
@@ -243,7 +235,7 @@ export const translations: Record<Language, Translations> = {
     catalogItems: "Catalog items",
     chooseLanguage: "Language",
     languageEn: "English",
-    languageMy: "မြန်မာ",
+    languageMy: "English",
     operations: "Operations",
     intelligence: "Intelligence",
     channels: "Channels",
@@ -366,20 +358,12 @@ export const translations: Record<Language, Translations> = {
 
     // Bot Connection
     telegramBotActivationWorkspace: "TELEGRAM BOT ACTIVATION WORKSPACE",
-    oneClickOnboardingDesc: "Connect your Telegram Bot token or link your Facebook Messenger business page.",
+    oneClickOnboardingDesc: "Connect your Telegram Bot token to activate automated sales and customer order processing.",
     storeNameLabel: "Store Name:",
     smeOwnerNameLabel: "SME Owner Name:",
     contactPhoneLabel: "Contact Phone Number:",
     telegramBotUsernameLabel: "Telegram Bot Username (@):",
     saveStoreSettingsBtn: "SAVE STORE SETTINGS & CONNECT BOT",
-    messengerBotActivationWorkspace: "MESSENGER BOT ACTIVATION WORKSPACE",
-    connectMessengerBot: "Connect Messenger Bot",
-    connectFacebookPage: "Connect Facebook Page",
-    signInFacebookFirst: "Sign in with Facebook to link your business Page, then choose which Page should run the Messenger bot.",
-    oauthCompleteChoosePage: "Facebook sign-in complete. Select the Page you want to use for Messenger:",
-    activateMessengerBot: "Activate Messenger Bot",
-    selectPageLabel: "Choose your Facebook Page:",
-    disconnectFacebook: "Disconnect Messenger Bot",
     connectedActive: "Connected & Active",
     scanQrToConnect: "Scan to open bot in Telegram",
 
@@ -450,230 +434,6 @@ export const translations: Record<Language, Translations> = {
     confirmDelete: "Are you sure you want to delete this?",
     loading: "Loading...",
   },
-  my: {
-    // App & Shell
-    appName: "Sales Brain AI",
-    appSubtitle: "မြန်မာလုပ်ငန်းရှင်များအတွက် AI လူမှုကူးသန်းရောင်းဝယ်ရေး စနစ်",
-    smeHubTab: "လုပ်ငန်းခွင် စင်တာ",
-    webhooksActive: "Webhooks အသက်ဝင်နေသည်",
-    live: "တိုက်ရိုက်လွှင့်",
-    liveBot: "ဘော့တ် အသက်ဝင်နေသည်",
-    workspace: "လုပ်ငန်းခွင်",
-    landingPage: "ပင်မ မိတ်ဆက်စာမျက်နှာ",
-    editProfile: "ပရိုဖိုင် ပြင်ဆင်ရန်",
-    editBusinessProfile: "ဆိုင်အချက်အလက် ပြင်ဆင်ရန်",
-    signOut: "အကောင့်မှ ထွက်မည်",
-    resetDemoState: "မူလ အခြေအနေသို့ ပြန်လည်ထားမည်",
-    catalogItems: "ပစ္စည်းစာရင်း အရေအတွက်",
-    chooseLanguage: "ဘာသာစကား",
-    languageEn: "English",
-    languageMy: "မြန်မာ",
-    operations: "လုပ်ငန်းလည်ပတ်မှု",
-    intelligence: "AI ဆန်းစစ်ချက်",
-    channels: "ဆက်သွယ်ရေး လိုင်းများ",
-
-    // Tabs
-    tabOrders: "အော်ဒါစာရင်း",
-    tabProducts: "ကုန်ပစ္စည်း ကတ်တလောက်",
-    tabDelivery: "ပို့ဆောင်ခ နှုန်းထားများ",
-    tabInsights: "AI စီးပွားရေး မဟာဗျူဟာ",
-    tabSmartMarketing: "စမတ် မားကတ်တင်း",
-    tabConfig: "ဘော့တ် ချိတ်ဆက်မှု",
-    tabLiveSupport: "တိုက်ရိုက် VIP အကူအညီ",
-
-    // KPIs & Stats
-    totalStoreRevenue: "စုစုပေါင်း ရောင်းရငွေ",
-    excludesDelivery: "ပို့ဆောင်ခ မပါဝင်သော အသားတင် အရောင်းပမာဏ",
-    validatedOrders: "အတည်ပြုပြီး အော်ဒါများ",
-    cashOnDeliveryAndPrepay: "အိမ်ရောက်ငွေချေနှင့် စစ်ဆေးပြီး မိုဘိုင်းငွေလွှဲ အော်ဒါများ",
-    needsVerification: "စစ်ဆေးရန် လိုအပ်ချက်များ",
-    pendingOwnerVerification: "ဆိုင်ရှင် စစ်ဆေးအတည်ပြုရန် ကျန်ရှိသော ငွေလွှဲပြေစာများ",
-    stockWarnings: "လက်ကျန် သတိပေးချက်များ",
-    lowStockMsg: "ဆိုင်လက်ကျန် ၅ ခုနှင့် အောက် လျော့နည်းနေသော ပစ္စည်းများ",
-    allInventoriesHealthy: "ပစ္စည်းလက်ကျန် အားလုံး ကောင်းမွန်ပါသည်",
-    webhookAlertTitle: "ငွေလွှဲပြေစာ အသစ် ရောက်ရှိလာပါသည် ({count} စောင်)",
-    webhookAlertBody: "ဝယ်သူမှ ငွေလွှဲစလစ် ပေးပို့ထားသဖြင့် ဆိုင်ရှင်၏ အတည်ပြုချက် လိုအပ်ပါသည်။",
-    reviewReceipts: "ပြေစာများ စစ်ဆေးရန်",
-
-    // Orders Ledger
-    pendingTransactionsLedger: "စစ်ဆေးဆဲ ငွေလွှဲမှုများနှင့် အရောင်းစာရင်း",
-    validateSubmittedScreenshots: "ဝယ်သူပေးပို့သော ငွေလွှဲစလစ်များ စစ်ဆေးခြင်း၊ ပို့ဆောင်ခ တွက်ချက်ခြင်းနှင့် အခြေအနေ စီမံခြင်း။",
-    exportLedgerCsv: "စာရင်းကို CSV ဖြင့် ထုတ်ယူမည်",
-    orderInvoice: "အော်ဒါ ဘောက်ချာ",
-    clientCustomer: "ဝယ်သူ အမည်",
-    addressLocation: "ပို့ဆောင်ရမည့် လိပ်စာ",
-    paymentMethod: "ငွေပေးချေမှု ပုံစံ",
-    status: "အခြေအနေ",
-    invoiceSum: "စုစုပေါင်း တန်ဖိုး",
-    receiptVerification: "ငွေလွှဲစလစ် စစ်ဆေးခြင်း",
-    evaluateReceipt: "စလစ် စစ်ဆေးရန်",
-    approveCod: "အိမ်ရောက်ငွေချေ အတည်ပြုမည်",
-    markCompleted: "ပြီးစီးကြောင်း မှတ်သားမည်",
-    noAuditNeeded: "စစ်ဆေးရန် မလိုအပ်ပါ",
-    viewReceipt: "ပြေစာ ကြည့်မည်",
-    noOrdersFound: "အော်ဒါစာရင်း မရှိသေးပါ။",
-    statusPending: "စောင့်ဆိုင်းဆဲ",
-    statusVerifying: "စစ်ဆေးဆဲ",
-    statusConfirmed: "အတည်ပြုပြီး",
-    statusCompleted: "ပြီးစီးပါပြီ",
-    statusCancelled: "ပယ်ဖျက်ပြီး",
-
-    // Receipt Modal
-    evaluateReceiptHeader: "ငွေလွှဲပြေစာ စစ်ဆေးအတည်ပြုသည့် မျက်နှာပြင်",
-    invoiceRef: "ဘောက်ချာ အမှတ်စဉ်",
-    transactionId: "ငွေလွှဲ အမှတ် (TxID)",
-    paymentChannel: "ငွေလွှဲ ချန်နယ်",
-    totalCharged: "ကျသင့်ငွေ စုစုပေါင်း",
-    confirmGenerateInvoice: "အတည်ပြုပြီး ဘောက်ချာ ထုတ်ပေးမည်",
-    rejectScreenshot: "ပြေစာ ပယ်ဖျက်မည်",
-    closeEvalPane: "ပိတ်မည်",
-    submittedScreenshotEvidence: "ဝယ်သူ တင်ပြထားသော ငွေလွှဲပြေစာ ပုံရိပ်:",
-    noScreenshotUploaded: "ငွေလွှဲပြေစာ တွဲတင်ထားခြင်း မရှိပါ။",
-    customerPhone: "ဖုန်းနံပါတ်",
-    orderItems: "မှာယူထားသော ပစ္စည်းများ",
-    deliveryFee: "ပို့ဆောင်ခ",
-    slipAuthenticityVerified: "ငွေလွှဲပြေစာ အမှန်တကယ် စစ်မှန်ပါသည်",
-
-    // Products
-    premiumStoreCatalog: "ကုန်ပစ္စည်း စာရင်း",
-    controlProductPrices: "ပစ္စည်းအမည်၊ စျေးနှုန်း၊ လက်ကျန်စာရင်းနှင့် အမျိုးအစားများကို စီမံခန့်ခွဲပါ။",
-    addNewProduct: "ပစ္စည်းအသစ် ထည့်သွင်းမည်",
-    editInfo: "ပြင်ဆင်ရန်",
-    delete: "ဖျက်မည်",
-    editProductHeader: "ပစ္စည်း အချက်အလက် ပြင်ဆင်ရန်",
-    addNewProductHeader: "ပစ္စည်းအသစ် ထည့်သွင်းရန်",
-    brandNameLabel: "ပစ္စည်းအမည်:",
-    categoryLabel: "အမျိုးအစား:",
-    unitPriceLabel: "တစ်ခုချင်း စျေးနှုန်း (ကျပ်):",
-    availableStockLabel: "လက်ကျန် အရေအတွက်:",
-    imageUrlLabel: "ပစ္စည်း ဓာတ်ပုံ URL:",
-    shortDescriptionLabel: "အသေးစိတ် ဖော်ပြချက်:",
-    confirmProductRevisions: "ပြင်ဆင်ချက်များ အတည်ပြုမည်",
-    addItemCatalog: "ပစ္စည်း ထည့်သွင်းမည်",
-    cancel: "မလုပ်တော့ပါ",
-    lowStockTag: "လက်ကျန်နည်း",
-    unitPriceMmk: "စျေးနှုန်း (ကျပ်)",
-    stockLevel: "လက်ကျန် အဆင့်",
-    inStock: "ပစ္စည်း ရှိသည်",
-    outOfStock: "ပစ္စည်း ကုန်သွားပါပြီ",
-    isOnDemand: "အော်ဒါမှာမှ ပြုလုပ်ပေးသော ပစ္စည်း",
-    waitingTimeDays: "ကြာမြင့်ချိန် (ရက်)",
-    noProductsFound: "ကုန်ပစ္စည်း မရှိသေးပါ။",
-
-    // Delivery
-    townshipDeliveryRateMatrix: "မြို့နယ်အလိုက် ပို့ဆောင်ခ နှုန်းထားများ",
-    defineDeliveryFees: "ရန်ကုန်မြို့တွင်းနှင့် အခြားမြို့နယ်များအတွက် ပို့ဆောင်ခနှင့် ကြာမြင့်ချိန် သတ်မှတ်ပါ။",
-    townshipNameLabel: "မြို့နယ် အမည်:",
-    rateLabel: "ပို့ဆောင်ခ (ကျပ်):",
-    addRateRule: "နှုန်းထားအသစ် ထည့်မည်",
-    matchedTownship: "သက်ဆိုင်ရာ မြို့နယ်",
-    estimatedTransit: "ကြာမြင့်ချိန် ခန့်မှန်းချက်",
-    settingsActions: "လုပ်ဆောင်ချက်",
-    removeRule: "ဖျက်မည်",
-    townshipSearchPlaceholder: "မြို့နယ်အမည် ရိုက်ထည့်ပါ (ဥပမာ - ရန်ကင်း၊ လှည်းတန်း၊ ဗဟန်း)...",
-    deliveryRateMmk: "ပို့ဆောင်ခ (ကျပ်)",
-    totalZonesConfigured: "သတ်မှတ်ထားသော မြို့နယ်များ",
-
-    // Strategy & AI
-    salesBrainAdvisorDesk: "SALES BRAIN AI အကြံပေး စင်တာ",
-    strategicAnalysisPoweredBySparkles: "Gemini AI မှ တိုက်ရိုက်ဆန်းစစ်ပေးထားသော အရောင်းနှင့် ကုန်ပစ္စည်း စီးပွားရေး လမ်းညွှန်။",
-    reEvaluateStrategy: "မဟာဗျူဟာ ပြန်လည်ဆန်းစစ်မည်",
-    analyzingPatterns: "Sales Brain မှ ဝယ်သူများ၏ အပြုအမူများကို ဆန်းစစ်နေပါသည်...",
-    weeklyStoreVolume: "အပတ်စဉ် အရောင်းပမာဏ ပြောင်းလဲမှု",
-    leanAccountingStatsSummary: "ဘဏ္ဍာရေး အနှစ်ချုပ် အချက်အလက်",
-    grossSalesValue: "စုစုပေါင်း အရောင်းပမာဏ:",
-    ordersCompiled: "လက်ခံပြီး အော်ဒါအရေအတွက်:",
-    canceledTransactions: "ပယ်ဖျက်လိုက်သော အရေအတွက်:",
-    downloadLedgerCsv: "စာရင်းအစီရင်ခံစာ CSV ဒေါင်းလုဒ်ဆွဲမည်",
-    aiBriefingTitle: "လုပ်ငန်းရှင်အတွက် မဟာဗျူဟာ အနှစ်ချုပ် လမ်းညွှန်",
-    advisorSubtitle: "အချိန်နှင့်တပြေးညီ တိုးတက်မှု ညွှန်းကိန်းများ၊ ဝယ်ယူမှု အလေ့အထများနှင့် အမြတ်အစွန်း လမ်းညွှန်။",
-
-    // Bot Connection
-    telegramBotActivationWorkspace: "TELEGRAM ဘော့တ် ချိတ်ဆက်မှု လုပ်ငန်းခွင်",
-    oneClickOnboardingDesc: "Telegram Bot Token ထည့်သွင်းခြင်း သို့မဟုတ် Facebook Messenger စာမျက်နှာနှင့် ချိတ်ဆက်နိုင်ပါသည်။",
-    storeNameLabel: "ဆိုင်အမည်:",
-    smeOwnerNameLabel: "ဆိုင်ရှင် အမည်:",
-    contactPhoneLabel: "ဆက်သွယ်ရန် ဖုန်းနံပါတ်:",
-    telegramBotUsernameLabel: "Telegram Bot Username (@):",
-    saveStoreSettingsBtn: "ဆိုင်အချက်အလက် သိမ်းဆည်းပြီး ဘော့တ်ကို အသက်သွင်းမည်",
-    messengerBotActivationWorkspace: "MESSENGER ဘော့တ် ချိတ်ဆက်မှု လုပ်ငန်းခွင်",
-    connectMessengerBot: "Messenger ဘော့တ် ချိတ်ဆက်မည်",
-    connectFacebookPage: "Facebook Page ချိတ်ဆက်မည်",
-    signInFacebookFirst: "Facebook အကောင့်ဖြင့် အရင်ဝင်ရောက်ပြီး Messenger ဘော့တ် အသုံးပြုမည့် Page ကို ရွေးချယ်ပါ။",
-    oauthCompleteChoosePage: "Facebook ဝင်ရောက်မှု အောင်မြင်ပါသည်။ အသုံးပြုမည့် Page ကို ရွေးချယ်ပါ:",
-    activateMessengerBot: "Messenger ဘော့တ် အသက်သွင်းမည်",
-    selectPageLabel: "အသုံးပြုမည့် Facebook Page ရွေးပါ:",
-    disconnectFacebook: "Messenger ဘော့တ် ချိတ်ဆက်မှု ဖြုတ်မည်",
-    connectedActive: "ချိတ်ဆက်ပြီး အသက်ဝင်နေပါသည်",
-    scanQrToConnect: "Telegram တွင် ဖွင့်ရန် QR ကုဒ်ကို စကင်ဖတ်ပါ",
-
-    // Live Support
-    liveSupportRoomHeader: "SME CRM တိုက်ရိုက် VIP အကူအညီပေးခန်း",
-    chatTakeoverDesc: "ဝယ်သူများနှင့် စကားပြောဆိုမှုများကို စောင့်ကြည့်ပြီး လိုအပ်ပါက AI လက်မှ ဆိုင်ရှင်ကိုယ်တိုင် တိုက်ရိုက်ဝင်ရောက် ပြောဆိုနိုင်ပါသည်။",
-    activeUserSessionsLabel: "လက်ရှိ စကားပြောနေသူများ:",
-    supportLabel: "လူကိုယ်တိုင်",
-    aiAutoLabel: "AI အလိုအလျောက်",
-    noMessagesChosen: "စကားပြောဆိုမှု မရွေးချယ်ရသေးပါ",
-    activeModeLabel: "လက်ရှိ ပုံစံ:",
-    manualSupportOverrideLabel: "ဆိုင်ရှင် ကိုယ်တိုင် ပြောကြားနေပါသည်",
-    automatedBotActiveLabel: "AI ဘော့တ်မှ အလိုအလျောက် ဖြေကြားနေပါသည်",
-    turnOnAiBotLabel: "AI ဘော့တ် ဖွင့်မည်",
-    switchToManualLabel: "လူကိုယ်တိုင် ဖြေကြားမည့်စနစ်သို့ ပြောင်းမည်",
-    ownerChatInputPlaceholder: "ဝယ်သူထံသို့ တိုက်ရိုက် စာပို့ရန်...",
-    takeoverPlaceholder: "ဝယ်သူနှင့် ကိုယ်တိုင် စကားပြောရန် အခွင့်အရေး ယူပါ...",
-    sendMessageBtn: "စာပို့မည်",
-    activeSessionsCount: "လက်ရှိ စကားပြောနေသူ အရေအတွက်",
-
-    // Simulator
-    simulationSandboxTitle: "Telegram ဝယ်သူ စမ်းသပ်ခန်း",
-    viewSimulatorButton: "ဝယ်သူ စကားပြောခန်း စမ်းသပ်မည်",
-    closeSimulatorButton: "စမ်းသပ်ခန်း ပိတ်မည်",
-    integrationQuickGuidance: "အသုံးပြုပုံ အကြံပြုချက်",
-    quickGuidanceExplanation: "ဘယ်ဘက်ရှိ ကုန်ပစ္စည်းနှင့် ပို့ဆောင်ခ နှုန်းထားများကို ပြင်ဆင်ပြီး ညာဘက် စမ်းသပ်ခန်းတွင် ဝယ်သူအဖြစ် စမ်းသပ်ဝယ်ယူနိုင်ပါသည်။",
-    simCheckMenu: "ပစ္စည်းစာရင်း ကြည့်မည်",
-    simHowToPay: "ငွေရှင်းပုံ အချက်အလက်",
-    simDeliveryInfo: "ပို့ဆောင်ခ အချက်အလက်",
-    simTypeMessagePlaceholder: "ဝယ်သူအဖြစ် စာရိုက်ထည့်ပါ...",
-    simAttachPaymentSlip: "ငွေလွှဲပြေစာ တွဲတင်ရန်",
-    simSelectPaymentMethod: "ငွေပေးချေမှု ပုံစံ",
-    simEnterTxId: "ငွေလွှဲနံပါတ် နောက်ဆုံး ၆ လုံး",
-    simSendButton: "ပို့မည်",
-    simCustomerTitle: "ဝယ်သူ (စမ်းသပ်မှု)",
-    simBotTitle: "Candy AI အရောင်းလက်ထောက်",
-    simSimulatedOrderComplete: "မှာယူမှု အောင်မြင်ပါသည်!",
-
-    // Landing Page
-    landingHeroHeadline: "လူမှုကူးသန်းရောင်းဝယ်ရေးကို AI စနစ်ဖြင့် အလိုအလျောက် ပြုလုပ်ပါ",
-    landingHeroSub: "Sales Brain AI သည် Telegram, Messenger နှင့် ဝက်ဘ်ဆိုဒ်များမှ ချတ်များကို အတည်ပြုပြီး အော်ဒါများအဖြစ်သို့ အလိုအလျောက် ပြောင်းလဲပေးပြီး KPay/Wave စလစ် စစ်ဆေးခြင်းနှင့် မြို့နယ် ပို့ဆောင်ခများကို ချက်ချင်း တွက်ချက်ပေးပါသည်။",
-    landingGetStarted: "လုပ်ငန်းခွင် စတင်မည်",
-    landingViewDemo: "စမ်းသပ်ခန်း ကြည့်ရှုမည်",
-    landingFeature1Title: "Candy AI အရောင်းလက်ထောက်",
-    landingFeature1Desc: "ဝယ်သူများ၏ ပစ္စည်းမေးမြန်းမှုများကို ၂၄ နာရီ ချက်ချင်း ဖြေကြားပေးပြီး ခြင်းတောင်းထဲ အလိုအလျောက် ထည့်သွင်းပေးပါသည်။",
-    landingFeature2Title: "ငွေလွှဲပြေစာ အလိုအလျောက် စစ်ဆေးခြင်း",
-    landingFeature2Desc: "KBZPay, WavePay, CBPay, AYA Pay ပြေစာ စခရင်ရှော့များကို တိကျစွာ စစ်ဆေးပေးသည့် စနစ်။",
-    landingFeature3Title: "မြို့နယ်အလိုက် ပို့ဆောင်ခ နှုန်းထား",
-    landingFeature3Desc: "ရန်ကုန်မြို့နယ်များနှင့် နယ်ဝေးမြို့များအတွက် ပို့ဆောင်ခနှင့် ကြာမြင့်ချိန်ကို အလိုအလျောက် တွက်ချက်ပေးပါသည်။",
-    landingFeature4Title: "ဆိုင်ရှင် ကိုယ်တိုင် ဝင်ရောက်ပြောဆိုနိုင်မှု",
-    landingFeature4Desc: "AI မှ အလိုအလျောက် ဖြေကြားနေစဉ် လိုအပ်သည့်အချိန်တိုင်း ဆိုင်ရှင်ကိုယ်တိုင် တိုက်ရိုက် ပြောင်းလဲပြောဆိုနိုင်ပါသည်။",
-    landingMetrics1: "၁၀ ဆ",
-    landingMetrics1Label: "အော်ဒါ တုံ့ပြန်မှု ပိုမိုမြန်ဆန်ခြင်း",
-    landingMetrics2: "၉၉.၄%",
-    landingMetrics2Label: "ငွေလွှဲပြေစာ စစ်ဆေးမှု တိကျမှု",
-    landingMetrics3: "ကျပ်",
-    landingMetrics3Label: "မြန်မာကျပ်ငွေနှင့် ပြည်တွင်း ပို့ဆောင်ရေး အံဝင်ခွင်ကျမှု",
-    landingCtaTitle: "ယနေ့ပဲ သင့်လုပ်ငန်း၏ အရောင်းစနစ်ကို အဆင့်မြှင့်တင်ပါ",
-    landingCtaDesc: "မြန်မာနိုင်ငံတစ်ဝှမ်းရှိ အောင်မြင်သော လုပ်ငန်းရှင်များနှင့်အတူ လက်တွဲပြီး အော်ဒါများကို လွယ်ကူစွာ စီမံလိုက်ပါ။",
-    landingLoginBtn: "အကောင့်ဝင်မည်",
-    landingDashboardBtn: "လုပ်ငန်းခွင် ဖွင့်မည်",
-
-    // Common & Notifications
-    saveChanges: "သိမ်းဆည်းမည်",
-    savedSuccessfully: "အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ",
-    errorOccurred: "ချို့ယွင်းချက် ဖြစ်ပေါ်နေပါသည်။ ထပ်မံကြိုးစားပါ။",
-    copiedToClipboard: "ကူးယူပြီးပါပြီ",
-    confirmDelete: "ဤအရာကို ဖျက်ရန် သေချာပါသလား?",
-    loading: "လုပ်ဆောင်နေပါသည်...",
-  }
 };
 
 /** Exact English phrases lookup to support direct string calls like t("Client Customer") */
@@ -724,7 +484,6 @@ const EXACT_PHRASE_MAP: Record<string, keyof Translations> = {
   "Cancel": "cancel",
   "Language": "chooseLanguage",
   "English": "languageEn",
-  "မြန်မာ": "languageMy",
 };
 
 export function getTranslation(
@@ -732,7 +491,7 @@ export function getTranslation(
   key: string,
   params?: Record<string, string | number>
 ): string {
-  const currentDict = translations[lang] || translations.en;
+  const currentDict = translations.en;
   
   // 1. Direct key match (e.g. t("tabOrders"))
   if (key in currentDict) {
