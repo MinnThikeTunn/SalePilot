@@ -30,7 +30,8 @@ import {
   Menu,
   LogOut,
   User,
-  Bot
+  Bot,
+  RotateCcw
 } from "lucide-react";
 
 import { CustomChart } from "./components/CustomChart";
@@ -1482,7 +1483,7 @@ export default function App() {
                   <span>{t("tabConfig")}</span>
                 </div>
                 <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
-                  Meta &amp; TG
+                  TG
                 </span>
               </button>
             </div>
@@ -2581,6 +2582,27 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
+                      const defs = getDefaultSessions();
+                      if (storeState) {
+                        const updated = { ...storeState, sessions: defs };
+                        setStoreState(updated);
+                        if (typeof localStorage !== "undefined") {
+                          localStorage.setItem("sales_brain_state_v3", JSON.stringify(updated));
+                        }
+                      }
+                      setActiveSessionId("default_customer");
+                      showToast("🔄 Reset chats to English defaults", "info");
+                    }}
+                    title="Reset sample conversations to fresh English defaults"
+                    className="px-3.5 py-2 rounded-full text-xs font-medium bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-stone-600 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw size={13} className="text-stone-400" />
+                    <span>Reset Chats</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
                       const newSess = store.createSimulationCustomer();
                       setActiveSessionId(newSess.sessionId);
                       showToast(`✨ Added new test customer (${newSess.customerName})`, "info");
@@ -2753,10 +2775,10 @@ export default function App() {
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          "မင်္ဂလာပါရှင့်! ၂ မျိုးလုံး stock ရှိပါတယ်ရှင် (Both in stock)",
-                          "ဟုတ်ကဲ့ ၂ မျိုးလုံးယူရင် 5% discount ပေးပါမယ်ရှင် (5% discount)",
-                          "KPay / WavePay လက်ခံပါတယ်ရှင် (KPay/WavePay accepted)",
-                          "အော်ဒါ confirm လုပ်ပေးရမလားရှင်? (Confirm order?)"
+                          "Hello! Both items are in stock and ready to ship.",
+                          "Yes, we can offer a 5% bundle discount if you purchase both today.",
+                          "We accept KPay, WavePay, and Cash on Delivery.",
+                          "Would you like me to prepare and confirm your invoice now?"
                         ].map((chip, cIdx) => (
                           <button
                             key={cIdx}
