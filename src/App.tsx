@@ -30,6 +30,7 @@ import {
   Menu,
   LogOut,
   User,
+  Bot,
   Store,
   RotateCcw
 } from "lucide-react";
