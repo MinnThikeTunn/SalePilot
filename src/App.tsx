@@ -43,6 +43,7 @@ import { AuthPage } from "./components/auth/AuthPage";
 import { PublicShop } from "./components/PublicShop";
 import { AIStrategyDesk } from "./components/strategy/AIStrategyDesk";
 import { TeamRoom } from "./features/sales-team/components/TeamRoom";
+import { SalesTeamPage } from "./features/sales-team/components/SalesTeamPage";
 import { useAuth } from "./contexts/AuthContext";
 import { invokeApi } from "./services/api";
 import { getShopState, saveShopState } from "./services/shopState";
@@ -252,6 +253,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [showLandingPage, setShowLandingPage] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'sales_team' || window.location.pathname === '/sales-team') return false;
     if (params.get('landing') === 'true') return true;
     return true;
   });
@@ -267,7 +269,11 @@ export default function App() {
 
   // Main Store State
   const [storeState, setStoreState] = useState<SystemState | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "delivery" | "insights" | "bot_config" | "live_support" | "smart_marketing" | "sales_team">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "delivery" | "insights" | "bot_config" | "live_support" | "smart_marketing" | "sales_team">(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'sales_team' || window.location.pathname === '/sales-team') return "sales_team";
+    return "orders";
+  });
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
@@ -1110,6 +1116,35 @@ export default function App() {
     );
   }
  
+  // Render dedicated Sales Team page when activeTab is "sales_team"
+  if (activeTab === "sales_team") {
+    return (
+      <SalesTeamPage
+        shopId={storeState.config.shopId || shopRecord?.shop_id || user?.id || "default_shop"}
+        onBackToDashboard={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+          setActiveTab("orders");
+        }}
+        onNavigateToInsights={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+          setActiveTab("insights");
+        }}
+        user={user}
+        lang={lang}
+        toggleLang={toggleLang}
+        t={t}
+        signOut={async () => {
+          await signOut();
+          setStoreState(null);
+          setShopRecord(null);
+        }}
+      />
+    );
+  }
 
   // Derived dashboard analytics values
   const productsCount = storeState.products.length;
@@ -1218,6 +1253,7 @@ export default function App() {
                   { id: "orders", label: t("tabOrders"), icon: ShoppingBag },
                   { id: "products", label: t("tabProducts"), icon: Database },
                   { id: "delivery", label: t("tabDelivery"), icon: Truck },
+                  { id: "sales_team", label: t("tabSalesTeam"), icon: Bot },
                   { id: "insights", label: t("tabInsights"), icon: Sparkles },
                   { id: "smart_marketing", label: t("tabSmartMarketing"), icon: TrendingUp },
                   { id: "live_support", label: t("tabLiveSupport"), icon: MessageSquare },
@@ -1227,6 +1263,11 @@ export default function App() {
                     key={item.id}
                     type="button"
                     onClick={() => {
+                      if (item.id === "sales_team") {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set("tab", "sales_team");
+                        window.open(url.toString(), "_blank");
+                      }
                       setActiveTab(item.id as any);
                       setMobileSidebarOpen(false);
                     }}
@@ -1406,18 +1447,19 @@ export default function App() {
               {/* Sales Team (5-Agent War Room) */}
               <button
                 type="button"
-                onClick={() => setActiveTab("sales_team")}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer group ${
-                  activeTab === "sales_team"
-                    ? "bg-[#1C1917] text-white font-semibold shadow-xs"
-                    : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
-                }`}
+                onClick={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("tab", "sales_team");
+                  window.open(url.toString(), "_blank");
+                  setActiveTab("sales_team");
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer group text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
               >
                 <div className="flex items-center gap-2.5">
-                  <Bot size={15} className={activeTab === "sales_team" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-700"} />
+                  <Bot size={15} className="text-stone-400 group-hover:text-stone-700" />
                   <span>{t("tabSalesTeam")}</span>
                 </div>
-                <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-medium ${activeTab === "sales_team" ? "bg-amber-400 text-stone-900 font-bold" : "bg-stone-100 text-stone-600"}`}>
+                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-medium bg-stone-100 text-stone-600">
                   5 Agents
                 </span>
               </button>
@@ -2431,14 +2473,6 @@ export default function App() {
                 </div>
               )}
             </div>
-          )}
-
-          {/* TAB: SALES TEAM (5-AGENT WAR ROOM) */}
-          {activeTab === "sales_team" && (
-            <TeamRoom
-              shopId={storeState?.config.shopId || shopRecord?.shop_id || user?.id || "default_shop"}
-              onNavigateToInsights={() => setActiveTab("insights")}
-            />
           )}
 
           {/* TAB 4: AI STRATEGY DESK */}

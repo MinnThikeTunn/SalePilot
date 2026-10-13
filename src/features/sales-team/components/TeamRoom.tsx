@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
   ShieldCheck,
@@ -6,15 +7,11 @@ import {
   MessageCircle,
   Award,
   Sliders,
-  AlertCircle,
   CheckCircle2,
   TrendingUp,
-  Clock,
   ArrowRight,
   Database,
-  Coins,
   Bot,
-  Zap,
   Loader2,
   RotateCcw,
   Lock,
@@ -116,7 +113,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     setIsDeliberating(true);
     setDeliberationStep("investigating");
 
-    // Sequential stepper animation for UX feedback
+    // Sequential stepper animation for calm UX feedback
     setTimeout(() => {
       setDeliberationStep("debating");
       setTimeout(() => {
@@ -130,15 +127,15 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
           setIsDeliberating(false);
           setDeliberationStep("completed");
           refreshTelemetry();
-        }, 400);
-      }, 400);
-    }, 450);
+        }, 450);
+      }, 450);
+    }, 500);
   };
 
   const getAgentIcon = (key: string) => {
     switch (key) {
       case "scout":
-        return <Search size={18} className="text-blue-600" />;
+        return <Search size={18} className="text-[#0069FF]" />;
       case "guardian":
         return <ShieldCheck size={18} className="text-amber-600" />;
       case "muse":
@@ -146,123 +143,128 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
       case "echo":
         return <MessageCircle size={18} className="text-emerald-600" />;
       case "commander":
-        return <Award size={18} className="text-rose-600" />;
+        return <Award size={18} className="text-[#0A1B2A]" />;
       default:
-        return <Bot size={18} className="text-stone-600" />;
+        return <Bot size={18} className="text-[#64748B]" />;
     }
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16 animate-in fade-in duration-300">
-      {/* 1. Header & Live Telemetry Strip */}
-      <div className="p-6 sm:p-8 bg-white border border-stone-200/90 rounded-[32px] shadow-xs space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1.5">
+    <div className="space-y-10 max-w-7xl mx-auto pb-16 font-sans">
+      {/* 1. Command Header & Telemetry Strip */}
+      <div className="p-6 sm:p-10 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-8">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2.5">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-stone-900 text-stone-100">
-                AI Orchestration
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20">
+                <Bot size={12} />
+                <span>Sales Intelligence Council</span>
               </span>
-              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100/80 text-emerald-800 border border-emerald-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                Store Engine Synced
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#ECFDF5] text-[#047857] border border-[#10B981]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                <span>Store Engine Connected</span>
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-              Sale Brain Team Room
+
+            <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#0A1B2A] tracking-tight leading-tight">
+              Merchant Council Chamber
             </h1>
-            <p className="text-xs sm:text-sm text-stone-500 font-medium max-w-2xl leading-relaxed">
-              Five coordinated AI specialists investigating real inventory, customer friction, and profit margins under strict owner-in-the-loop governance.
+
+            <p className="text-sm sm:text-base text-[#475569] leading-relaxed font-normal">
+              Five coordinated AI specialists investigating real inventory, customer friction, and profit margin rules under strict merchant governance.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Evidence Ledger Button */}
+          {/* Action pills toolbar */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Pending Approvals Pill */}
             <button
               type="button"
-              onClick={() => setEvidenceExplorerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200 text-stone-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              onClick={() => setActionCenterOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#EFF6FF] hover:bg-[#0069FF] text-[#0069FF] hover:text-white border border-[#0069FF]/30 text-xs font-semibold cursor-pointer transition-all shadow-xs group"
+              title="View pending merchant approvals"
             >
-              <Database size={14} className="text-emerald-600" />
-              <span>Evidence Ledger</span>
-              <span className="font-mono text-[10px] bg-stone-100 px-1.5 py-0.5 rounded text-stone-600">
-                {(councilResult?.evidence || []).length}
+              <Lock size={13} className="text-[#0069FF] group-hover:text-white transition-colors" />
+              <span>Pending Approvals</span>
+              <span className="font-mono text-xs bg-white text-[#0069FF] px-2 py-0.5 rounded-md font-bold shadow-2xs group-hover:bg-white/20 group-hover:text-white">
+                {pendingApprovalsCount}
               </span>
             </button>
 
-            {/* Business Memory Button */}
-            <button
-              type="button"
-              onClick={() => setMemoryDrawerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200 text-stone-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
-            >
-              <Brain size={14} className="text-purple-600" />
-              <span>Business Memory</span>
-              <span className="font-mono text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">
-                {memoryCount}
-              </span>
-            </button>
-
-            {/* Policies Button */}
+            {/* Shop Guardrails Pill */}
             <button
               type="button"
               onClick={() => setPoliciesOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200 text-stone-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] text-xs font-medium transition-all shadow-xs cursor-pointer"
             >
-              <Sliders size={14} className="text-stone-500" />
+              <Sliders size={13} className="text-[#64748B]" />
               <span>Shop Guardrails</span>
-              <span className="font-mono text-[10px] text-amber-700 bg-amber-100/70 px-1.5 py-0.5 rounded">
+              <span className="font-mono text-[11px] text-[#0069FF] bg-[#EFF6FF] px-2 py-0.5 rounded font-semibold">
                 {policies.min_contribution_margin_pct}% Min
               </span>
             </button>
 
-            {/* Pending Approvals Badge (Clickable to open Action Center) */}
+            {/* Business Memory Pill */}
             <button
               type="button"
-              onClick={() => setActionCenterOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200/80 border border-stone-200/80 text-xs font-bold text-stone-800 cursor-pointer transition-colors shadow-2xs"
+              onClick={() => setMemoryDrawerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] text-xs font-medium transition-all shadow-xs cursor-pointer"
             >
-              <Lock size={13} className="text-amber-600" />
-              <span>Pending Approvals:</span>
-              <span className="font-mono font-bold text-xs bg-white px-2 py-0.5 rounded-md border border-stone-300 text-stone-900">
-                {pendingApprovalsCount}
+              <Brain size={13} className="text-purple-600" />
+              <span>Business Memory</span>
+              <span className="font-mono text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">
+                {memoryCount}
+              </span>
+            </button>
+
+            {/* Evidence Ledger Pill */}
+            <button
+              type="button"
+              onClick={() => setEvidenceExplorerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] text-xs font-medium transition-all shadow-xs cursor-pointer"
+            >
+              <Database size={13} className="text-[#10B981]" />
+              <span>Evidence Ledger</span>
+              <span className="font-mono text-[11px] bg-[#ECFDF5] text-[#047857] px-2 py-0.5 rounded font-semibold">
+                {(councilResult?.evidence || []).length}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Low-Data Warning Banner (ADR-0003) */}
+        {/* Low-Data Warning Notice */}
         {scarcity.status === "insufficient_evidence" && (
-          <div className="p-5 bg-amber-50/90 border border-amber-200/90 rounded-[28px] space-y-3 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div className="p-6 bg-[#FFFBEB] border border-[#FDE68A] rounded-2xl space-y-3.5 transition-all">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
                 <AlertTriangle size={18} className="text-amber-600 shrink-0" />
-                <h3 className="text-xs sm:text-sm font-black text-amber-900 tracking-tight">
-                  ADR-0003 Data Scarcity Notice: Speculative Forecasting Suppressed
-                </h3>
+                <h2 className="text-sm font-semibold text-amber-950">
+                  Data Coverage Notice: Empirical Forecasting Paused
+                </h2>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-200 text-amber-900 uppercase">
-                Insufficient Evidence
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-amber-200 text-amber-900 uppercase">
+                Baseline Needed
               </span>
             </div>
-            <p className="text-xs text-amber-800 leading-relaxed font-medium">
-              Your store currently has fewer than 5 completed transactions or uncosted inventory items. To prevent financial hallucinations and preserve margin integrity, speculative forecasts are suppressed until data coverage improves.
+            <p className="text-xs text-amber-900 leading-relaxed font-normal">
+              Your store has recorded fewer than 5 completed orders or uncosted items. To protect profit accuracy and prevent speculative errors, financial forecasts remain paused until baseline data coverage improves.
             </p>
 
             {/* Guided Completion Tasks */}
-            <div className="pt-2 border-t border-amber-200/60 space-y-2">
-              <p className="text-[10px] font-mono uppercase font-bold text-amber-900">
-                Guided Tasks to Unlock Full Intelligence:
+            <div className="pt-2 border-t border-amber-200/80 space-y-2">
+              <p className="text-xs font-mono uppercase font-bold text-amber-900">
+                Recommended Actions to Calibrate Council:
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {scarcity.guidedTasks.map((t) => (
-                  <div key={t.id} className="p-3 bg-white/95 border border-amber-200 rounded-xl text-xs space-y-1">
+                  <div key={t.id} className="p-3.5 bg-white border border-amber-200 rounded-xl text-xs space-y-1 shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-stone-900">{t.title}</span>
-                      <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-100 px-1.5 py-0.5 rounded">
+                      <span className="font-semibold text-[#0A1B2A]">{t.title}</span>
+                      <span className="text-xs font-mono text-amber-900 font-semibold bg-amber-100 px-2 py-0.5 rounded">
                         {t.actionLabel}
                       </span>
                     </div>
-                    <p className="text-[11px] text-stone-600">{t.description}</p>
+                    <p className="text-[11px] text-[#475569]">{t.description}</p>
                   </div>
                 ))}
               </div>
@@ -270,82 +272,84 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
           </div>
         )}
 
-        {/* Telemetry Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-stone-100 text-xs">
-          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
-            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Catalog Coverage</span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-black text-stone-900 font-mono">
+        {/* Telemetry Strip - Clean, quiet metric columns */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-[#E2E8F0]">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-[#64748B]">Catalog Coverage</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-[#0A1B2A]">
                 {freshness?.totalProducts || 0}
               </span>
-              <span className="text-[10px] text-stone-500">
+              <span className="text-xs text-[#64748B]">
                 ({freshness?.costedProducts || 0} costed)
               </span>
             </div>
           </div>
 
-          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
-            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Verified Orders</span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-black text-stone-900 font-mono">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-[#64748B]">Verified Orders</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-[#0A1B2A]">
                 {freshness?.completedOrders || 0}
               </span>
-              <span className="text-[10px] text-stone-500">transactions</span>
+              <span className="text-xs text-[#64748B]">transactions</span>
             </div>
           </div>
 
-          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
-            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Floor Margin</span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-black text-amber-700 font-mono">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-[#64748B]">Contribution Margin Floor</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-[#0069FF]">
                 {policies.min_contribution_margin_pct}%
               </span>
-              <span className="text-[10px] text-stone-500">contribution</span>
+              <span className="text-xs text-[#64748B]">minimum</span>
             </div>
           </div>
 
-          <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200/60">
-            <span className="text-[10px] font-mono text-stone-400 uppercase font-bold">Discount Ceiling</span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-black text-stone-900 font-mono">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-[#64748B]">Maximum Discount Cap</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-[#0A1B2A]">
                 {policies.max_discount_pct}%
               </span>
-              <span className="text-[10px] text-stone-500">max cap</span>
+              <span className="text-xs text-[#64748B]">ceiling</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* 2. Interactive Agent Roster */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <div>
-            <h2 className="text-lg font-black text-stone-900 tracking-tight">
-              Agent Roster &amp; Single-Agent Inquiries
+      <div className="space-y-5">
+        <div className="flex items-end justify-between px-1">
+          <div className="space-y-1">
+            <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight">
+              Council Specialists
             </h2>
-            <p className="text-xs text-stone-500">
-              Click any agent to interrogate specific domain hypotheses or request focused analysis.
+            <p className="text-xs sm:text-sm text-[#64748B]">
+              Consult individual domain specialists or inspect their active hypotheses.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-stone-400">
+          <span className="text-xs font-mono text-[#64748B] hidden sm:inline">
             5 Active Specialists
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {roster.map((agent) => (
-            <div
+            <motion.div
               key={agent.key}
+              whileHover={{ y: -2 }}
+              transition={{ duration: 0.2 }}
               onClick={() => handleAgentClick(agent)}
-              className={`p-5 rounded-[28px] border transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4 bg-white shadow-2xs ${
+              className={`p-5 rounded-2xl border transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4 bg-white shadow-xs ${
                 selectedAgent?.key === agent.key
-                  ? "border-stone-900 ring-2 ring-stone-900/10 shadow-md"
-                  : "border-stone-200/90 hover:border-stone-400 hover:shadow-xs"
+                  ? "border-[#0069FF] ring-2 ring-[#0069FF]/15 shadow-sm"
+                  : "border-[#E2E8F0] hover:border-[#0069FF]/40 hover:shadow-sm"
               }`}
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
+                  <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#F4F2EC] border border-[#E2E8F0] flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                     <img
                       src={agent.avatarUrl}
                       alt={agent.name}
@@ -358,61 +362,62 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
                       {getAgentIcon(agent.key)}
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-stone-100 text-stone-700">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#ECFDF5] text-[#047857]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
                     Ready
                   </span>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-black text-stone-900 group-hover:text-stone-700 transition-colors">
+                  <h3 className="text-sm font-semibold text-[#0A1B2A] group-hover:text-[#0069FF] transition-colors">
                     {agent.name}
                   </h3>
-                  <p className="text-[11px] font-bold text-stone-500">
+                  <p className="text-xs font-medium text-[#64748B]">
                     {agent.title}
                   </p>
-                  <p className="text-[10px] font-medium text-amber-700 mt-0.5 line-clamp-1">
+                  <p className="text-xs font-medium text-amber-700 mt-1 line-clamp-1">
                     {agent.persona}
                   </p>
                 </div>
 
-                <p className="text-[11px] text-stone-600 leading-relaxed line-clamp-2">
+                <p className="text-xs text-[#475569] leading-relaxed line-clamp-2">
                   {agent.description}
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-[10px]">
-                <span className="font-mono text-stone-400">{agent.specialty}</span>
-                <span className="font-bold text-stone-900 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                  Inquire <ArrowRight size={10} />
+              <div className="pt-3 border-t border-[#E2E8F0] flex items-center justify-between text-xs">
+                <span className="font-mono text-xs text-[#64748B]">{agent.specialty}</span>
+                <span className="font-semibold text-[#0069FF] group-hover:text-[#0052CC] flex items-center gap-1 transition-transform group-hover:translate-x-0.5">
+                  Consult <ArrowRight size={11} />
                 </span>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
 
-      {/* 3. Main War Room Action Deck & Deliberation Trigger */}
+      {/* 3. Council Deliberation Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Deliberation Launch & Flow */}
-        <div className="lg:col-span-2 p-6 sm:p-8 bg-white border border-stone-200/90 rounded-[32px] shadow-xs space-y-6">
-          <div className="flex items-center justify-between">
+        <div className="lg:col-span-2 p-6 sm:p-8 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="text-base font-black text-stone-900 tracking-tight">
-                Sales Council Deliberation
-              </h3>
-              <p className="text-xs text-stone-500">
-                Orchestrate Scout, Muse, Guardian, Echo, and Commander in a structured debate
+              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight">
+                Council Deliberation Theater
+              </h2>
+              <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">
+                Debate store inventory, buyer hesitation, and discount economics across all 5 specialists.
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-50 border border-amber-200 text-amber-800">
-              2-Revision Cap Enforced
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20 self-start sm:self-auto">
+              2-Revision Cap
             </span>
           </div>
 
           {/* Goal Input */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-stone-700 uppercase font-mono">
-              Council Objective / Seasonal Focus:
+            <label className="text-xs font-semibold text-[#0A1B2A]">
+              Council Strategic Objective:
             </label>
             <input
               type="text"
@@ -420,60 +425,60 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               onChange={(e) => setCouncilGoal(e.target.value)}
               disabled={isDeliberating}
               placeholder="e.g. Maximize revenue for upcoming festival without sacrificing contribution margin..."
-              className="w-full px-4 py-2.5 rounded-2xl bg-[#FAF8F5] border border-stone-200 text-xs text-stone-800 placeholder-stone-400 focus:outline-hidden focus:ring-2 focus:ring-stone-900/10"
+              className="w-full px-4 py-3 rounded-xl bg-[#FAF8F5] border border-[#E2E8F0] text-xs sm:text-sm text-[#0A1B2A] placeholder-[#94A3B8] focus:bg-white focus:outline-none focus:border-[#0069FF] focus:ring-2 focus:ring-[#0069FF]/10 transition-all"
             />
           </div>
 
-          {/* 5-Phase Loop Visualization */}
-          <div className="grid grid-cols-5 gap-2 text-center text-[10px] py-4 bg-[#FAF8F5] border border-stone-200/70 rounded-2xl">
-            <div className={`space-y-1 px-1 transition-colors ${deliberationStep === "investigating" ? "text-blue-600 font-bold" : ""}`}>
-              <span className="font-mono font-bold text-stone-400">01</span>
-              <p className="font-bold text-stone-900">Investigate</p>
-              <p className="text-[9px] text-stone-500">Scout &amp; Echo</p>
+          {/* 5-Phase Loop Visualization - Serene, quiet progress rail */}
+          <div className="grid grid-cols-5 gap-1 py-4 px-2 bg-[#FAF8F5] border border-[#E2E8F0] rounded-2xl text-center text-xs">
+            <div className={`space-y-1 py-1 transition-colors ${deliberationStep === "investigating" ? "text-[#0069FF] font-semibold" : "text-[#64748B]"}`}>
+              <p className="font-mono text-xs text-[#94A3B8]">01</p>
+              <p className="font-semibold text-xs text-[#0A1B2A]">Investigate</p>
+              <p className="text-xs text-[#64748B]">Scout &amp; Echo</p>
             </div>
-            <div className="space-y-1 px-1 border-l border-stone-200">
-              <span className="font-mono font-bold text-stone-400">02</span>
-              <p className="font-bold text-stone-900">Constraints</p>
-              <p className="text-[9px] text-stone-500">Guardian</p>
+            <div className="space-y-1 py-1 border-l border-[#E2E8F0] text-[#64748B]">
+              <p className="font-mono text-xs text-[#94A3B8]">02</p>
+              <p className="font-semibold text-xs text-[#0A1B2A]">Floor Rules</p>
+              <p className="text-xs text-[#64748B]">Guardian</p>
             </div>
-            <div className="space-y-1 px-1 border-l border-stone-200">
-              <span className="font-mono font-bold text-stone-400">03</span>
-              <p className="font-bold text-stone-900">Draft Offers</p>
-              <p className="text-[9px] text-stone-500">Muse</p>
+            <div className="space-y-1 py-1 border-l border-[#E2E8F0] text-[#64748B]">
+              <p className="font-mono text-xs text-[#94A3B8]">03</p>
+              <p className="font-semibold text-xs text-[#0A1B2A]">Draft Offers</p>
+              <p className="text-xs text-[#64748B]">Muse</p>
             </div>
-            <div className={`space-y-1 px-1 border-l border-stone-200 transition-colors ${deliberationStep === "debating" ? "text-amber-600 font-bold" : ""}`}>
-              <span className="font-mono font-bold text-stone-400">04</span>
-              <p className="font-bold text-stone-900">Profit Audit</p>
-              <p className="text-[9px] text-stone-500">Guardian Veto</p>
+            <div className={`space-y-1 py-1 border-l border-[#E2E8F0] transition-colors ${deliberationStep === "debating" ? "text-amber-600 font-semibold" : "text-[#64748B]"}`}>
+              <p className="font-mono text-xs text-[#94A3B8]">04</p>
+              <p className="font-semibold text-xs text-[#0A1B2A]">Profit Audit</p>
+              <p className="text-xs text-[#64748B]">Margin Veto</p>
             </div>
-            <div className={`space-y-1 px-1 border-l border-stone-200 transition-colors ${deliberationStep === "synthesizing" ? "text-rose-600 font-bold" : ""}`}>
-              <span className="font-mono font-bold text-stone-400">05</span>
-              <p className="font-bold text-stone-900">Decision Card</p>
-              <p className="text-[9px] text-stone-500">Commander</p>
+            <div className={`space-y-1 py-1 border-l border-[#E2E8F0] transition-colors ${deliberationStep === "synthesizing" ? "text-[#0069FF] font-semibold" : "text-[#64748B]"}`}>
+              <p className="font-mono text-xs text-[#94A3B8]">05</p>
+              <p className="font-semibold text-xs text-[#0A1B2A]">Decision Card</p>
+              <p className="text-xs text-[#64748B]">Commander</p>
             </div>
           </div>
 
-          {/* Primary Convene Action */}
+          {/* Primary Action Button */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-            <div className="text-xs text-stone-500">
+            <p className="text-xs text-[#64748B] leading-relaxed">
               {isDeliberating
-                ? "Council in session: Synthesizing real catalog stock, customer friction, and margin floors..."
-                : "Ready to evaluate store data and synthesize an empirical Strategy Decision Card."}
-            </div>
+                ? "Council deliberating: Analyzing store inventory, drop-offs, and margin rules..."
+                : "Ready to run multi-agent debate and synthesize a Strategy Decision Card."}
+            </p>
             <button
               type="button"
               onClick={handleConveneCouncil}
               disabled={isDeliberating}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-full text-xs font-black bg-stone-900 hover:bg-stone-800 text-white flex items-center justify-center gap-2.5 cursor-pointer shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#0069FF] hover:bg-[#0052CC] text-white flex items-center justify-center gap-2.5 cursor-pointer shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 shrink-0"
             >
               {isDeliberating ? (
                 <>
-                  <Loader2 size={15} className="animate-spin text-amber-400" />
+                  <Loader2 size={16} className="animate-spin text-white" />
                   <span>Deliberating ({deliberationStep})...</span>
                 </>
               ) : (
                 <>
-                  <Bot size={15} className="text-amber-400" />
+                  <Bot size={16} />
                   <span>Convene Full Sales Council</span>
                 </>
               )}
@@ -481,64 +486,64 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
           </div>
         </div>
 
-        {/* Right Col: Persona Spotlight & Quick Rules */}
-        <div className="p-6 bg-[#FAF8F5] border border-stone-200/90 rounded-[32px] shadow-xs space-y-5 flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-stone-900 text-xs font-bold">
-              <ShieldCheck size={16} className="text-amber-600" />
-              <span>Active Council Guardrails</span>
+        {/* Right Col: Active Policy Protections */}
+        <div className="p-6 sm:p-8 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-6 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-[#0A1B2A] text-sm font-semibold">
+              <ShieldCheck size={18} className="text-[#0069FF]" />
+              <span>Active Policy Protections</span>
             </div>
-            <ul className="text-[11px] text-stone-600 space-y-2 leading-relaxed">
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-600 font-bold">✓</span>
+            <ul className="text-xs text-[#475569] space-y-3 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
                 <span>Minimum Contribution Margin locked at <strong>{policies.min_contribution_margin_pct}%</strong></span>
               </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-600 font-bold">✓</span>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
                 <span>Discount ceilings restricted to <strong>{policies.max_discount_pct}%</strong></span>
               </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span>Courier COD return allowance factored at <strong>{policies.max_cod_return_allowance_pct}%</strong></span>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
+                <span>Courier return rate factored at <strong>{policies.max_cod_return_allowance_pct}%</strong></span>
               </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span>All owner approvals secured with SHA-256 payload hashes</span>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
+                <span>Cryptographically verified &amp; sealed by store owner</span>
               </li>
             </ul>
           </div>
 
-          <div className="pt-4 border-t border-stone-200/80">
+          <div className="pt-4 border-t border-[#E2E8F0]">
             <button
               type="button"
               onClick={onNavigateToInsights}
-              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-white hover:bg-stone-100 border border-stone-200 text-stone-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
-              <TrendingUp size={13} />
+              <TrendingUp size={14} className="text-[#64748B]" />
               <span>View Quick Strategy Desk</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* 4. Synthesized Strategy Decision Card (When Deliberation Completes) */}
+      {/* 4. Synthesized Strategy Decision Card */}
       {councilResult && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-black text-stone-900 tracking-tight">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2.5">
+              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight">
                 Synthesized Strategy Decision
-              </h3>
-              <span className="text-xs font-mono text-stone-400">
+              </h2>
+              <span className="text-xs font-mono text-[#64748B]">
                 Session {councilResult.session.id}
               </span>
             </div>
             <button
               type="button"
               onClick={handleConveneCouncil}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
             >
-              <RotateCcw size={13} />
+              <RotateCcw size={13} className="text-[#64748B]" />
               <span>Re-run Deliberation</span>
             </button>
           </div>
