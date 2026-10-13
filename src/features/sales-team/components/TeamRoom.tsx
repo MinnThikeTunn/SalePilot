@@ -154,7 +154,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
       {/* 1. Command Header & Telemetry Strip */}
       <div className="p-6 sm:p-10 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-8">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
+          <div className="space-y-2.5 max-w-xl">
             <div className="flex items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20">
                 <Bot size={12} />
@@ -166,11 +166,11 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               </span>
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#0A1B2A] tracking-tight leading-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#0A1B2A] tracking-tight leading-tight text-balance">
               Merchant Council Chamber
             </h1>
 
-            <p className="text-sm sm:text-base text-[#475569] leading-relaxed font-normal">
+            <p className="text-sm sm:text-base text-[#475569] leading-relaxed font-normal text-balance">
               Five coordinated AI specialists investigating real inventory, customer friction, and profit margin rules under strict merchant governance.
             </p>
           </div>
@@ -322,10 +322,10 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
       <div className="space-y-5">
         <div className="flex items-end justify-between px-1">
           <div className="space-y-1">
-            <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight">
+            <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight text-balance">
               Council Specialists
             </h2>
-            <p className="text-xs sm:text-sm text-[#64748B]">
+            <p className="text-xs sm:text-sm text-[#64748B] text-balance">
               Consult individual domain specialists or inspect their active hypotheses.
             </p>
           </div>
@@ -402,10 +402,10 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         <div className="lg:col-span-2 p-6 sm:p-8 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight">
+              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight text-balance">
                 Council Deliberation Theater
               </h2>
-              <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">
+              <p className="text-xs sm:text-sm text-[#64748B] mt-0.5 text-balance">
                 Debate store inventory, buyer hesitation, and discount economics across all 5 specialists.
               </p>
             </div>
@@ -531,7 +531,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2.5">
-              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight">
+              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight text-balance">
                 Synthesized Strategy Decision
               </h2>
               <span className="text-xs font-mono text-[#64748B]">
