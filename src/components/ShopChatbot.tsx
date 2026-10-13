@@ -550,9 +550,11 @@ export function ShopChatbot({
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (apiKey && apiKey !== "undefined" && apiKey !== "") {
         try {
-          const productList = products
-            .map((p) => `- ${p.name} (Price: ${p.price} MMK, Stock: ${p.stock}): ${p.description}`)
-            .join("\n");
+          const productList = products.length > 0
+            ? products
+                .map((p) => `- ${p.name} (Price: ${p.price} MMK, Stock: ${p.stock}): ${p.description}`)
+                .join("\n")
+            : "(EMPTY CATALOG - The merchant has not added any products to this store yet.)";
 
           const candidateModels = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
           let botText: string | null = null;
@@ -620,8 +622,10 @@ AUTHORITATIVE STORE KNOWLEDGE INSTRUCTIONS:
   3. Phone / Contact / Call: Provide the store phone number (${effectivePhone || "contact directly via chat"}).
   4. Address / Location / Visit: Provide the boutique address (${effectiveAddress || "online boutique with direct courier delivery"}).
   5. Products / Stock / Price:
-     - SINGLE PRODUCT INQUIRIES (CRITICAL): When the customer asks about ONE specific product (e.g. asks about "Lamp", "Do you have lamp?", "Is lamp in stock?", "Fan price", "Tell me about the lamp"), you MUST respond with ONLY information about THAT SPECIFIC PRODUCT! Provide that product's exact price, stock availability, and description. DO NOT mention, list, or summarize any other products from the catalog.
-     - FULL CATALOG INQUIRIES: ONLY list multiple products or the entire catalog if the customer explicitly asks a broad question like "what do you have?", "show catalog", "list all items", or "what do you sell?".
+     - ZERO PRODUCTS (CRITICAL): If the catalog above is EMPTY (0 products), you MUST explicitly state that the store catalog has no products listed yet (e.g. "Our collection is currently being prepared and will be available soon! Please feel free to check back shortly."). You MUST NEVER invent, hallucinate, imagine, or make up ANY fake products or prices!
+     - STRICT CATALOG GROUNDING: NEVER fabricate items. ONLY reference items explicitly listed in "Available Products in Catalog" above. If an item is not in the list, state politely that it is not available.
+     - SINGLE PRODUCT INQUIRIES: When the customer asks about ONE specific product, you MUST respond with ONLY information about THAT SPECIFIC PRODUCT. DO NOT mention, list, or summarize any other products from the catalog.
+     - FULL CATALOG INQUIRIES: ONLY list products if items exist in the catalog above.
   6. Ordering / Checkout: Guide the customer to add items to their bag and use the Checkout button.
   7. Basket / Cart / Order status:
      - If the customer asks about their cart or basket and it is empty: State clearly that their shopping basket is currently empty (0 items) and offer to help them find items.
@@ -630,11 +634,8 @@ AUTHORITATIVE STORE KNOWLEDGE INSTRUCTIONS:
 - FORMATTING & PLAIN TEXT RULES:
   * Write in normal, clean plain conversational text.
   * NEVER use markdown asterisks (no "**" or "*"), hashtags ("#"), or bolding syntax in your response.
-  * When showing a single product:
-    Lamp — 4,500 MMK (10 pieces available). Handcrafted desk lamp with warm glow. Would you like to add it to your bag?
-  * If broad catalog is requested:
-    • Lamp — 4,500 MMK (10 pieces available)
-    • Fan — 4,500 MMK (4 pieces available)
+  * When showing real items from the catalog, format cleanly:
+    • [Product Name] — [Price] MMK ([Stock] pieces available)
 
 Customer Message: ${trimmed}
 Candy:`,
