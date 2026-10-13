@@ -60,6 +60,7 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<AnalyticsTab>("decisions");
+  const [chartMetric, setChartMetric] = useState<"revenue" | "orders">("revenue");
   const [analyticsRun, setAnalyticsRun] = useState<AnalyticsRun | null>(null);
   const [opportunities, setOpportunities] = useState<SalesOpportunity[]>([]);
   const [topPriority, setTopPriority] = useState<SalesOpportunity | null>(null);
@@ -270,9 +271,9 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
       {/* 1. Header with Title & Action Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
-          <h2 className="font-black text-2xl tracking-tight text-[#0A1B2A]">AI Strategy Desk</h2>
+          <h2 className="font-serif font-medium text-2xl sm:text-3xl tracking-tight text-[#0A1B2A]">AI Strategy Desk</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Deterministic business intelligence and evidence-backed decision support.
+            Autonomous commercial intelligence and prioritized merchant action plans.
           </p>
         </div>
 
@@ -287,7 +288,7 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
           <button
             onClick={() => executeAnalysis(true)}
             disabled={loading}
-            className="px-4 py-2 rounded-full text-xs font-semibold bg-[#FAF8F5] hover:bg-slate-100 text-[#0A1B2A] border border-slate-200 flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+            className="px-3.5 py-2 rounded-xl text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-[0.98]"
           >
             <RefreshCw size={12} className={loading ? "animate-spin text-[#0069FF]" : "text-slate-500"} />
             <span>{loading ? "Re-evaluating..." : "Re-evaluate Strategy"}</span>
@@ -307,23 +308,21 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
       )}
 
       {/* 2.5 Segmented Workspace Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-[#FAF8F5] border border-slate-200/90 rounded-2xl overflow-x-auto max-w-full">
+      <div className="flex items-center gap-1.5 p-1 bg-[#F4F2EC]/80 border border-slate-200/70 rounded-2xl overflow-x-auto max-w-full">
         <button
           onClick={() => setActiveTab("decisions")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
             activeTab === "decisions"
-              ? "bg-[#0A1B2A] text-white shadow-xs font-bold"
-              : "text-slate-600 hover:text-[#0A1B2A] hover:bg-white/60"
+              ? "bg-white text-[#0A1B2A] shadow-2xs font-semibold"
+              : "text-slate-600 hover:text-[#0A1B2A] font-medium"
           }`}
         >
-          <Layers size={14} className={activeTab === "decisions" ? "text-white" : "text-slate-400"} />
-          <span>Strategic Decisions</span>
+          <Layers size={13} className={activeTab === "decisions" ? "text-[#0069FF]" : "text-slate-400"} />
+          <span>Strategic Priorities</span>
           {opportunities.length > 0 && (
             <span
-              className={`px-1.5 py-0.5 rounded-full font-mono text-[11px] font-bold ${
-                activeTab === "decisions"
-                  ? "bg-white/20 text-white"
-                  : "bg-slate-200/70 text-slate-700"
+              className={`px-1.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
+                activeTab === "decisions" ? "bg-slate-100 text-slate-800" : "bg-slate-200/60 text-slate-600"
               }`}
             >
               {opportunities.length}
@@ -333,37 +332,37 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
 
         <button
           onClick={() => setActiveTab("economics")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
             activeTab === "economics"
-              ? "bg-[#0A1B2A] text-white shadow-xs font-bold"
-              : "text-slate-600 hover:text-[#0A1B2A] hover:bg-white/60"
+              ? "bg-white text-[#0A1B2A] shadow-2xs font-semibold"
+              : "text-slate-600 hover:text-[#0A1B2A] font-medium"
           }`}
         >
-          <TrendingUp size={14} className={activeTab === "economics" ? "text-emerald-400" : "text-slate-400"} />
+          <TrendingUp size={13} className={activeTab === "economics" ? "text-[#0069FF]" : "text-slate-400"} />
           <span>Unit Economics & Margins</span>
         </button>
 
         <button
           onClick={() => setActiveTab("channels")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
             activeTab === "channels"
-              ? "bg-[#0A1B2A] text-white shadow-xs font-bold"
-              : "text-slate-600 hover:text-[#0A1B2A] hover:bg-white/60"
+              ? "bg-white text-[#0A1B2A] shadow-2xs font-semibold"
+              : "text-slate-600 hover:text-[#0A1B2A] font-medium"
           }`}
         >
-          <CreditCard size={14} className={activeTab === "channels" ? "text-sky-400" : "text-slate-400"} />
-          <span>Channel & Payment Risk</span>
+          <CreditCard size={13} className={activeTab === "channels" ? "text-[#0069FF]" : "text-slate-400"} />
+          <span>Payment Channels & Risk</span>
         </button>
 
         <button
           onClick={() => setActiveTab("inventory")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs cursor-pointer transition-all flex items-center gap-2 shrink-0 ${
             activeTab === "inventory"
-              ? "bg-[#0A1B2A] text-white shadow-xs font-bold"
-              : "text-slate-600 hover:text-[#0A1B2A] hover:bg-white/60"
+              ? "bg-white text-[#0A1B2A] shadow-2xs font-semibold"
+              : "text-slate-600 hover:text-[#0A1B2A] font-medium"
           }`}
         >
-          <Box size={14} className={activeTab === "inventory" ? "text-amber-400" : "text-slate-400"} />
+          <Box size={13} className={activeTab === "inventory" ? "text-[#0069FF]" : "text-slate-400"} />
           <span>Inventory Runway</span>
         </button>
       </div>
@@ -371,523 +370,344 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
       {/* Tab Content Viewport */}
       {activeTab === "decisions" && (
         <div className="space-y-8 animate-fadeIn">
-          {/* 3. Top Priority Opportunity Spotlight Container (rounded-[32px]) */}
+          {/* 3. Top Priority Opportunity Spotlight Container (rounded-[28px]) */}
           {topPriority && topPriority.status !== "dismissed" && topPriority.status !== "completed" && (
-            <div className="bg-gradient-to-b from-[#FAF8F5] to-white border border-slate-200/90 rounded-[32px] p-7 shadow-xs space-y-4">
+            <div className="bg-white border border-slate-200/90 rounded-[28px] p-6 sm:p-7 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
-            <span className="px-3 py-1 rounded-full bg-[#0069FF] text-white font-mono text-[11px] font-bold flex items-center gap-1.5">
-              <Award size={13} />
-              Top Business Priority
-            </span>
+                <span className="px-3 py-1 rounded-full bg-[#EFF6FF] text-[#0069FF] font-mono text-[11px] font-semibold border border-[#0069FF]/20 flex items-center gap-1.5">
+                  <Award size={13} />
+                  Top Commercial Priority
+                </span>
 
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-[#0A1B2A]">
-                Priority Score: {topPriority.priority_score} / 100
-              </span>
-            </div>
-          </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-slate-700">
+                    Priority Score: {topPriority.priority_score} / 100
+                  </span>
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <h3 className="font-black text-xl text-[#0A1B2A] leading-snug">{topPriority.title}</h3>
-            <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">
-              {topPriority.problem_description}
-            </p>
-          </div>
+              <div className="space-y-1.5">
+                <h3 className="font-serif text-xl sm:text-2xl font-medium text-[#0A1B2A] tracking-tight leading-snug">
+                  {topPriority.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
+                  {topPriority.problem_description}
+                </p>
+              </div>
 
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-2 text-xs">
-            <div className="flex items-center gap-1.5 font-bold text-slate-900">
-              <Sparkles size={14} className="text-[#0069FF]" />
-              <span>Why this matters right now</span>
-            </div>
-            <p className="text-slate-700 leading-relaxed text-xs">
-              {topPriority.ai_explanation.why_it_matters}
-            </p>
-            <p className="text-slate-600 text-xs pt-1 border-t border-slate-100">
-              <strong className="text-slate-800">Action:</strong> {topPriority.ai_explanation.action_rationale}
-            </p>
-          </div>
+              <div className="bg-[#FAF8F5] border border-slate-200/70 rounded-xl p-4 space-y-2 text-xs">
+                <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                  <Sparkles size={14} className="text-[#0069FF]" />
+                  <span>Why this matters right now</span>
+                </div>
+                <p className="text-slate-700 leading-relaxed text-xs">
+                  {topPriority.ai_explanation.why_it_matters}
+                </p>
+                <p className="text-slate-600 text-xs pt-1.5 border-t border-slate-200/60">
+                  <strong className="text-slate-800">Recommended action:</strong> {topPriority.ai_explanation.action_rationale}
+                </p>
+              </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            <button
-              onClick={() => setSelectedEvidenceOpp(topPriority)}
-              className="text-xs font-semibold text-[#0069FF] hover:underline cursor-pointer flex items-center gap-1"
-            >
-              Audit supporting metrics & formulas →
-            </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleUpdateStatus(topPriority.id, "accepted")}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition-all"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => handleUpdateStatus(topPriority.id, "in_progress")}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#0A1B2A] hover:bg-slate-800 text-white cursor-pointer transition-all shadow-xs"
-              >
-                Start Action
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Business Performance Overview & Charts */}
-      <div className="space-y-4">
-        <h3 className="font-black text-lg tracking-tight text-[#0A1B2A]">Business Performance Overview</h3>
-
-        {/* 4 KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Revenue */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 space-y-1 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Net Revenue</span>
-            <div className="flex items-baseline justify-between gap-2 mt-1">
-              <span className="font-mono font-bold text-lg text-[#0A1B2A]">
-                {currentMetrics ? currentMetrics.revenue.toLocaleString() : "0"} MMK
-              </span>
-              {changes?.revenue_pct !== null && changes?.revenue_pct !== undefined && (
-                <span
-                  className={`text-[11px] font-mono font-semibold flex items-center ${
-                    changes.revenue_pct >= 0 ? "text-emerald-700" : "text-rose-700"
-                  }`}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <button
+                  onClick={() => setSelectedEvidenceOpp(topPriority)}
+                  className="text-xs font-medium text-[#0069FF] hover:underline cursor-pointer flex items-center gap-1"
                 >
-                  {changes.revenue_pct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                  {Math.abs(changes.revenue_pct)}%
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-400">7-day trailing net sales</p>
-          </div>
+                  Audit supporting metrics & formulas →
+                </button>
 
-          {/* Orders */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 space-y-1 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Completed Orders</span>
-            <div className="flex items-baseline justify-between gap-2 mt-1">
-              <span className="font-mono font-bold text-lg text-[#0A1B2A]">
-                {currentMetrics ? currentMetrics.completed_orders : "0"} orders
-              </span>
-              {changes?.orders_pct !== null && changes?.orders_pct !== undefined && (
-                <span
-                  className={`text-[11px] font-mono font-semibold flex items-center ${
-                    changes.orders_pct >= 0 ? "text-emerald-700" : "text-rose-700"
-                  }`}
-                >
-                  {changes.orders_pct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                  {Math.abs(changes.orders_pct)}%
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-400">Paid & confirmed orders</p>
-          </div>
-
-          {/* Average Order Value (AOV) */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 space-y-1 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Average Basket (AOV)</span>
-            <div className="flex items-baseline justify-between gap-2 mt-1">
-              <span className="font-mono font-bold text-lg text-[#0A1B2A]">
-                {currentMetrics ? currentMetrics.aov.toLocaleString() : "0"} MMK
-              </span>
-              {changes?.aov_pct !== null && changes?.aov_pct !== undefined && (
-                <span
-                  className={`text-[11px] font-mono font-semibold flex items-center ${
-                    changes.aov_pct >= 0 ? "text-emerald-700" : "text-rose-700"
-                  }`}
-                >
-                  {changes.aov_pct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                  {Math.abs(changes.aov_pct)}%
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-400">Revenue per completed order</p>
-          </div>
-
-          {/* Cancellation Rate */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-4.5 space-y-1 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Cancellation Rate</span>
-            <div className="flex items-baseline justify-between gap-2 mt-1">
-              <span className="font-mono font-bold text-lg text-[#0A1B2A]">
-                {currentMetrics ? Math.round(currentMetrics.cancellation_rate * 100) : "0"}%
-              </span>
-              {changes?.cancellation_rate_pct !== null && changes?.cancellation_rate_pct !== undefined && (
-                <span
-                  className={`text-[11px] font-mono font-semibold flex items-center ${
-                    changes.cancellation_rate_pct <= 0 ? "text-emerald-700" : "text-rose-700"
-                  }`}
-                >
-                  {changes.cancellation_rate_pct <= 0 ? <ArrowDownRight size={13} /> : <ArrowUpRight size={13} />}
-                  {Math.abs(changes.cancellation_rate_pct)}%
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-400">Unfulfilled or rejected orders</p>
-          </div>
-        </div>
-
-        {/* Row 1: Dual High-Resolution Time-Series SVG Dashboards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
-          {/* Dashboard 1: Revenue Matrix */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0069FF] flex items-center justify-center font-bold text-xs">
-                    <TrendingUp size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-[#0A1B2A]">Weekly Revenue Matrix</h4>
-                    <span className="text-[11px] text-slate-400">Trailing 7-day net store sales</span>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full bg-blue-50 text-[#0069FF] font-mono text-[11px] font-bold border border-blue-200/70">
-                  {currentMetrics ? currentMetrics.revenue.toLocaleString() : "0"} MMK
-                </span>
-              </div>
-              <CustomChart data={weekdaysChartData} color="#0069FF" title="Net Sales Trajectory" unit="MMK" />
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-slate-100 text-[11px]">
-              <div>
-                <span className="text-slate-400 block font-sans">Avg Run-Rate</span>
-                <strong className="font-mono text-slate-800">
-                  {Math.round((currentMetrics?.revenue || 0) / 7).toLocaleString()} MMK/d
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-sans">Peak Volume</span>
-                <strong className="font-mono text-slate-800">
-                  {Math.max(...weekdaysChartData.map((d) => d.value), 0).toLocaleString()} MMK
-                </strong>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-400 block font-sans">Trajectory</span>
-                <strong className={`font-mono ${changes?.revenue_pct !== null && changes?.revenue_pct !== undefined && changes.revenue_pct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                  {changes?.revenue_pct !== null && changes?.revenue_pct !== undefined ? `${changes.revenue_pct > 0 ? "+" : ""}${changes.revenue_pct}%` : "Stable"}
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Dashboard 2: Order Fulfillment Velocity */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                    <ShoppingBag size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-[#0A1B2A]">Order Fulfillment Velocity</h4>
-                    <span className="text-[11px] text-slate-400">Daily confirmed orders completed</span>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[11px] font-bold border border-emerald-200/70">
-                  {currentMetrics ? currentMetrics.completed_orders : "0"} orders
-                </span>
-              </div>
-              <CustomChart data={weekdayOrdersChartData} color="#10B981" title="Order Volume Velocity" unit="Orders" />
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-slate-100 text-[11px]">
-              <div>
-                <span className="text-slate-400 block font-sans">Daily Average</span>
-                <strong className="font-mono text-slate-800">
-                  {(Math.round(((currentMetrics?.completed_orders || 0) / 7) * 10) / 10).toFixed(1)} orders/d
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-sans">Peak Daily Orders</span>
-                <strong className="font-mono text-slate-800">
-                  {Math.max(...weekdayOrdersChartData.map((d) => d.value), 0)} orders
-                </strong>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-400 block font-sans">Fulfillment Rate</span>
-                <strong className="font-mono text-emerald-700">
-                  {orders.length > 0
-                    ? Math.round((orders.filter((o) => o.status === "confirmed" || o.status === "completed").length / orders.length) * 100)
-                    : 100}
-                  %
-                </strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Three In-Depth Analytic Matrix Dashboards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-          {/* Dashboard 3: Payment Channel & Settlement Risk */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                    <CreditCard size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[#0A1B2A]">Payment Channel Share</h4>
-                    <span className="text-[11px] text-slate-400">Settlement volume & risk</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stacked Progress Bar */}
-              <div className="w-full h-2 rounded-full bg-slate-100 flex overflow-hidden">
-                {paymentChannelStats.channels.map((ch, idx) => {
-                  const colors = ["bg-[#0069FF]", "bg-indigo-500", "bg-emerald-500", "bg-amber-500", "bg-slate-400"];
-                  return (
-                    <div
-                      key={ch.name}
-                      style={{ width: `${Math.max(ch.pctOfVolume, 3)}%` }}
-                      className={`${colors[idx % colors.length]} h-full transition-all`}
-                      title={`${ch.name}: ${ch.pctOfVolume}%`}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Channels List */}
-              <div className="space-y-2.5 pt-1 text-xs">
-                {paymentChannelStats.channels.slice(0, 3).map((ch) => (
-                  <div key={ch.name} className="flex items-center justify-between border-b border-slate-50 pb-2">
-                    <div>
-                      <span className="font-medium text-slate-800 text-xs block">{ch.name}</span>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {ch.total} orders • {ch.cancellationRate}% cancel
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-mono font-bold text-slate-900 text-xs block">
-                        {ch.volume.toLocaleString()} MMK
-                      </span>
-                      <span className="text-[11px] font-mono font-semibold text-indigo-700">
-                        {ch.pctOfVolume}% share
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setActiveTab("channels")}
-              className="text-[11px] text-[#0069FF] font-semibold hover:underline pt-3 cursor-pointer text-left block"
-            >
-              Explore complete channel & risk breakdown →
-            </button>
-          </div>
-
-          {/* Dashboard 4: SKU Demand Velocity Matrix */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
-                    <Box size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[#0A1B2A]">Top Product Demand</h4>
-                    <span className="text-[11px] text-slate-400">Unit sales & depletion</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product items */}
-              <div className="space-y-2.5 pt-1 text-xs">
-                {topProductsStats.items.map((prod) => (
-                  <div key={prod.name} className="space-y-1 border-b border-slate-50 pb-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800 text-xs truncate max-w-[130px]">{prod.name}</span>
-                      <span className="font-mono font-bold text-slate-900 text-xs">
-                        {prod.units} sold
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-amber-500 h-full rounded-full transition-all"
-                        style={{ width: `${Math.min(100, Math.round((prod.units / topProductsStats.maxUnits) * 100))}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center text-[11px] text-slate-400 font-mono">
-                      <span>{prod.revenue.toLocaleString()} MMK</span>
-                      <span className={prod.stock <= 5 ? "text-rose-600 font-bold" : "text-slate-500"}>
-                        {prod.stock} in stock
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setActiveTab("inventory")}
-              className="text-[11px] text-amber-700 font-semibold hover:underline pt-3 cursor-pointer text-left block"
-            >
-              Audit inventory runway & reorder days →
-            </button>
-          </div>
-
-          {/* Dashboard 5: Unit Economics & Gross Profit Breakdown */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                    <Percent size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[#0A1B2A]">Unit Economics</h4>
-                    <span className="text-[11px] text-slate-400">Gross profit & wholesale COGS</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Big Gross Margin Stat */}
-              <div className="bg-[#FAF8F5] border border-slate-200/60 rounded-xl p-3 text-center space-y-0.5">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Store Gross Margin</span>
-                <div className="font-mono font-black text-2xl text-emerald-700">
-                  {economicsStats.marginPct}%
-                </div>
-                <span className="text-[11px] text-slate-500 font-mono block">
-                  Contribution: <strong className="text-slate-800">{economicsStats.grossProfit.toLocaleString()} MMK</strong>
-                </span>
-              </div>
-
-              {/* Breakdown details */}
-              <div className="space-y-2 text-xs font-mono pt-1">
-                <div className="flex justify-between items-center border-b border-slate-50 pb-1.5">
-                  <span className="text-slate-500 font-sans">Gross Product Sales</span>
-                  <span className="text-slate-800 font-bold">{economicsStats.grossRev.toLocaleString()} MMK</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-slate-50 pb-1.5">
-                  <span className="text-slate-500 font-sans">Wholesale COGS</span>
-                  <span className="text-rose-600 font-bold">-{economicsStats.totalCogs.toLocaleString()} MMK</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-slate-50 pb-1.5">
-                  <span className="text-slate-500 font-sans">Net Store Margin</span>
-                  <span className="text-emerald-700 font-bold">+{economicsStats.grossProfit.toLocaleString()} MMK</span>
+                  <button
+                    onClick={() => handleUpdateStatus(topPriority.id, "accepted")}
+                    className="px-4 py-2 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer transition"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(topPriority.id, "in_progress")}
+                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#0A1B2A] hover:bg-slate-800 text-white cursor-pointer transition shadow-xs"
+                  >
+                    Start Action
+                  </button>
                 </div>
               </div>
             </div>
+          )}
 
-            <button
-              onClick={() => setActiveTab("economics")}
-              className="text-[11px] text-emerald-700 font-semibold hover:underline pt-3 cursor-pointer text-left block"
-            >
-              View product margin leaderboard →
-            </button>
-          </div>
-        </div>
+          {/* 4. Business Performance Overview & Charts */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif font-medium text-xl tracking-tight text-[#0A1B2A]">
+                Store Performance Pulse
+              </h3>
+              <span className="text-[11px] font-mono text-slate-500">Trailing 7 Days</span>
+            </div>
 
-        {/* Row 3: Township Logistics Heatmap & Order Ledger Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2">
-          {/* Dashboard 6: Township Logistics (7 cols) */}
-          <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center font-bold text-xs">
-                    <Truck size={15} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-[#0A1B2A]">Regional Township Demand</h4>
-                    <span className="text-[11px] text-slate-400">Order concentration & delivery averages</span>
-                  </div>
+            {/* 4 Clean Pulse KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Revenue */}
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-mono tracking-wider text-slate-500 uppercase font-medium">Net Revenue</span>
+                <div className="flex items-baseline justify-between gap-2 mt-1">
+                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0A1B2A]">
+                    {currentMetrics ? currentMetrics.revenue.toLocaleString() : "0"} MMK
+                  </span>
+                  {changes?.revenue_pct !== null && changes?.revenue_pct !== undefined && (
+                    <span
+                      className={`text-[11px] font-mono font-semibold flex items-center ${
+                        changes.revenue_pct >= 0 ? "text-emerald-700" : "text-rose-700"
+                      }`}
+                    >
+                      {changes.revenue_pct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                      {Math.abs(changes.revenue_pct)}%
+                    </span>
+                  )}
                 </div>
-                <span className="text-[11px] font-mono text-slate-500">
-                  {townshipStats.totalCount} orders total
-                </span>
+                <p className="text-[11px] text-slate-400">7-day confirmed sales</p>
               </div>
 
-              <div className="space-y-2.5 pt-2 text-xs">
-                {townshipStats.list.map((town) => (
-                  <div key={town.name} className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-slate-800 text-xs">{town.name}</span>
-                      <span className="font-mono font-bold text-slate-900 text-xs">
-                        {town.count} orders ({town.pctShare}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-sky-500 h-full rounded-full transition-all"
-                        style={{ width: `${Math.max(town.pctShare, 5)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-mono">
-                      <span>Vol: {town.volume.toLocaleString()} MMK</span>
-                      <span>Avg Courier Fee: {town.avgFee.toLocaleString()} MMK</span>
-                    </div>
-                  </div>
-                ))}
+              {/* Orders */}
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-mono tracking-wider text-slate-500 uppercase font-medium">Completed Orders</span>
+                <div className="flex items-baseline justify-between gap-2 mt-1">
+                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0A1B2A]">
+                    {currentMetrics ? currentMetrics.completed_orders : "0"}
+                  </span>
+                  {changes?.orders_pct !== null && changes?.orders_pct !== undefined && (
+                    <span
+                      className={`text-[11px] font-mono font-semibold flex items-center ${
+                        changes.orders_pct >= 0 ? "text-emerald-700" : "text-rose-700"
+                      }`}
+                    >
+                      {changes.orders_pct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                      {Math.abs(changes.orders_pct)}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">Paid and dispatched</p>
+              </div>
+
+              {/* Average Order Value (AOV) */}
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-mono tracking-wider text-slate-500 uppercase font-medium">Average Basket</span>
+                <div className="flex items-baseline justify-between gap-2 mt-1">
+                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0A1B2A]">
+                    {currentMetrics ? currentMetrics.aov.toLocaleString() : "0"} MMK
+                  </span>
+                  {changes?.aov_pct !== null && changes?.aov_pct !== undefined && (
+                    <span
+                      className={`text-[11px] font-mono font-semibold flex items-center ${
+                        changes.aov_pct >= 0 ? "text-emerald-700" : "text-rose-700"
+                      }`}
+                    >
+                      {changes.aov_pct >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                      {Math.abs(changes.aov_pct)}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">Net revenue per order</p>
+              </div>
+
+              {/* Cancellation Rate */}
+              <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-mono tracking-wider text-slate-500 uppercase font-medium">Cancellation Rate</span>
+                <div className="flex items-baseline justify-between gap-2 mt-1">
+                  <span className="font-mono font-bold text-lg sm:text-xl text-[#0A1B2A]">
+                    {currentMetrics ? Math.round(currentMetrics.cancellation_rate * 100) : "0"}%
+                  </span>
+                  {changes?.cancellation_rate_pct !== null && changes?.cancellation_rate_pct !== undefined && (
+                    <span
+                      className={`text-[11px] font-mono font-semibold flex items-center ${
+                        changes.cancellation_rate_pct <= 0 ? "text-emerald-700" : "text-rose-700"
+                      }`}
+                    >
+                      {changes.cancellation_rate_pct <= 0 ? <ArrowDownRight size={13} /> : <ArrowUpRight size={13} />}
+                      {Math.abs(changes.cancellation_rate_pct)}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">Rejected or abandoned</p>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex justify-between items-center">
-              <span>Delivery logistics optimized for Yangon metropolitan routes</span>
-              <span className="font-mono text-sky-700 font-semibold">Active Matrix</span>
-            </div>
-          </div>
-
-          {/* Dashboard 7: Order Ledger & Settlement Summary (5 cols) */}
-          <div className="md:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
-                  <CheckCircle2 size={15} />
-                </div>
+            {/* Unified 2-Column Analytics Workspace (Chart + Ledger Audit) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-1">
+              {/* Left Canvas: Interactive Chart (8 cols) */}
+              <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
                 <div>
-                  <h4 className="font-bold text-sm text-[#0A1B2A]">Order Ledger Summary</h4>
-                  <span className="text-[11px] text-slate-400">Verification & settlement status</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h4 className="font-medium text-sm text-[#0A1B2A]">Weekly Store Volume</h4>
+                      <span className="text-[11px] text-slate-500">
+                        {chartMetric === "revenue" ? "Daily net sales across trailing 7 days" : "Daily confirmed completed orders"}
+                      </span>
+                    </div>
+
+                    {/* Quiet Metric Switcher */}
+                    <div className="flex items-center gap-1 p-1 bg-[#F4F2EC] rounded-xl text-[11px]">
+                      <button
+                        onClick={() => setChartMetric("revenue")}
+                        className={`px-3 py-1 rounded-lg font-medium cursor-pointer transition ${
+                          chartMetric === "revenue"
+                            ? "bg-white text-[#0A1B2A] shadow-2xs font-semibold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Revenue (MMK)
+                      </button>
+                      <button
+                        onClick={() => setChartMetric("orders")}
+                        className={`px-3 py-1 rounded-lg font-medium cursor-pointer transition ${
+                          chartMetric === "orders"
+                            ? "bg-white text-[#0A1B2A] shadow-2xs font-semibold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Orders
+                      </button>
+                    </div>
+                  </div>
+
+                  {chartMetric === "revenue" ? (
+                    <CustomChart data={weekdaysChartData} color="#0069FF" title="Net Sales (MMK)" unit="MMK" />
+                  ) : (
+                    <CustomChart data={weekdayOrdersChartData} color="#10B981" title="Completed Orders" unit="Orders" />
+                  )}
+                </div>
+
+                {/* Quiet Footer Strip */}
+                <div className="grid grid-cols-3 gap-3 pt-3 mt-4 border-t border-slate-100 text-[11px]">
+                  <div>
+                    <span className="text-slate-400 block font-sans">Daily Run-Rate</span>
+                    <strong className="font-mono text-slate-800">
+                      {chartMetric === "revenue"
+                        ? `${Math.round((currentMetrics?.revenue || 0) / 7).toLocaleString()} MMK/d`
+                        : `${(Math.round(((currentMetrics?.completed_orders || 0) / 7) * 10) / 10).toFixed(1)} orders/d`}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-sans">Peak Day</span>
+                    <strong className="font-mono text-slate-800">
+                      {chartMetric === "revenue"
+                        ? `${Math.max(...weekdaysChartData.map((d) => d.value), 0).toLocaleString()} MMK`
+                        : `${Math.max(...weekdayOrdersChartData.map((d) => d.value), 0)} orders`}
+                    </strong>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-400 block font-sans">Trajectory</span>
+                    <strong className={`font-mono ${
+                      changes?.revenue_pct !== null && changes?.revenue_pct !== undefined && changes.revenue_pct >= 0
+                        ? "text-emerald-700"
+                        : "text-rose-700"
+                    }`}>
+                      {changes?.revenue_pct !== null && changes?.revenue_pct !== undefined
+                        ? `${changes.revenue_pct > 0 ? "+" : ""}${changes.revenue_pct}%`
+                        : "Stable"}
+                    </strong>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2.5 text-xs font-mono pt-1">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <span className="text-slate-500 font-sans">Total Recorded</span>
-                  <strong className="text-slate-800">{orders.length} orders</strong>
+              {/* Right Canvas: Store Ledger & Settlement Audit (4 cols) */}
+              <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-medium text-sm text-[#0A1B2A]">Order Ledger & Settlement</h4>
+                    <p className="text-[11px] text-slate-500">Verification and payment distribution</p>
+                  </div>
+
+                  {/* Status breakdown table */}
+                  <div className="space-y-2 text-xs font-mono pt-1">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="text-slate-500 font-sans">Total Recorded</span>
+                      <strong className="text-slate-800">{orders.length} orders</strong>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="text-slate-500 font-sans">Confirmed & Dispatched</span>
+                      <strong className="text-emerald-700">
+                        {orders.filter((o) => o.status === "confirmed" || o.status === "completed").length} orders
+                      </strong>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="text-slate-500 font-sans">Awaiting Slip Review</span>
+                      <strong className="text-amber-700">
+                        {orders.filter((o) => o.status === "verifying").length} orders
+                      </strong>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="text-slate-500 font-sans">Cancelled</span>
+                      <strong className="text-rose-600">
+                        {orders.filter((o) => o.status === "cancelled").length} orders
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Quiet Channel Summary */}
+                  {paymentChannelStats.channels.length > 0 && (
+                    <div className="pt-2 space-y-1.5">
+                      <span className="text-[11px] font-mono uppercase text-slate-500 font-semibold tracking-wider block">
+                        Payment Mix
+                      </span>
+                      <div className="w-full h-1.5 rounded-full bg-slate-100 flex overflow-hidden">
+                        {paymentChannelStats.channels.map((ch, idx) => {
+                          const colors = ["bg-[#0069FF]", "bg-slate-700", "bg-emerald-600", "bg-amber-500"];
+                          return (
+                            <div
+                              key={ch.name}
+                              style={{ width: `${Math.max(ch.pctOfVolume, 5)}%` }}
+                              className={`${colors[idx % colors.length]} h-full`}
+                              title={`${ch.name}: ${ch.pctOfVolume}%`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-500 font-mono pt-0.5">
+                        <span>{paymentChannelStats.channels[0]?.name} ({paymentChannelStats.channels[0]?.pctOfVolume}%)</span>
+                        {paymentChannelStats.channels[1] && (
+                          <span>{paymentChannelStats.channels[1]?.name} ({paymentChannelStats.channels[1]?.pctOfVolume}%)</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <span className="text-slate-500 font-sans">Confirmed & Fulfilled</span>
-                  <strong className="text-emerald-700">
-                    {orders.filter((o) => o.status === "confirmed" || o.status === "completed").length} orders
-                  </strong>
-                </div>
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <span className="text-slate-500 font-sans">Verifying Prepayment</span>
-                  <strong className="text-amber-700">
-                    {orders.filter((o) => o.status === "verifying").length} orders
-                  </strong>
-                </div>
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <span className="text-slate-500 font-sans">Cancelled / Rejected</span>
-                  <strong className="text-rose-600">
-                    {orders.filter((o) => o.status === "cancelled").length} orders
-                  </strong>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  {onExportCsv && (
+                    <button
+                      onClick={onExportCsv}
+                      className="w-full bg-[#0A1B2A] hover:bg-slate-800 text-white py-2.5 rounded-xl font-medium text-xs flex items-center justify-center gap-2 cursor-pointer transition shadow-2xs"
+                    >
+                      <Download size={13} />
+                      Export Ledger CSV
+                    </button>
+                  )}
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                    <button
+                      onClick={() => setActiveTab("economics")}
+                      className="hover:text-[#0069FF] transition cursor-pointer"
+                    >
+                      Unit Economics →
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("channels")}
+                      className="hover:text-[#0069FF] transition cursor-pointer"
+                    >
+                      Channel Risk →
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {onExportCsv && (
-              <button
-                onClick={onExportCsv}
-                className="w-full bg-[#0A1B2A] hover:bg-slate-800 text-white py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 mt-4 cursor-pointer transition-all active:scale-[0.98]"
-              >
-                <Download size={13} />
-                Export Ledger CSV
-              </button>
-            )}
           </div>
-        </div>
-      </div>
 
       {/* 5. Opportunity Queue with Filter Tabs */}
       <div className="space-y-4 pt-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
           <div className="flex items-center gap-2">
             <Layers size={17} className="text-[#0069FF]" />
-            <h3 className="font-black text-lg text-[#0A1B2A]">Detected Opportunities</h3>
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-bold">
+            <h3 className="font-serif font-medium text-xl text-[#0A1B2A] tracking-tight">Prioritized Opportunities</h3>
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-semibold">
               {opportunities.length}
             </span>
           </div>
@@ -900,12 +720,12 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
                 onClick={() => setStatusFilter(tab)}
                 className={`px-3 py-1.5 rounded-full font-medium cursor-pointer transition-all capitalize shrink-0 ${
                   statusFilter === tab
-                    ? "bg-[#0A1B2A] text-white font-semibold"
-                    : "bg-[#FAF8F5] text-slate-600 hover:bg-slate-100 border border-slate-200"
+                    ? "bg-[#0A1B2A] text-white shadow-2xs font-semibold"
+                    : "bg-white text-slate-600 hover:text-[#0A1B2A] border border-slate-200/80"
                 }`}
               >
                 {tab.replace("_", " ")}
-                <span className="ml-1.5 font-mono text-[11px] opacity-70">
+                <span className="ml-1.5 font-mono text-[11px] opacity-75">
                   (
                   {tab === "all"
                     ? opportunities.length
@@ -931,9 +751,9 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
             ))}
           </div>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 space-y-2">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-slate-500 space-y-2">
             <CheckCircle2 size={24} className="mx-auto text-slate-400" />
-            <p className="text-xs font-semibold">No opportunities in this view.</p>
+            <p className="text-xs font-medium text-slate-700">No opportunities in this view.</p>
             <p className="text-[11px] text-slate-400">
               {statusFilter === "all"
                 ? "Your shop is performing within normal statistical variance."
@@ -946,7 +766,7 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
       {/* 6. Measured Outcomes History */}
       {outcomes.length > 0 && (
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-3 shadow-xs">
-          <h4 className="font-bold text-sm text-[#0A1B2A] flex items-center gap-2">
+          <h4 className="font-serif font-medium text-base text-[#0A1B2A] flex items-center gap-2">
             <CheckCircle2 size={16} className="text-emerald-600" />
             Measured Action Outcomes
           </h4>
