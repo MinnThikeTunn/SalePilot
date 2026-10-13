@@ -2,6 +2,7 @@ import { supabase } from "../utils/supabase";
 import type { Product } from "../types";
 
 export async function getProducts(userId: string): Promise<Product[]> {
+  if (!userId) return [];
   const { data, error } = await supabase
     .from("products")
     .select("*")

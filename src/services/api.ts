@@ -2,6 +2,7 @@ import { supabase } from "../utils/supabase";
 import { getShopState, saveShopState } from "./shopState";
 import { getState, botTakeover, botRelease, botOwnerReply } from "./clientStore";
 import { cloneDefaultState } from "../data/defaultState";
+import { createEmptyShopState } from "./defaults";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 
 /** Client-side fallback handler when Edge Functions are not deployed */
@@ -103,7 +104,7 @@ async function fallbackLocalAction<T>(
 
   if (action === "reset") {
     if (userId) {
-      const state = cloneDefaultState();
+      const state = createEmptyShopState();
       await saveShopState(userId, state);
     }
     return { success: true } as T;

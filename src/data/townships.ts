@@ -442,6 +442,37 @@ export const TOWNSHIPS: string[] = [
   "Myebon",
 ];
 
+export const MYANMAR_REGIONS: string[] = [
+  "Yangon Region",
+  "Mandalay Region",
+  "Naypyitaw Union Territory",
+  "Shan State",
+  "Bago Region",
+  "Ayeyarwady Region",
+  "Magway Region",
+  "Sagaing Region",
+  "Mon State",
+  "Kayin State",
+  "Kachin State",
+  "Rakhine State",
+  "Tanintharyi Region",
+  "Kayah State",
+  "Chin State",
+];
+
+export const REGIONAL_DELIVERY_PRESETS = [
+  "Other States & Regions (Highway Bus Gate)",
+  "Express Courier (Nationwide)",
+];
+
 export function loadTownships(): string[] {
   return [...TOWNSHIPS];
+}
+
+export function loadMyanmarRegions(): string[] {
+  return [...MYANMAR_REGIONS];
+}
+
+export function loadAllDeliveryLocations(): string[] {
+  return [...MYANMAR_REGIONS, ...REGIONAL_DELIVERY_PRESETS, ...TOWNSHIPS];
 }

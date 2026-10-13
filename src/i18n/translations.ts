@@ -29,6 +29,8 @@ export interface Translations {
   tabInsights: string;
   tabSmartMarketing: string;
   tabConfig: string;
+  tabTelegramBot: string;
+  tabWebChatbot: string;
   tabLiveSupport: string;
 
   // KPIs & Stats
@@ -247,6 +249,8 @@ export const translations: Record<Language, Translations> = {
     tabInsights: "AI Strategy",
     tabSmartMarketing: "Smart Marketing",
     tabConfig: "Bot Connection",
+    tabTelegramBot: "Telegram Bot",
+    tabWebChatbot: "Web Chatbot",
     tabLiveSupport: "Live VIP Support",
 
     // KPIs & Stats
@@ -329,16 +333,16 @@ export const translations: Record<Language, Translations> = {
     noProductsFound: "No products in store catalog.",
 
     // Delivery
-    townshipDeliveryRateMatrix: "TOWNSHIP DELIVERY RATE MATRIX",
-    defineDeliveryFees: "Configure delivery pricing and transit lead times across Yangon and regional townships.",
-    townshipNameLabel: "Township Name in Yangon:",
+    townshipDeliveryRateMatrix: "TOWNSHIP & REGIONAL DELIVERY RATE MATRIX",
+    defineDeliveryFees: "Configure delivery pricing and transit lead times across local townships and all 14 Myanmar states & regions.",
+    townshipNameLabel: "Township / State / Region Name:",
     rateLabel: "Rate (MMK):",
     addRateRule: "Add rate rule",
-    matchedTownship: "Matched Township",
+    matchedTownship: "Matched Destination",
     estimatedTransit: "Estimated transit timeline",
     settingsActions: "Settings Actions",
     removeRule: "Remove Rule",
-    townshipSearchPlaceholder: "Type township name (e.g. Yankin, Hledan, Bahan)...",
+    townshipSearchPlaceholder: "Type township or state/region (e.g. Kamayut, Chanayethazan, Taunggyi, Mandalay Region)...",
     deliveryRateMmk: "Delivery Fee (MMK)",
     totalZonesConfigured: "Configured Delivery Zones",
 
@@ -446,6 +450,11 @@ const EXACT_PHRASE_MAP: Record<string, keyof Translations> = {
   "AI Strategy": "tabInsights",
   "Smart Marketing": "tabSmartMarketing",
   "Bot Connection": "tabConfig",
+  "Telegram Bot": "tabTelegramBot",
+  "Telegram Bot Connection": "tabTelegramBot",
+  "Web Chatbot": "tabWebChatbot",
+  "Public Web Chatbot": "tabWebChatbot",
+  "Public Web Chatbot Connection": "tabWebChatbot",
   "Live VIP Support": "tabLiveSupport",
   "Total Store Revenue": "totalStoreRevenue",
   "Validated Orders": "validatedOrders",
