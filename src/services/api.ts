@@ -2,6 +2,7 @@ import { supabase } from "../utils/supabase";
 import { getShopState, saveShopState } from "./shopState";
 import { getState } from "./clientStore";
 import { cloneDefaultState } from "../data/defaultState";
+import { createEmptyShopState } from "./defaults";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 
 
@@ -88,7 +89,7 @@ async function fallbackLocalAction<T>(
 
   if (action === "reset") {
     if (userId) {
-      const state = cloneDefaultState();
+      const state = createEmptyShopState();
       await saveShopState(userId, state);
     }
     return { success: true } as T;

@@ -46,6 +46,12 @@ function load(): SystemState {
       if (!Array.isArray(memoryState.deliveryZones)) {
         memoryState.deliveryZones = [];
       }
+      // Purge any unowned or foreign orders that leaked into local storage for this user
+      if (activeUserId && Array.isArray(memoryState.orders)) {
+        memoryState.orders = memoryState.orders.filter(
+          (o) => o.owner_id === activeUserId || (memoryState!.config.shopId && (o as any).shop_id === memoryState!.config.shopId)
+        );
+      }
       return memoryState;
     }
   } catch {
@@ -166,6 +172,12 @@ export function setClientDeliveryZones(zones: DeliveryZone[]) {
 
 export function addOrder(order: Order) {
   const state = load();
+  if (activeUserId && !order.owner_id) {
+    order.owner_id = activeUserId;
+  }
+  if (state.config.shopId && !(order as any).shop_id) {
+    (order as any).shop_id = state.config.shopId;
+  }
   state.orders.unshift(order);
   save();
   return state;

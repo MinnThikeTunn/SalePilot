@@ -734,6 +734,9 @@ Candy:`,
         }
       }
 
+      (newOrder as any).owner_id = ownerId;
+      (newOrder as any).shop_id = targetShopId || "official-store";
+
       const { error: insertErr } = await supabase.from("orders").insert([
         {
           id: newOrder.id,

@@ -281,6 +281,9 @@ export default function App() {
   }, [user?.id]);
 
   const handleSignOut = async () => {
+    if (user?.id) {
+      store.clearUserState(user.id);
+    }
     store.setActiveUser(null);
     await signOut();
     setStoreState(null);
@@ -360,6 +363,7 @@ export default function App() {
   // Fetch shop state from Supabase Storage
   const fetchState = async (silent = false) => {
     if (!user) return;
+    store.setActiveUser(user.id);
     if (!silent) setLoading(true);
     try {
       // 1. Fetch JSON state from storage
@@ -422,20 +426,30 @@ export default function App() {
       try {
         const dbOrders = await getOrdersForOwner(user.id, data.config.shopId);
         const orderMap = new Map<string, Order>();
+
+        // 1. Strict filter on JSON state orders: must belong to this user or shop
         (data.orders || []).forEach((o) => {
-          const key = o.invoiceId || o.id;
-          if (key) orderMap.set(key, o);
+          const matchesOwner = o.owner_id && o.owner_id === user.id;
+          const matchesShop = data.config.shopId && (o as any).shop_id && (o as any).shop_id === data.config.shopId;
+          if (matchesOwner || matchesShop) {
+            const key = o.invoiceId || o.id;
+            if (key) orderMap.set(key, o);
+          }
         });
+
+        // 2. DB orders from Supabase (already filtered for this user/shop)
         dbOrders.forEach((o) => {
           const key = o.invoiceId || o.id;
           if (key) orderMap.set(key, o);
         });
+
+        // 3. Local store orders (strictly match current owner or shop - NEVER match unowned orders)
         const localState = store.getState();
         (localState.orders || []).forEach((o) => {
           const key = o.invoiceId || o.id;
-          const matchesOwner = !o.owner_id || o.owner_id === user.id;
-          const matchesShop = !data.config.shopId || !(o as any).shop_id || (o as any).shop_id === data.config.shopId;
-          if (key && !orderMap.has(key) && matchesOwner && matchesShop) {
+          const matchesOwner = o.owner_id && o.owner_id === user.id;
+          const matchesShop = data.config.shopId && (o as any).shop_id && (o as any).shop_id === data.config.shopId;
+          if (key && !orderMap.has(key) && (matchesOwner || matchesShop)) {
             orderMap.set(key, o);
           }
         });
@@ -528,8 +542,11 @@ export default function App() {
       const customEvent = event as CustomEvent<Order>;
       if (customEvent.detail) {
         const newOrder = customEvent.detail;
-        if (user?.id && (newOrder as any).owner_id && (newOrder as any).owner_id !== user.id) return;
-        if (shopRecord?.shop_id && (newOrder as any).shop_id && (newOrder as any).shop_id !== shopRecord.shop_id) return;
+        if (user?.id) {
+          const matchesOwner = (newOrder as any).owner_id === user.id;
+          const matchesShop = shopRecord?.shop_id && (newOrder as any).shop_id === shopRecord.shop_id;
+          if (!matchesOwner && !matchesShop) return;
+        }
         setStoreState((prev) => {
           if (!prev) return prev;
           const exists = (prev.orders || []).some(
