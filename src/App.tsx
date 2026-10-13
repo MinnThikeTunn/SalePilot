@@ -59,7 +59,7 @@ import { supabase } from "./utils/supabase";
 import { fetchDeliveryMatrix, addDeliveryZone, deleteDeliveryZone } from "./services/deliveryMatrixApi";
 import { getOrdersForOwner, updateDbOrderStatus } from "./services/ordersApi";
 import { buildShopPublicUrl } from "./utils/shopId";
-import { loadTownships } from "./data/townships";
+import { loadTownships, loadAllDeliveryLocations, MYANMAR_REGIONS } from "./data/townships";
 import QRCode from "qrcode";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations, getTranslation, Language } from "./i18n/translations";
@@ -2328,13 +2328,53 @@ export default function App() {
           {activeTab === "delivery" && (
             <div className="space-y-4">
               <div className="bg-white border border-[#E7E5E4] p-5 rounded-2xl shadow-2xs">
-                <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
-                  {t("townshipDeliveryRateMatrix")}
-                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                      {t("townshipDeliveryRateMatrix")}
+                    </h3>
+                    <p className="text-xs text-[#78716C] mt-0.5">
+                      {t("defineDeliveryFees")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-[#E7E5E4]/80">
+                  <span className="text-[11px] font-medium text-[#78716C] mr-1">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Local City Delivery", region: "", division: "", rate: 2500, estimated_transit_timeline: "1-2 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Local City (2,500 MMK)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Mandalay Region (Bus Gate)", region: "Mandalay Region", division: "", rate: 4000, estimated_transit_timeline: "2-3 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Mandalay Region (4,000 MMK)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Yangon Region (Bus Gate)", region: "Yangon Region", division: "", rate: 4000, estimated_transit_timeline: "2-3 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Yangon Region (4,000 MMK)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Other States & Regions (Highway Bus Gate)", region: "", division: "", rate: 4500, estimated_transit_timeline: "2-4 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Inter-State Bus Gate (4,500 MMK)
+                  </button>
+                </div>
 
                 {/* Insertion row */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-4 items-end text-xs text-[#57534E]">
-                  <div className="space-y-1 sm:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mt-4 items-end text-xs text-[#57534E]">
+                  <div className="space-y-1 sm:col-span-5">
                     <label className="text-[10px] text-[#78716C] block font-mono font-semibold uppercase">{t("townshipNameLabel")}</label>
                     <div className="relative">
                       <input
@@ -2345,14 +2385,14 @@ export default function App() {
                           setShowTownshipSuggestions(true);
                         }}
                         onFocus={() => setShowTownshipSuggestions(true)}
-                        placeholder="e.g., Yankin, Tamwe, North Dagon"
+                        placeholder="e.g., Kamayut, Chanayethazan, Taunggyi, or Mandalay Region"
                         className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF]"
                       />
                       {showTownshipSuggestions && newZone.township_name.trim().length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-[#E7E5E4] rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                          {loadTownships()
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-[#E7E5E4] rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                          {loadAllDeliveryLocations()
                             .filter(t => t.toLowerCase().includes(newZone.township_name.toLowerCase()))
-                            .slice(0, 10)
+                            .slice(0, 12)
                             .map((township, idx) => (
                               <div
                                 key={`${township}-${idx}`}
@@ -2370,7 +2410,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 sm:col-span-3">
                     <label className="text-[10px] text-[#78716C] block font-mono font-semibold uppercase">{t("rateLabel")}</label>
                     <input
                       type="number"
@@ -2380,12 +2420,29 @@ export default function App() {
                     />
                   </div>
 
-                  <button
-                    onClick={handleAddZone}
-                    className="bg-[#0069FF] hover:bg-[#0052CC] text-white font-semibold py-2 px-5 rounded-full text-xs cursor-pointer h-10 transition-all active:scale-[0.98] shadow-2xs"
-                  >
-                    {t("addRateRule")}
-                  </button>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-[10px] text-[#78716C] block font-mono font-semibold uppercase">Transit Time</label>
+                    <select
+                      value={newZone.estimated_transit_timeline}
+                      onChange={(e) => setNewZone({ ...newZone, estimated_transit_timeline: e.target.value })}
+                      className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF] cursor-pointer"
+                    >
+                      <option value="1-2 Days">1-2 Days</option>
+                      <option value="2-3 Days">2-3 Days</option>
+                      <option value="2-4 Days">2-4 Days</option>
+                      <option value="3-5 Days">3-5 Days</option>
+                      <option value="Same Day">Same Day</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <button
+                      onClick={handleAddZone}
+                      className="w-full bg-[#0069FF] hover:bg-[#0052CC] text-white font-semibold py-2 px-4 rounded-xl text-xs cursor-pointer h-10 transition-all active:scale-[0.98] shadow-2xs"
+                    >
+                      {t("addRateRule")}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2398,7 +2455,7 @@ export default function App() {
                     setDeliveryZonesSearch(e.target.value);
                     setDeliveryZonesPage(1);
                   }}
-                  placeholder="Search township name..."
+                  placeholder="Search township or region name..."
                   className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF]"
                 />
               </div>

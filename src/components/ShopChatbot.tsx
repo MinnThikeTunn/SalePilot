@@ -138,34 +138,66 @@ function buildLocalReply(
 ): string {
   const t = text.toLowerCase();
 
-  // 1. Delivery question - check specific township first
-  if (deliveryZones && deliveryZones.length > 0) {
-    const matchedZone = deliveryZones.find((z) => {
-      const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
-      return name && name.length >= 3 && t.includes(name);
-    });
+  // 1. Delivery & shipping questions (English & Burmese)
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate|ကားဂိတ်|ပို့ခ|ပို့ပေး|ပို့ဆောင်/i.test(t)) {
+    const origin = address ? address.trim() : "our store dispatch center";
 
-    if (matchedZone) {
-      const name = matchedZone.township_name || (matchedZone as any).township;
-      const rate = (Number(matchedZone.rate) || 0).toLocaleString();
-      const timeline = matchedZone.estimated_transit_timeline ? ` (${matchedZone.estimated_transit_timeline})` : "";
-      return `Delivery to ${name} is ${rate} MMK${timeline}. Would you like to proceed with your order? [STATE:intent_classification]`;
-    }
-  }
-
-  // General delivery & courier schedule
-  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost/.test(t)) {
+    // 1a. Check if customer specifically asked about a matched township or region
     if (deliveryZones && deliveryZones.length > 0) {
-      const list = deliveryZones
-        .map((z) => `${z.township_name || (z as any).township || ""}: ${(Number(z.rate) || 0).toLocaleString()} MMK${z.estimated_transit_timeline ? ` (${z.estimated_transit_timeline})` : ""}`)
-        .filter(Boolean)
-        .join(" • ");
-      return `Delivery rates for ${businessName}:\n${list}${deliveryInfo ? `\nDispatch Policy: ${deliveryInfo}` : ""} [STATE:intent_classification]`;
-    } else if (deliveryInfo) {
-      return `Delivery information for ${businessName}: ${deliveryInfo} [STATE:intent_classification]`;
-    } else {
-      return `Delivery arrangements for ${businessName} will be confirmed upon order. Please inquire directly with the store. [STATE:intent_classification]`;
+      const matchedZone = deliveryZones.find((z) => {
+        const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
+        return name && name.length >= 3 && t.includes(name);
+      });
+
+      if (matchedZone) {
+        const name = matchedZone.township_name || (matchedZone as any).township;
+        const rate = (Number(matchedZone.rate) || 0).toLocaleString();
+        const timeline = matchedZone.estimated_transit_timeline ? ` (${matchedZone.estimated_transit_timeline})` : "";
+        return `Yes, we deliver to ${name}! Delivery fee is ${rate} MMK${timeline} (dispatched from ${origin}). Would you like to proceed with your order? [STATE:intent_classification]`;
+      }
     }
+
+    // Check if customer asked about a common Myanmar city/region
+    const knownLocations = [
+      "mandalay", "yangon", "naypyitaw", "taunggyi", "bago", "mawlamyine",
+      "monywa", "pathein", "pyinoolwin", "pyin oo lwin", "meiktila", "magway",
+      "myitkyina", "sittwe", "dawei", "lashio", "kalay", "hpa-an", "kengtung"
+    ];
+    const detectedCity = knownLocations.find((loc) => t.includes(loc));
+    if (detectedCity) {
+      const capitalizedCity = detectedCity.charAt(0).toUpperCase() + detectedCity.slice(1);
+      const busGateZone = deliveryZones?.find((z) => /bus gate|other|regional|nationwide|gate/i.test(z.township_name || ""));
+      const feeText = busGateZone
+        ? `${(Number(busGateZone.rate) || 4000).toLocaleString()} MMK (${busGateZone.estimated_transit_timeline || "2-3 Days"})`
+        : "approx 3,500 – 4,500 MMK (2–3 days via Highway Bus Gate / Express Courier)";
+      return `Yes, we dispatch to ${capitalizedCity}! Dispatched from our base in ${origin}. Delivery fee is ${feeText}. You can easily select your destination at checkout without hassle! [STATE:intent_classification]`;
+    }
+
+    // 1b. General delivery inquiry - transparent overview without interrogating customer upfront
+    const busGateZone = deliveryZones?.find((z) => /bus gate|other|regional|nationwide|gate/i.test(z.township_name || ""));
+    const localZones = deliveryZones?.filter((z) => !/bus gate|other|regional|nationwide|gate/i.test(z.township_name || "")) || [];
+
+    let feeSummary = "";
+    if (localZones.length > 0) {
+      const rates = localZones.map(z => Number(z.rate) || 0).filter(r => r > 0);
+      const minRate = rates.length > 0 ? Math.min(...rates).toLocaleString() : "2,000";
+      const maxRate = rates.length > 0 ? Math.max(...rates).toLocaleString() : "3,000";
+      const localStr = minRate === maxRate ? `${minRate} MMK` : `${minRate} – ${maxRate} MMK`;
+      feeSummary += `\n• Local City Delivery: ${localStr} (1–2 days direct rider)`;
+    } else {
+      feeSummary += `\n• Local City Delivery: 2,000 – 3,000 MMK (1–2 days)`;
+    }
+
+    if (busGateZone) {
+      feeSummary += `\n• Other Myanmar States & Regions: ${(Number(busGateZone.rate) || 4000).toLocaleString()} MMK (${busGateZone.estimated_transit_timeline || "2-4 days via Highway Bus Gate / Courier"})`;
+    } else {
+      feeSummary += `\n• Other Myanmar States & Regions: 3,500 – 5,000 MMK (2–4 days via Highway Bus Gate / Courier)`;
+    }
+
+    return `📦 Delivery Matrix for ${businessName}:
+Dispatched from: ${origin}${feeSummary}
+${deliveryInfo ? `\nNote: ${deliveryInfo}\n` : ""}
+Feel free to explore our collection! No need to specify your location now — you can select your township during checkout, or ask me about any specific city anytime. [STATE:intent_classification]`;
   }
 
   // 2. Payment options & mobile wallet accounts
@@ -370,13 +402,23 @@ export function ShopChatbot({
 
   // Calculate delivery fee dynamically based on user input delivery zones
   const deliveryFee = useMemo(() => {
-    if (!selectedTownship || !activeZones || activeZones.length === 0) return 0;
-    const match = activeZones.find(
-      (z) =>
-        (z?.township_name || (z as any)?.township || "").toLowerCase() ===
-        selectedTownship.toLowerCase()
-    );
-    return match ? (Number(match.rate) || 0) : 0;
+    if (!selectedTownship) return 0;
+    if (activeZones && activeZones.length > 0) {
+      const match = activeZones.find(
+        (z) =>
+          (z?.township_name || (z as any)?.township || "").toLowerCase() ===
+          selectedTownship.toLowerCase()
+      );
+      if (match) return Number(match.rate) || 0;
+      if (/other|bus gate|gate|regional|nationwide|inter-state|ဂိတ်/i.test(selectedTownship)) {
+        const busGateZone = activeZones.find((z) =>
+          /other|bus gate|gate|regional|nationwide|inter-state|ဂိတ်/i.test(z?.township_name || "")
+        );
+        if (busGateZone) return Number(busGateZone.rate) || 4000;
+        return 4000;
+      }
+    }
+    return 3000;
   }, [selectedTownship, activeZones]);
 
   // Session ID initialization
@@ -1416,14 +1458,19 @@ Candy:`,
                       required
                       value={selectedTownship}
                       onChange={(e) => setSelectedTownship(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none cursor-pointer"
                     >
-                      <option value="">-- Select Township * --</option>
+                      <option value="">-- Select Township / Destination * --</option>
                       {activeZones.map((z) => (
                         <option key={z.id || z.township_name} value={z.township_name}>
                           {z.township_name} ({(Number(z.rate) || 0).toLocaleString()} MMK)
                         </option>
                       ))}
+                      {!activeZones.some((z) => /other|bus gate/i.test(z.township_name || "")) && (
+                        <option value="Other Myanmar States & Regions (Highway Bus Gate)">
+                          Other Myanmar States & Regions (Highway Bus Gate) - 4,000 MMK
+                        </option>
+                      )}
                     </select>
                   ) : (
                     <input
@@ -1431,7 +1478,7 @@ Candy:`,
                       required
                       value={selectedTownship}
                       onChange={(e) => setSelectedTownship(e.target.value)}
-                      placeholder="Enter your township or area *"
+                      placeholder="Enter your township or destination *"
                       className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
                     />
                   )}
