@@ -30,8 +30,8 @@ import {
   Menu,
   LogOut,
   User,
-  Bot,
-  Store
+  Store,
+  RotateCcw
 } from "lucide-react";
 
 import { CustomChart } from "./components/CustomChart";
@@ -2837,6 +2837,25 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
+                      const defs = getDefaultSessions();
+                      if (storeState) {
+                        const updated = { ...storeState, sessions: defs };
+                        setStoreState(updated);
+                        store.setStoreState(updated);
+                      }
+                      setActiveSessionId("default_customer");
+                      showToast("Reset chats to English defaults", "info");
+                    }}
+                    title="Reset sample conversations to fresh English defaults"
+                    className="px-3.5 py-2 rounded-full text-xs font-medium bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-stone-600 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw size={13} className="text-stone-400" />
+                    <span>Reset Chats</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
                       const newSess = store.createSimulationCustomer();
                       setActiveSessionId(newSess.sessionId);
                       showToast(`✨ Added new test customer (${newSess.customerName})`, "info");
@@ -3009,10 +3028,10 @@ export default function App() {
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          "Hello! Both items are currently in stock.",
-                          "Yes, we can offer a 5% bundle discount for both pieces.",
-                          "KBZPay and WavePay are accepted for prepay.",
-                          "Would you like us to confirm this order for you?"
+                          "Hello! Both items are in stock and ready to ship.",
+                          "Yes, we can offer a 5% bundle discount if you purchase both today.",
+                          "We accept KPay, WavePay, and Cash on Delivery.",
+                          "Would you like me to prepare and confirm your invoice now?"
                         ].map((chip, cIdx) => (
                           <button
                             key={cIdx}

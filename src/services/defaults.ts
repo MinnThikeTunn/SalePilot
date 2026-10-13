@@ -12,19 +12,19 @@ export function getDefaultSessions(): Record<string, TelegramSession> {
         {
           id: "msg-init-1",
           sender: "customer",
-          content: "Hello Candy, are the handmade silk scarf and ceramic mug available?",
+          content: "Hello Candy! Are the handmade silk scarf and ceramic mug still available in stock?",
           timestamp: new Date(now - 1000 * 60 * 18).toISOString(),
         },
         {
           id: "msg-init-2",
           sender: "bot",
-          content: "Hello! Candy here. Both items are in stock! Standard city delivery is 2,500 MMK.",
+          content: "Hello! Yes, both items are currently in stock. Standard delivery within Yangon is 2,500 MMK.",
           timestamp: new Date(now - 1000 * 60 * 15).toISOString(),
         },
         {
           id: "msg-init-3",
           sender: "customer",
-          content: "Can I get a discount if I buy both pieces? Can I speak directly with the shop owner?",
+          content: "Can I get a discount if I purchase both items together? Could I speak directly with the shop owner?",
           timestamp: new Date(now - 1000 * 60 * 5).toISOString(),
         },
       ],
@@ -42,13 +42,13 @@ export function getDefaultSessions(): Record<string, TelegramSession> {
         {
           id: "msg-aung-1",
           sender: "customer",
-          content: "Can I pay with KBZPay? Please send me the invoice.",
+          content: "Can I pay via KPay or WavePay? Please send over the digital invoice.",
           timestamp: new Date(now - 1000 * 60 * 45).toISOString(),
         },
         {
           id: "msg-aung-2",
           sender: "bot",
-          content: "Yes, certainly! KBZPay and WavePay are accepted for mobile prepay remittances.",
+          content: "Certainly! We accept direct mobile transfers via both KPay and WavePay.",
           timestamp: new Date(now - 1000 * 60 * 40).toISOString(),
         },
       ],

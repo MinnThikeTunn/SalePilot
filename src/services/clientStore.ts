@@ -4,7 +4,6 @@ import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormDa
 import { processCustomerMessage } from "./botSimulator";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 import { invokeApi } from "./api";
-
 let activeUserId: string | null = null;
 let memoryState: SystemState | null = null;
 
@@ -20,6 +19,7 @@ export function clearUserState(userId?: string) {
   if (typeof localStorage !== "undefined") {
     const key = userId ? `sales_brain_state_${userId}` : (activeUserId ? `sales_brain_state_${activeUserId}` : "sales_brain_state_guest");
     localStorage.removeItem(key);
+    localStorage.removeItem("sales_brain_state_v3");
     localStorage.removeItem("sales_brain_state_v2");
     localStorage.removeItem("sales_brain_state_v1");
   }
@@ -32,6 +32,19 @@ function getStorageKey(): string {
   return "sales_brain_state_guest";
 }
 
+function sanitizeSessionsToEnglish(sessions: Record<string, TelegramSession>): Record<string, TelegramSession> {
+  const defaults = getDefaultSessions();
+  const sanitized = { ...sessions };
+  // If default_customer has old Burmese text, replace with updated English defaults
+  if (sanitized.default_customer && sanitized.default_customer.messages.some(m => m.content.includes("မင်္ဂလာပါ") || m.content.includes("hoke ke par"))) {
+    sanitized.default_customer = defaults.default_customer;
+  }
+  if (sanitized.sess_aung_tg && sanitized.sess_aung_tg.messages.some(m => m.content.includes("KPay") && m.content.includes("ရပါတယ်"))) {
+    sanitized.sess_aung_tg = defaults.sess_aung_tg;
+  }
+  return sanitized;
+}
+
 function load(): SystemState {
   if (memoryState) return memoryState;
   const key = getStorageKey();
@@ -39,7 +52,9 @@ function load(): SystemState {
     if (typeof localStorage !== "undefined" && localStorage.getItem("sales_brain_state_v1")) {
       localStorage.removeItem("sales_brain_state_v1");
     }
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+    const raw = typeof localStorage !== "undefined"
+      ? (localStorage.getItem(key) || (!activeUserId ? (localStorage.getItem("sales_brain_state_v3") || localStorage.getItem("sales_brain_state_v2")) : null))
+      : null;
     if (raw) {
       const base = activeUserId ? createEmptyShopState() : cloneDefaultState();
       memoryState = { ...base, ...JSON.parse(raw) };
@@ -54,7 +69,10 @@ function load(): SystemState {
       }
       if (!memoryState.sessions || Object.keys(memoryState.sessions).length === 0) {
         memoryState.sessions = getDefaultSessions();
+      } else {
+        memoryState.sessions = sanitizeSessionsToEnglish(memoryState.sessions);
       }
+      save();
       return memoryState;
     }
   } catch {
@@ -304,13 +322,13 @@ export function createSimulationCustomer(name?: string): TelegramSession {
       {
         id: `msg-${Date.now()}`,
         sender: "customer",
-        content: "Hi! I would like to inquire about your latest products.",
+        content: "Hi! I would like to inquire about your new arrivals and pricing.",
         timestamp: new Date().toISOString(),
       },
       {
         id: `msg-${Date.now() + 1}`,
         sender: "bot",
-        content: "Hello! Candy is happy to assist you. Which items are you interested in today?",
+        content: "Welcome! Candy is happy to assist you. Which items or categories are you looking for today?",
         timestamp: new Date().toISOString(),
       },
     ],
