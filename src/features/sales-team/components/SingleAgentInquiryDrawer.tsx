@@ -17,10 +17,16 @@ import {
   Lightbulb,
   ShieldCheck,
   Lock,
+  Percent,
+  Truck,
+  AlertTriangle,
+  CheckCircle2,
+  Sliders,
 } from "lucide-react";
 import type { AgentRosterInfo } from "../services/salesTeamApi";
 import { runScoutInquiry, type ScoutInquiryResult } from "../agents/scoutRunner";
 import { runEchoInquiry, type EchoInquiryResult } from "../agents/echoRunner";
+import { runGuardianAudit, type GuardianAuditResult } from "../agents/guardianRunner";
 import type { TeamEvidence } from "../types/sales-team";
 
 interface SingleAgentInquiryDrawerProps {
@@ -39,6 +45,7 @@ export function SingleAgentInquiryDrawer({
   const [isRunning, setIsRunning] = useState(false);
   const [scoutResult, setScoutResult] = useState<ScoutInquiryResult | null>(null);
   const [echoResult, setEchoResult] = useState<EchoInquiryResult | null>(null);
+  const [guardianResult, setGuardianResult] = useState<GuardianAuditResult | null>(null);
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null);
   const [customQuery, setCustomQuery] = useState("");
 
@@ -55,6 +62,7 @@ export function SingleAgentInquiryDrawer({
         });
         setScoutResult(result);
         setEchoResult(null);
+        setGuardianResult(null);
       } else if (agent.key === "echo") {
         const result = runEchoInquiry({
           shopId,
@@ -63,6 +71,23 @@ export function SingleAgentInquiryDrawer({
         });
         setEchoResult(result);
         setScoutResult(null);
+        setGuardianResult(null);
+      } else if (agent.key === "guardian") {
+        let proposedDiscount = 0;
+        let deliveryFee = 2500;
+        if (triggerPreset === "simulate_discount") proposedDiscount = 15;
+        if (triggerPreset === "stress_test_cod") deliveryFee = 4500;
+
+        const result = runGuardianAudit({
+          shopId,
+          proposedDiscountPct: proposedDiscount,
+          deliveryFee,
+          trigger: triggerPreset || "general",
+          customPrompt: customQuery,
+        });
+        setGuardianResult(result);
+        setScoutResult(null);
+        setEchoResult(null);
       }
       setIsRunning(false);
     }, 450);
@@ -240,6 +265,58 @@ export function SingleAgentInquiryDrawer({
                   </div>
                   <p>FAQ &amp; Script Fixes</p>
                   <p className="text-[10px] font-normal text-stone-500">Optimize bot responses</p>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preset Investigation Triggers for Guardian */}
+          {agent.key === "guardian" && (
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold text-stone-700 uppercase tracking-wider font-mono">
+                Guardian Margin &amp; Profit Audits
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRunInquiry("audit_catalog_margins")}
+                  disabled={isRunning}
+                  className="p-3 text-left rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200/80 transition-all text-xs font-bold text-stone-800 space-y-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-emerald-600">
+                    <ShieldCheck size={14} />
+                    <ArrowRight size={12} />
+                  </div>
+                  <p>Audit Catalog Margins</p>
+                  <p className="text-[10px] font-normal text-stone-500">Check baseline profitability</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRunInquiry("simulate_discount")}
+                  disabled={isRunning}
+                  className="p-3 text-left rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200/80 transition-all text-xs font-bold text-stone-800 space-y-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-amber-600">
+                    <Percent size={14} />
+                    <ArrowRight size={12} />
+                  </div>
+                  <p>Simulate 15% Off</p>
+                  <p className="text-[10px] font-normal text-stone-500">Test proposed promotion</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRunInquiry("stress_test_cod")}
+                  disabled={isRunning}
+                  className="p-3 text-left rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200/80 transition-all text-xs font-bold text-stone-800 space-y-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-rose-600">
+                    <Truck size={14} />
+                    <ArrowRight size={12} />
+                  </div>
+                  <p>Stress Test COD</p>
+                  <p className="text-[10px] font-normal text-stone-500">Factor courier return loss</p>
                 </button>
               </div>
             </div>
@@ -560,11 +637,231 @@ export function SingleAgentInquiryDrawer({
               )}
             </div>
           )}
+
+          {/* Guardian Results Section */}
+          {guardianResult && agent.key === "guardian" && (
+            <div className="space-y-5 pt-2 border-t border-stone-100">
+              {/* Policy Thresholds Card */}
+              <div className="p-5 rounded-2xl border border-stone-200 bg-[#FAF8F5] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-emerald-600" />
+                    <span>Active Financial Policy Guardrails</span>
+                  </h4>
+                  <span className="text-[10px] font-mono text-stone-500">
+                    {guardianResult.vetoCount > 0 ? (
+                      <span className="text-rose-600 font-bold">{guardianResult.vetoCount} Policy Veto(es)</span>
+                    ) : (
+                      <span className="text-emerald-700 font-bold">100% Policy Compliant</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 bg-white rounded-xl border border-stone-200">
+                    <p className="text-[10px] font-mono text-stone-500 uppercase">Min Margin Floor</p>
+                    <p className="text-base font-black text-stone-900 mt-0.5">
+                      {guardianResult.policySummary.min_contribution_margin_pct}%
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-stone-200">
+                    <p className="text-[10px] font-mono text-stone-500 uppercase">Max Discount Cap</p>
+                    <p className="text-base font-black text-stone-900 mt-0.5">
+                      {guardianResult.policySummary.max_discount_pct}%
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-stone-200">
+                    <p className="text-[10px] font-mono text-stone-500 uppercase">Max COD Risk</p>
+                    <p className="text-base font-black text-stone-900 mt-0.5">
+                      {guardianResult.policySummary.max_cod_return_allowance_pct}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Audits */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider font-mono">
+                    Deterministic Unit Economics Audit ({guardianResult.financialAudits.length})
+                  </h4>
+                  <span className="text-[10px] font-mono text-stone-400">
+                    {guardianResult.evidence.length} Evidence Records
+                  </span>
+                </div>
+
+                {guardianResult.financialAudits.map((item) => (
+                  <div
+                    key={item.productId}
+                    className="p-5 rounded-2xl border border-stone-200 bg-[#FAF8F5] space-y-3.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <h5 className="text-sm font-bold text-stone-900">{item.productName}</h5>
+                        <p className="text-[10px] font-mono text-stone-500">
+                          Retail Price: {item.originalPrice.toLocaleString()} MMK • Available Stock: {item.currentStock} units
+                        </p>
+                      </div>
+
+                      {item.status === "approved" && (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase flex items-center gap-1">
+                          <CheckCircle2 size={11} /> Approved
+                        </span>
+                      )}
+                      {item.status === "vetoed" && (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300 uppercase flex items-center gap-1">
+                          <AlertTriangle size={11} /> Vetoed
+                        </span>
+                      )}
+                      {item.status === "warning_unverified" && (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 uppercase flex items-center gap-1">
+                          <AlertTriangle size={11} /> Unverified
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Veto Notice if breached */}
+                    {item.isVetoed && item.vetoReason && (
+                      <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-xs text-rose-900 flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-rose-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-[11px]">Guardian Financial Veto:</p>
+                          <p className="text-[11px] mt-0.5">{item.vetoReason}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Missing Cost Notice */}
+                    {item.costMissing && (
+                      <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-[11px]">Cost Price Not Recorded:</p>
+                          <p className="text-[11px] mt-0.5">
+                            Wholesale COGS is unrecorded for this item. Margins cannot be calculated without cost data.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Numbers Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                      <div className="p-2.5 bg-white rounded-xl border border-stone-200">
+                        <p className="text-[9px] font-mono text-stone-500 uppercase">Net Selling Price</p>
+                        <p className="font-mono font-bold text-stone-900 mt-0.5">
+                          {item.netPrice.toLocaleString()} MMK
+                        </p>
+                        {item.discountPct > 0 && (
+                          <span className="text-[9px] text-amber-600 font-mono">
+                            (-{item.discountPct}%)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-stone-200">
+                        <p className="text-[9px] font-mono text-stone-500 uppercase">Product COGS</p>
+                        <p className="font-mono font-bold text-stone-900 mt-0.5">
+                          {item.costPrice !== null ? `${item.costPrice.toLocaleString()} MMK` : "Unknown"}
+                        </p>
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-stone-200">
+                        <p className="text-[9px] font-mono text-stone-500 uppercase">Gross Margin</p>
+                        <p className="font-mono font-bold text-stone-900 mt-0.5">
+                          {item.grossMarginMmk !== null ? `${item.grossMarginMmk.toLocaleString()} MMK` : "Unknown"}
+                        </p>
+                        {item.grossMarginPct !== null && (
+                          <span className="text-[9px] text-stone-500 font-mono">
+                            ({item.grossMarginPct}%)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-2.5 bg-white rounded-xl border border-stone-200">
+                        <p className="text-[9px] font-mono text-stone-500 uppercase">Contribution Margin</p>
+                        <p className={`font-mono font-bold mt-0.5 ${item.contributionMmk && item.contributionMmk > 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                          {item.contributionMmk !== null ? `${item.contributionMmk.toLocaleString()} MMK` : "Unknown"}
+                        </p>
+                        {item.contributionMarginPct !== null && (
+                          <span className={`text-[9px] font-mono font-bold ${item.isVetoed ? "text-rose-600" : "text-emerald-600"}`}>
+                            ({item.contributionMarginPct}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-white border border-stone-200/80 rounded-xl text-xs space-y-1">
+                      <p className="font-bold text-stone-800 text-[11px] flex items-center gap-1.5">
+                        <ShieldCheck size={12} className="text-emerald-600" />
+                        <span>Guardian Assessment:</span>
+                      </p>
+                      <p className="text-stone-600 text-[11px]">{item.recommendation}</p>
+                    </div>
+
+                    {/* Evidence Citations */}
+                    <div className="space-y-2 pt-2 border-t border-stone-200/60">
+                      <p className="text-[10px] font-mono text-stone-500 font-bold uppercase">
+                        Deterministic Financial Snapshots:
+                      </p>
+                      <div className="space-y-1.5">
+                        {item.evidenceRefs.map((refId) => {
+                          const ev = guardianResult.evidence.find((e) => e.id === refId);
+                          if (!ev) return null;
+                          const isExpanded = expandedEvidenceId === ev.id;
+                          return (
+                            <div
+                              key={ev.id}
+                              className="bg-white border border-stone-200/90 rounded-xl overflow-hidden text-[11px]"
+                            >
+                              <div
+                                onClick={() =>
+                                  setExpandedEvidenceId(isExpanded ? null : ev.id)
+                                }
+                                className="p-2.5 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                                    {ev.source_type.toUpperCase()}
+                                  </span>
+                                  <span className="font-bold text-stone-800">
+                                    {ev.metric_key}
+                                  </span>
+                                  <span className="text-stone-500 font-mono">
+                                    = {String(ev.value)} {ev.unit}
+                                  </span>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp size={13} className="text-stone-400" />
+                                ) : (
+                                  <ChevronDown size={13} className="text-stone-400" />
+                                )}
+                              </div>
+
+                              {isExpanded && ev.snapshot && (
+                                <div className="p-3 bg-stone-900 text-stone-200 font-mono text-[10px] border-t border-stone-200 space-y-1">
+                                  <p className="text-stone-400 font-bold">
+                                    Financial Math Snapshot (Source: {ev.source_id}):
+                                  </p>
+                                  <pre className="whitespace-pre-wrap overflow-x-auto text-amber-300">
+                                    {JSON.stringify(ev.snapshot, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 3. Footer */}
         <div className="p-4 border-t border-stone-100 bg-[#FAF8F5]/80 flex items-center justify-between text-xs text-stone-500 shrink-0">
-          <span>Zero-PII evidence checked deterministically against sessions</span>
+          <span>Deterministic mathematical proof attached to every claim</span>
           <button
             type="button"
             onClick={onClose}

@@ -4,11 +4,11 @@
 
 **Blocked by:** 02: Scout Inquiry & Core Evidence Schema
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Apply database migration creating `shop_business_policies` table with defaults (15% min margin, 20% max discount) and tenant RLS
-- [ ] Build editable "Shop Policies" settings drawer in the Team Room allowing merchants to adjust thresholds
-- [ ] Implement Guardian's deterministic financial calculation engine (Net Revenue, Gross Margin, Contribution Margin, COD Return Risk Allowance)
-- [ ] Return explicit `unknown` for margins when product `cost_price` is missing, never substituting zero
-- [ ] Implement Guardian agent runner and Agent Roster UI with quick trigger ("Audit Discount Margin")
-- [ ] Add automated unit tests verifying Guardian's deterministic margin formulas and policy veto logic
+- [x] Apply database migration creating `shop_business_policies` table with defaults (15% min margin, 20% max discount) and tenant RLS
+- [x] Build editable "Shop Policies" settings drawer in the Team Room allowing merchants to adjust thresholds
+- [x] Implement Guardian's deterministic financial calculation engine (Net Revenue, Gross Margin, Contribution Margin, COD Return Risk Allowance)
+- [x] Return explicit `unknown` for margins when product `cost_price` is missing, never substituting zero
+- [x] Implement Guardian agent runner and Agent Roster UI with quick trigger ("Audit Discount Margin")
+- [x] Add automated unit tests verifying Guardian's deterministic margin formulas and policy veto logic
