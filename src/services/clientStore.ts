@@ -100,9 +100,12 @@ export function mutateProducts(action: string, product: Partial<Product> & { id?
   const state = load();
   if (action === "add") {
     state.products.push({
-      id: `prod-${Date.now()}`,
+      id: product.id || `prod-${Date.now()}`,
       name: product.name || "New Product",
       price: Number(product.price) || 0,
+      cost_price: product.cost_price !== undefined ? Number(product.cost_price) : 0,
+      safety_stock_threshold: product.safety_stock_threshold !== undefined ? Number(product.safety_stock_threshold) : 5,
+      lead_time_days: product.lead_time_days !== undefined ? Number(product.lead_time_days) : 3,
       stock: Number(product.stock) || 0,
       description: product.description || "",
       image:
@@ -110,6 +113,7 @@ export function mutateProducts(action: string, product: Partial<Product> & { id?
         "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400",
       varies: product.varies || [],
     });
+
   } else if (action === "edit" && product.id) {
     state.products = state.products.map((p) =>
       p.id === product.id

@@ -26,6 +26,7 @@ import {
   type DataFreshnessStatus,
 } from "../services/salesTeamApi";
 import { ShopPoliciesDrawer } from "./ShopPoliciesDrawer";
+import { SingleAgentInquiryDrawer } from "./SingleAgentInquiryDrawer";
 
 interface TeamRoomProps {
   shopId?: string;
@@ -39,6 +40,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   const [policiesOpen, setPoliciesOpen] = useState<boolean>(false);
   const [policies, setPolicies] = useState(() => getShopBusinessPolicies(shopId));
   const [selectedAgent, setSelectedAgent] = useState<AgentRosterInfo | null>(null);
+  const [inquiryDrawerOpen, setInquiryDrawerOpen] = useState<boolean>(false);
   const [inquiryNotice, setInquiryNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,9 +56,9 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
 
   const handleAgentClick = (agent: AgentRosterInfo) => {
     setSelectedAgent(agent);
-    setInquiryNotice(`Single-Agent Inquiry active: Connected to ${agent.name} (${agent.title}). Ready to run targeted investigations.`);
-    setTimeout(() => setInquiryNotice(null), 4000);
+    setInquiryDrawerOpen(true);
   };
+
 
   const getAgentIcon = (key: string) => {
     switch (key) {
@@ -368,13 +370,21 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         </div>
       </div>
 
-      {/* Drawer */}
+      {/* Drawers */}
       <ShopPoliciesDrawer
         isOpen={policiesOpen}
         onClose={() => setPoliciesOpen(false)}
         policy={policies}
         onSave={handleSavePolicies}
       />
+
+      <SingleAgentInquiryDrawer
+        isOpen={inquiryDrawerOpen}
+        agent={selectedAgent}
+        shopId={shopId}
+        onClose={() => setInquiryDrawerOpen(false)}
+      />
     </div>
   );
 }
+

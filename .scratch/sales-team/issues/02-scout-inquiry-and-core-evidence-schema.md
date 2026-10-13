@@ -6,9 +6,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] Apply database migration creating `team_sessions`, `team_agent_runs`, and `team_evidence` with UUID foreign keys to `public.shops(id)` and tenant RLS
-- [ ] Implement Scout agent runner service querying live inventory, sales trends, and buffer thresholds with Zod schema validation
-- [ ] Render interactive Agent Roster in the Team Room header highlighting Scout
-- [ ] Build single-agent inquiry drawer for Scout with preset triggers ("Hunt Stockout & Sales Risks", "Scan Slow-Moving Inventory")
-- [ ] Display Scout's findings with expandable evidence citation badges linking to observed catalog snapshots
-- [ ] Add automated verification test proving Scout runs and generates valid evidence records against seed data
+- [x] Apply database migration creating `team_sessions`, `team_agent_runs`, and `team_evidence` with UUID foreign keys to `public.shops(id)` and tenant RLS
+- [x] Implement Scout agent runner service querying live inventory, sales trends, and buffer thresholds with Zod schema validation
+- [x] Render interactive Agent Roster in the Team Room header highlighting Scout
+- [x] Build single-agent inquiry drawer for Scout with preset triggers ("Hunt Stockout & Sales Risks", "Scan Slow-Moving Inventory")
+- [x] Display Scout's findings with expandable evidence citation badges linking to observed catalog snapshots
+- [x] Add automated verification test proving Scout runs and generates valid evidence records against seed data
+

@@ -283,3 +283,13 @@
 - [2026-10-13T17:12:07.601Z] Modified file: `.scratch\sales-team\issues\01-sales-team-workspace-shell.md` - Pending specialist committee & Ultimate Judge review.
 - [2026-10-13T17:19:39.811Z] Modified file: `src\features\sales-team\services\salesTeamApi.ts` - Pending specialist committee & Ultimate Judge review.
 - [2026-10-13T17:20:35.996Z] Modified file: `src\features\sales-team\components\TeamRoom.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:23:13.439Z] Modified file: `scripts\test-scout-inquiry.ts` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:23:52.474Z] Modified file: `supabase\migrations\20261016000000_sales_team_core_evidence.sql` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:24:32.291Z] Modified file: `src\features\sales-team\agents\scoutRunner.ts` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:25:18.366Z] Modified file: `src\services\clientStore.ts` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:26:05.643Z] Modified file: `src\features\sales-team\components\SingleAgentInquiryDrawer.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:26:42.155Z] Modified file: `src\features\sales-team\components\TeamRoom.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:27:02.684Z] Modified file: `src\features\sales-team\components\TeamRoom.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:27:30.753Z] Modified file: `src\features\sales-team\components\TeamRoom.tsx` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:28:04.638Z] Modified file: `src\features\sales-team\agents\scoutRunner.ts` - Pending specialist committee & Ultimate Judge review.
+- [2026-10-13T17:29:18.680Z] Modified file: `.scratch\sales-team\issues\02-scout-inquiry-and-core-evidence-schema.md` - Pending specialist committee & Ultimate Judge review.
