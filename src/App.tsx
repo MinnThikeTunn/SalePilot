@@ -1897,32 +1897,6 @@ export default function App() {
                                 }`}>
                                   {o.paymentMethod.toUpperCase()}
                                 </span>
-                                <div className="mt-1 flex flex-col gap-1 items-start">
-                                  {o.paymentDetails?.transactionId && o.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && o.paymentDetails.transactionId !== "SLIP_ATTACHED" && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setActiveVerificationReceipt(o)}
-                                      className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded font-bold truncate max-w-[140px] cursor-pointer hover:bg-indigo-100 transition text-left"
-                                      title={`Click to verify Transaction ID: ${o.paymentDetails.transactionId}`}
-                                    >
-                                      TX: {o.paymentDetails.transactionId}
-                                    </button>
-                                  )}
-                                  {o.paymentDetails?.screenshotUrl && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveVerificationReceipt(o);
-                                        setSelectedSlipPreview(o.paymentDetails?.screenshotUrl || null);
-                                      }}
-                                      className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded font-bold truncate max-w-[140px] cursor-pointer hover:bg-emerald-100 transition text-left flex items-center gap-1"
-                                      title="Click to view submitted payment slip screenshot"
-                                    >
-                                      <Image size={10} />
-                                      <span>Slip Attached</span>
-                                    </button>
-                                  )}
-                                </div>
                               </td>
                               <td className="p-3 text-right font-semibold text-[#1C1917] text-xs">{o.totalAmount.toLocaleString()} MMK</td>
                               <td className="p-3 text-center">
@@ -2164,7 +2138,7 @@ export default function App() {
                             Customer did not attach an image slip during checkout.
                           </p>
                           <p className="text-[11px] text-stone-400 font-sans">
-                            If customer sent the receipt over Telegram or Viber, you can attach it here:
+                            If customer sent the receipt over Telegram, you can attach it here:
                           </p>
                           <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold cursor-pointer transition border border-stone-200">
                             <Image size={12} />
