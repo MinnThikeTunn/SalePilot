@@ -18,6 +18,7 @@ import {
   Loader2,
   RotateCcw,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getAgentRoster,
@@ -31,10 +32,15 @@ import {
   getPendingApprovals,
   createPendingApproval,
 } from "../services/approvalService";
+import {
+  evaluateDataScarcity,
+  type DataScarcityEvaluation,
+} from "../services/dataScarcityService";
 import { ShopPoliciesDrawer } from "./ShopPoliciesDrawer";
 import { SingleAgentInquiryDrawer } from "./SingleAgentInquiryDrawer";
 import { StrategyDecisionCard } from "./StrategyDecisionCard";
 import { ActionCenterDrawer } from "./ActionCenterDrawer";
+import { EvidenceExplorerDrawer } from "./EvidenceExplorerDrawer";
 import {
   runCouncilDeliberation,
   type CouncilDeliberationResult,
@@ -48,12 +54,14 @@ interface TeamRoomProps {
 export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: TeamRoomProps) {
   const [roster, setRoster] = useState<AgentRosterInfo[]>([]);
   const [freshness, setFreshness] = useState<DataFreshnessStatus | null>(null);
+  const [scarcity, setScarcity] = useState<DataScarcityEvaluation>(() => evaluateDataScarcity(shopId));
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
   const [policiesOpen, setPoliciesOpen] = useState<boolean>(false);
   const [policies, setPolicies] = useState(() => getShopBusinessPolicies(shopId));
   const [selectedAgent, setSelectedAgent] = useState<AgentRosterInfo | null>(null);
   const [inquiryDrawerOpen, setInquiryDrawerOpen] = useState<boolean>(false);
   const [actionCenterOpen, setActionCenterOpen] = useState<boolean>(false);
+  const [evidenceExplorerOpen, setEvidenceExplorerOpen] = useState<boolean>(false);
 
   // Council Deliberation State
   const [isDeliberating, setIsDeliberating] = useState<boolean>(false);
@@ -63,14 +71,15 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     "Maximize revenue for upcoming Thadingyut Lighting Festival without sacrificing contribution margin"
   );
 
-  const refreshApprovals = () => {
+  const refreshTelemetry = () => {
     setPendingApprovalsCount(getPendingApprovals(shopId).length);
+    setScarcity(evaluateDataScarcity(shopId));
+    setFreshness(getDataFreshnessStatus(shopId));
   };
 
   useEffect(() => {
     setRoster(getAgentRoster());
-    setFreshness(getDataFreshnessStatus(shopId));
-    refreshApprovals();
+    refreshTelemetry();
   }, [shopId]);
 
   const handleSavePolicies = (newPolicies: any) => {
@@ -93,7 +102,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         description: action.description,
       },
     });
-    refreshApprovals();
+    refreshTelemetry();
     setActionCenterOpen(true);
   };
 
@@ -114,6 +123,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
           setCouncilResult(result);
           setIsDeliberating(false);
           setDeliberationStep("completed");
+          refreshTelemetry();
         }, 400);
       }, 400);
     }, 450);
@@ -160,6 +170,19 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Evidence Ledger Button */}
+            <button
+              type="button"
+              onClick={() => setEvidenceExplorerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200 text-stone-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            >
+              <Database size={14} className="text-emerald-600" />
+              <span>Evidence Ledger</span>
+              <span className="font-mono text-[10px] bg-stone-100 px-1.5 py-0.5 rounded text-stone-600">
+                {(councilResult?.evidence || []).length}
+              </span>
+            </button>
+
             {/* Policies Button */}
             <button
               type="button"
@@ -187,6 +210,46 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
             </button>
           </div>
         </div>
+
+        {/* Low-Data Warning Banner (ADR-0003) */}
+        {scarcity.status === "insufficient_evidence" && (
+          <div className="p-5 bg-amber-50/90 border border-amber-200/90 rounded-[28px] space-y-3 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+                <h3 className="text-xs sm:text-sm font-black text-amber-900 tracking-tight">
+                  ADR-0003 Data Scarcity Notice: Speculative Forecasting Suppressed
+                </h3>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-200 text-amber-900 uppercase">
+                Insufficient Evidence
+              </span>
+            </div>
+            <p className="text-xs text-amber-800 leading-relaxed font-medium">
+              Your store currently has fewer than 5 completed transactions or uncosted inventory items. To prevent financial hallucinations and preserve margin integrity, speculative forecasts are suppressed until data coverage improves.
+            </p>
+
+            {/* Guided Completion Tasks */}
+            <div className="pt-2 border-t border-amber-200/60 space-y-2">
+              <p className="text-[10px] font-mono uppercase font-bold text-amber-900">
+                Guided Tasks to Unlock Full Intelligence:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {scarcity.guidedTasks.map((t) => (
+                  <div key={t.id} className="p-3 bg-white/95 border border-amber-200 rounded-xl text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-stone-900">{t.title}</span>
+                      <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-100 px-1.5 py-0.5 rounded">
+                        {t.actionLabel}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-600">{t.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Telemetry Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-stone-100 text-xs">
@@ -491,11 +554,17 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         shopId={shopId}
         onClose={() => {
           setActionCenterOpen(false);
-          refreshApprovals();
+          refreshTelemetry();
         }}
         onActionExecuted={() => {
-          refreshApprovals();
+          refreshTelemetry();
         }}
+      />
+
+      <EvidenceExplorerDrawer
+        isOpen={evidenceExplorerOpen}
+        evidence={councilResult?.evidence || []}
+        onClose={() => setEvidenceExplorerOpen(false)}
       />
     </div>
   );

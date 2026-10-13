@@ -4,11 +4,11 @@
 
 **Blocked by:** 05: Full Council Deliberation & 5-Agent Debate Loop
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Build Evidence Explorer UI with filters for date range, metric type, and source entity
-- [ ] Render data quality metrics: coverage score, calculation timestamp, formula version, and limitation notes
-- [ ] Implement data scarcity evaluator checking minimum transaction thresholds (at least 5 completed orders and costed products)
-- [ ] Display prominent `insufficient_evidence` warning banner when data scarcity is detected
-- [ ] Provide guided data-completion checklist (e.g. "Add cost price for top 3 items", "Log initial 5 customer transactions")
-- [ ] Add automated test verifying that low-volume test fixtures trigger the data scarcity fallback without crashing or hallucinating
+- [x] Build Evidence Explorer UI with filters for date range, metric type, and source entity
+- [x] Render data quality metrics: coverage score, calculation timestamp, formula version, and limitation notes
+- [x] Implement data scarcity evaluator checking minimum transaction thresholds (at least 5 completed orders and costed products)
+- [x] Display prominent `insufficient_evidence` warning banner when data scarcity is detected
+- [x] Provide guided data-completion checklist (e.g. "Add cost price for top 3 items", "Log initial 5 customer transactions")
+- [x] Add automated test verifying that low-volume test fixtures trigger the data scarcity fallback without crashing or hallucinating
