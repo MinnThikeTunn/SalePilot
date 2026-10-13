@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T14:32:00.000Z",
+  "title": "Design System: Sales Brain AI",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Terracotta Rust",
+        "canonical": "#C05A3E",
+        "tonalRamp": ["#421A10", "#6A2D1E", "#933E2B", "#C05A3E", "#D57C63", "#E6A290", "#F4CBC0", "#FDF5F2"]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Warm Alabaster Canvas",
+        "canonical": "#FAF8F5",
+        "tonalRamp": ["#1C1917", "#44403C", "#78716C", "#A8A29E", "#D6D3D1", "#E7E5E4", "#F5F1EA", "#FAF8F5"]
+      },
+      "surface-card": {
+        "role": "neutral-variant",
+        "displayName": "Warm Oatmeal Card",
+        "canonical": "#F3EFEA",
+        "tonalRamp": ["#292524", "#57534E", "#78716C", "#A8A29E", "#D6D3D1", "#E7E5E4", "#EFE8E1", "#F3EFEA"]
+      },
+      "text-primary": {
+        "role": "on-neutral",
+        "displayName": "Rich Stone",
+        "canonical": "#1C1917",
+        "tonalRamp": ["#0C0A09", "#1C1917", "#292524", "#44403C", "#57534E", "#78716C", "#A8A29E", "#E7E5E4"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Editorial Display Serif",
+        "purpose": "Hero statements and top-level brand greetings."
+      },
+      "headline": {
+        "displayName": "Editorial Headline Serif",
+        "purpose": "Major section titles and category headers."
+      },
+      "title": {
+        "displayName": "Card & Modal Title Serif",
+        "purpose": "Card titles, product names, and dialog headers."
+      },
+      "body": {
+        "displayName": "Modern Sans Body",
+        "purpose": "Readable descriptions, instructions, and customer chat."
+      },
+      "label": {
+        "displayName": "Tracked Uppercase Micro",
+        "purpose": "Category eyebrows, status pills, and column keys."
+      }
+    },
+    "shadows": [
+      {
+        "name": "subtle-surface",
+        "value": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        "purpose": "Tactile grounding for buttons and pill tags."
+      },
+      {
+        "name": "elevated-card",
+        "value": "0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06)",
+        "purpose": "Floating modals, dropdowns, and verified slip popovers."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Default easing for hover and state transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Terracotta primary action button with uppercase tracking.",
+      "html": "<button class=\"ds-btn-primary\">GET STARTED</button>",
+      "css": ".ds-btn-primary { background-color: #C05A3E; color: #FFFFFF; font-family: Inter, sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 24px; border-radius: 6px; border: none; cursor: pointer; transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); } .ds-btn-primary:hover { background-color: #A94C33; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Refined neutral outline button for secondary choices.",
+      "html": "<button class=\"ds-btn-secondary\">EXPLORE WORKFLOWS</button>",
+      "css": ".ds-btn-secondary { background-color: #FFFFFF; color: #1C1917; font-family: Inter, sans-serif; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 20px; border-radius: 6px; border: 1px solid #E7E5E4; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-secondary:hover { border-color: #1C1917; background-color: #F5F1EA; }"
+    },
+    {
+      "name": "Workflow Feature Card",
+      "kind": "card",
+      "refersTo": "card-workflow",
+      "description": "Warm oatmeal square container with circular terracotta icon and serif title.",
+      "html": "<div class=\"ds-card-workflow\"><div class=\"ds-icon-circle\">✦</div><span class=\"ds-tag\">TELEGRAM & WEB</span><p class=\"ds-title\">Autonomous Chatbot</p></div>",
+      "css": ".ds-card-workflow { background-color: #F3EFEA; border: 1px solid rgba(231, 229, 228, 0.6); border-radius: 16px; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: background-color 0.3s; cursor: pointer; } .ds-card-workflow:hover { background-color: #EFE8E1; } .ds-icon-circle { width: 48px; height: 48px; border-radius: 9999px; background-color: rgba(255, 255, 255, 0.85); color: #C05A3E; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); } .ds-tag { font-family: monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #78716C; margin-bottom: 8px; } .ds-title { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #1C1917; margin: 0; }"
+    },
+    {
+      "name": "Slip Verified Badge",
+      "kind": "chip",
+      "refersTo": "badge-verified",
+      "description": "Green verification indicator for successful payment screenshot audits.",
+      "html": "<span class=\"ds-badge-verified\">✓ Slip Verified</span>",
+      "css": ".ds-badge-verified { background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-family: Inter, sans-serif; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Curated Merchant Sanctuary",
+    "overview": "Sales Brain AI embodies an artisanal, editorial sanctuary crafted specifically for independent merchants and modern makers. Inspired by high-end botanical and ceramic design houses, the interface turns away from sterile, cold-blue software dashboards in favor of warm tactile paper tones, thoughtful negative space, and disciplined typography.\n\nThe experience celebrates the craft of commerce. Every screen feels calm, deliberate, and trustworthy—balancing editorial elegance with lightning-fast operational clarity for inventory, township deliveries, and payment verification.",
+    "keyCharacteristics": [
+      "Warm Alabaster Canvas (#FAF8F5)",
+      "Editorial Typography Pairing (Playfair Display + Inter)",
+      "Warm Terracotta Accent (#C05A3E)",
+      "Subtle Layered Tactility (Oatmeal containers and hairline sand borders)"
+    ],
+    "rules": [
+      {
+        "name": "The 10% Terracotta Rule",
+        "body": "Terracotta (#C05A3E) must never overwhelm the canvas. It is strictly reserved for primary actions, current step markers, and confirmed checkout highlights.",
+        "section": "colors"
+      },
+      {
+        "name": "The Warm Paper Rule",
+        "body": "Never use pure cold black (#000000) or tech-blue slate (#0F172A, #F0F9FF) as primary backgrounds. Every surface must remain anchored in warm alabaster, oatmeal, or stone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Editorial Masthead Rule",
+        "body": "Page titles, modal headings, and brand identifiers must lead in Serif (font-serif) to maintain the signature artisanal feel.",
+        "section": "typography"
+      },
+      {
+        "name": "The Unambiguous Metric Rule",
+        "body": "Prices in MMK, township shipping fees, transaction IDs, and quantities must strictly render in Inter or font-mono with medium/semibold weights to eliminate ambiguity.",
+        "section": "typography"
+      },
+      {
+        "name": "The Material Layering Rule",
+        "body": "Depth is created through surface contrast (#FAF8F5 background -> #F3EFEA container -> #FFFFFF floating card) and 1px sand borders, never heavy blurry shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use #FAF8F5 as the foundation background for pages, cards, and layouts.",
+      "Do lead with font-serif (Playfair Display) on main headlines, section titles, and brand touchpoints.",
+      "Do reserve Terracotta #C05A3E for primary CTAs, active highlights, and verified markers.",
+      "Do use uppercase tracked typography (text-[11px] font-bold tracking-[0.2em]) for category eyebrows and badges.",
+      "Do maintain generous whitespace and breathable section padding.",
+      "Do keep borders delicate and warm (border-stone-200/60)."
+    ],
+    "donts": [
+      "Don't use cold saturated blues or dark slate-blue palettes for general admin surfaces.",
+      "Don't use harsh pure black (#000000) for text or background buttons—use rich stone (#1C1917).",
+      "Don't place heavy drop shadows or vibrant neon gradients behind cards.",
+      "Don't use sans-serif exclusively for all titles; preserve the distinctive editorial serif character.",
+      "Don't omit Myanmar Unicode legibility enhancements when rendering Burmese script."
+    ]
+  }
+}

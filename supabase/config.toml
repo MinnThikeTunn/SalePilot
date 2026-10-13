@@ -1,0 +1,19 @@
+[api]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+
+[storage]
+enabled = true
+
+[functions.api]
+verify_jwt = false
+
+[functions.shop]
+verify_jwt = false
+
+[functions.telegram-webhook]
+verify_jwt = false

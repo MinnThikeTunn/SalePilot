@@ -1,0 +1,35 @@
+{
+  "skill_name": "engineering-guardrails",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Suggest adding Redis for caching user sessions to improve performance",
+      "expected_output": "Should reject or flag the proposal as violating hard constraints (Redis by default), suggest alternatives like in-memory caching",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I want to split the backend into separate microservices for user management and order processing",
+      "expected_output": "Should reject or flag as violating hard constraints (microservices), ask for explicit user request",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Add python-dotenv for environment variable management in the Python backend",
+      "expected_output": "Should approve as it's a minimal, well-justified dependency",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Propose a deployment approach that is demo-friendly and does not use Kubernetes",
+      "expected_output": "Should provide demo-friendly deployment (e.g., Vercel, Render, Railway) without Kubernetes",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Write a function that calculates fibonacci numbers",
+      "expected_output": "Should NOT trigger this skill - it's a simple coding task, not architecture/dependency proposal",
+      "files": []
+    }
+  ]
+}
