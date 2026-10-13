@@ -249,6 +249,24 @@ export function updateOrderStatus(orderId: string, status: "confirmed" | "cancel
   return state;
 }
 
+export function updateOrderPaymentDetails(
+  orderId: string,
+  paymentDetails: {
+    method: "KPay" | "WavePay" | "CBPay" | "AYA Pay" | "CoD";
+    transactionId: string;
+    screenshotUrl?: string;
+  }
+) {
+  const state = load();
+  const order = state.orders.find((o) => o.id === orderId || o.invoiceId === orderId);
+  if (order) {
+    order.paymentDetails = paymentDetails;
+  }
+  save();
+  return state;
+}
+
+
 export function botTakeover(sessionId: string) {
   const state = load();
   if (state.sessions[sessionId]) {

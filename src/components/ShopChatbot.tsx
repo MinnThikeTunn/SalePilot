@@ -11,6 +11,7 @@ import {
   Trash2,
   MapPin,
   CreditCard,
+  Image,
   X,
   ChevronRight,
   ArrowRight,
@@ -380,6 +381,7 @@ export function ShopChatbot({
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "prepay">("cod");
   const [prepayProvider, setPrepayProvider] = useState<"KPay" | "WavePay" | "AYA Pay" | "CBPay">("KPay");
   const [prepayTransactionId, setPrepayTransactionId] = useState("");
+  const [prepayScreenshot, setPrepayScreenshot] = useState<string | null>(null);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
 
@@ -763,6 +765,7 @@ Candy:`,
       ? {
           method: prepayProvider,
           transactionId: prepayTransactionId.trim(),
+          screenshotUrl: prepayScreenshot || undefined,
         }
       : {
           method: "CoD" as const,
@@ -878,6 +881,7 @@ Candy:`,
       // 4. Reset checkout form fields
       setAddressDetails("");
       setPrepayTransactionId("");
+      setPrepayScreenshot(null);
       setIsCheckoutOpen(false);
       setOrderSuccess(newOrder);
 
@@ -1880,6 +1884,63 @@ Candy:`,
                           <p className="text-[11px] text-emerald-600 font-medium mt-1">
                             ✓ Transaction ID provided.
                           </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-bold text-[#57534E] uppercase tracking-wider">
+                            Payment Slip Screenshot (Optional)
+                          </label>
+                          {prepayScreenshot && (
+                            <span className="text-[10px] text-emerald-600 font-semibold font-mono">
+                              ✓ Slip Attached
+                            </span>
+                          )}
+                        </div>
+
+                        {prepayScreenshot ? (
+                          <div className="relative border border-stone-200 rounded-xl p-2.5 bg-[#FAF8F5] flex items-center gap-3">
+                            <img
+                              src={prepayScreenshot}
+                              alt="Payment Slip Preview"
+                              className="w-14 h-14 object-cover rounded-lg border border-stone-200 shadow-2xs"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-stone-800 truncate">Payment Slip Attached</p>
+                              <p className="text-[10px] text-stone-500">Image will be attached to order for verification</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setPrepayScreenshot(null)}
+                              className="p-1.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-700 transition cursor-pointer"
+                              title="Remove Screenshot"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-stone-300 bg-[#FAF8F5] hover:bg-stone-100 hover:border-stone-400 cursor-pointer transition text-xs text-stone-600 group">
+                            <Image className="w-4 h-4 text-stone-400 group-hover:text-stone-600" />
+                            <span className="font-medium">Attach / Upload Payment Slip Screenshot</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    if (event.target?.result) {
+                                      setPrepayScreenshot(event.target.result as string);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
                         )}
                       </div>
                     </div>

@@ -75,3 +75,25 @@ export async function updateDbOrderStatus(orderId: string, status: string): Prom
     return false;
   }
 }
+
+/**
+ * Update order payment details (transaction ID and/or screenshot slip) in the Supabase Postgres "orders" table.
+ */
+export async function updateDbOrderPaymentDetails(orderId: string, paymentDetails: any): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("orders")
+      .update({ payment_details: paymentDetails, updated_at: new Date().toISOString() })
+      .or(`id.eq.${orderId},invoice_id.eq.${orderId}`);
+
+    if (error) {
+      console.warn("[ordersApi] Error updating payment details in DB:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("[ordersApi] Exception updating payment details:", err);
+    return false;
+  }
+}
+

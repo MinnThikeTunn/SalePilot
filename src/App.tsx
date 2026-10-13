@@ -59,7 +59,7 @@ import * as store from "./services/clientStore";
 import { getDefaultSessions } from "./services/defaults";
 import { supabase } from "./utils/supabase";
 import { fetchDeliveryMatrix, addDeliveryZone, deleteDeliveryZone } from "./services/deliveryMatrixApi";
-import { getOrdersForOwner, updateDbOrderStatus } from "./services/ordersApi";
+import { getOrdersForOwner, updateDbOrderStatus, updateDbOrderPaymentDetails } from "./services/ordersApi";
 import { buildShopPublicUrl } from "./utils/shopId";
 import { loadTownships, loadAllDeliveryLocations, MYANMAR_REGIONS } from "./data/townships";
 import QRCode from "qrcode";
@@ -363,6 +363,7 @@ export default function App() {
   // Owner custom live reply states
   const [ownerReplyText, setOwnerReplyText] = useState<string>("");
   const [activeVerificationReceipt, setActiveVerificationReceipt] = useState<Order | null>(null);
+  const [selectedSlipPreview, setSelectedSlipPreview] = useState<string | null>(null);
   const chatScrollRef = React.useRef<HTMLDivElement>(null);
 
   const onboardingInitialForm: OnboardingFormState = React.useMemo(() => {
@@ -897,6 +898,35 @@ export default function App() {
       console.error(err);
     }
   };
+
+  const handleAttachSlip = (file: File) => {
+    if (!activeVerificationReceipt) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl && activeVerificationReceipt) {
+        const updatedPaymentDetails = {
+          method: (activeVerificationReceipt.paymentDetails?.method || "KPay") as "KPay" | "WavePay" | "CBPay" | "AYA Pay" | "CoD",
+          transactionId: activeVerificationReceipt.paymentDetails?.transactionId || "",
+          screenshotUrl: dataUrl,
+        };
+
+        store.updateOrderPaymentDetails(activeVerificationReceipt.id, updatedPaymentDetails);
+        setActiveVerificationReceipt((prev) =>
+          prev ? { ...prev, paymentDetails: updatedPaymentDetails } : null
+        );
+
+        if (user) {
+          await updateDbOrderPaymentDetails(activeVerificationReceipt.id, updatedPaymentDetails);
+        }
+
+        showToast("Payment slip screenshot attached successfully!", "success");
+        fetchState();
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
 
   const handleTakeover = async (sessId?: string) => {
     const targetId = sessId || activeSessionId;
@@ -1867,8 +1897,8 @@ export default function App() {
                                 }`}>
                                   {o.paymentMethod.toUpperCase()}
                                 </span>
-                                {o.paymentDetails?.transactionId && o.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && (
-                                  <div className="mt-1 flex items-center gap-1">
+                                <div className="mt-1 flex flex-col gap-1 items-start">
+                                  {o.paymentDetails?.transactionId && o.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && (
                                     <button
                                       type="button"
                                       onClick={() => setActiveVerificationReceipt(o)}
@@ -1877,8 +1907,22 @@ export default function App() {
                                     >
                                       TX: {o.paymentDetails.transactionId}
                                     </button>
-                                  </div>
-                                )}
+                                  )}
+                                  {o.paymentDetails?.screenshotUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveVerificationReceipt(o);
+                                        setSelectedSlipPreview(o.paymentDetails?.screenshotUrl || null);
+                                      }}
+                                      className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded font-bold truncate max-w-[140px] cursor-pointer hover:bg-emerald-100 transition text-left flex items-center gap-1"
+                                      title="Click to view submitted payment slip screenshot"
+                                    >
+                                      <Image size={10} />
+                                      <span>Slip Attached</span>
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                               <td className="p-3 text-right font-semibold text-[#1C1917] text-xs">{o.totalAmount.toLocaleString()} MMK</td>
                               <td className="p-3 text-center">
@@ -1886,9 +1930,9 @@ export default function App() {
                                   <div className="flex items-center justify-center gap-1.5">
                                     <button
                                       onClick={() => setActiveVerificationReceipt(o)}
-                                      className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
+                                      className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1"
                                     >
-                                      {o.paymentDetails?.screenshotUrl ? t("evaluateReceipt") : "Verify TX ID"}
+                                      <span>Verify Payment</span>
                                     </button>
                                     <button
                                       onClick={() => handleUpdateOrderStatus(o.id, "confirmed")}
@@ -1930,11 +1974,10 @@ export default function App() {
               {activeVerificationReceipt && (
                 <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-lg animate-fadeIn grid grid-cols-1 md:grid-cols-12 gap-6">
                   
-                  <div className="md:col-span-7 space-y-4">
+                  {/* LEFT COLUMN: ORDER SUMMARY & APPROVAL ACTIONS */}
+                  <div className="md:col-span-5 space-y-4">
                     <span className="text-xs font-semibold font-mono text-amber-900 select-none block bg-amber-50 p-2.5 rounded-xl border border-amber-200/70">
-                      {activeVerificationReceipt.paymentDetails?.screenshotUrl
-                        ? t("evaluateReceiptHeader")
-                        : "TRANSACTION ID AUDIT — Verify customer mobile remittance transaction ID before dispatch"}
+                      PAYMENT EVALUATOR — Audit Transaction ID & Payment Slip Proof
                     </span>
 
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
@@ -1948,7 +1991,7 @@ export default function App() {
                       </div>
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
                         <span className="text-[10px] text-[#78716C] uppercase">{t("transactionId")}:</span>
-                        <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-sm break-all">
+                        <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-xs break-all">
                           {activeVerificationReceipt.paymentDetails?.transactionId || "—"}
                         </strong>
                       </div>
@@ -1963,7 +2006,7 @@ export default function App() {
                         <span className="text-[10px] text-[#78716C] uppercase font-mono block font-semibold">
                           {t("orderItems")}:
                         </span>
-                        <div className="space-y-1">
+                        <div className="space-y-1 max-h-36 overflow-y-auto">
                           {activeVerificationReceipt.items.map((it, idx) => (
                             <div key={idx} className="flex justify-between items-center text-xs font-mono text-stone-800">
                               <span>{it.quantity}× {it.productName}</span>
@@ -2011,69 +2054,164 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="md:col-span-5 flex flex-col justify-center">
-                    {activeVerificationReceipt.paymentDetails?.screenshotUrl ? (
-                      <div>
-                        <span className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider block mb-2 font-semibold">
-                          {t("submittedScreenshotEvidence")}
+                  {/* RIGHT COLUMN: BOTH TRANSACTION ID AND SCREENSHOT SLIP EVIDENCE */}
+                  <div className="md:col-span-7 space-y-4">
+                    {/* 1. Transaction ID Audit Card */}
+                    <div className="border border-indigo-200 bg-indigo-50/50 p-4 rounded-2xl space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                          <CreditCard size={13} className="text-indigo-600" />
+                          <span>Mobile Remittance Transaction ID</span>
                         </span>
-                        <div className="border border-[#E7E5E4] bg-[#FAF8F5] p-2.5 rounded-2xl text-center relative max-h-[290px] overflow-hidden">
-                          <img
-                            src={activeVerificationReceipt.paymentDetails.screenshotUrl}
-                            alt="Submitted receipt attachment proof"
-                            className="w-auto h-auto max-h-[260px] object-contain mx-auto rounded-xl shadow-2xs"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
+                        <span className="text-[10px] font-mono font-semibold bg-white border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                          {activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="border border-indigo-200 bg-indigo-50/50 p-4 sm:p-5 rounded-2xl space-y-3 text-center">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-1.5">
-                            <CreditCard size={13} className="text-indigo-600" />
-                            <span>Mobile Remittance</span>
-                          </span>
-                          <span className="text-[10px] font-mono font-semibold bg-white border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
-                            {activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}
-                          </span>
-                        </div>
 
-                        <div className="space-y-1.5 py-1">
-                          <span className="text-[10px] font-mono uppercase text-stone-500 tracking-wider block font-semibold">
-                            Customer Transaction ID
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-white border-2 border-indigo-300/80 rounded-xl px-3 py-2 shadow-2xs">
+                          <strong className="text-sm sm:text-base font-mono font-bold text-indigo-950 tracking-wider select-all block break-all">
+                            {activeVerificationReceipt.paymentDetails?.transactionId || "No TX ID Submitted"}
+                          </strong>
+                        </div>
+                        {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(activeVerificationReceipt.paymentDetails!.transactionId);
+                              showToast("Transaction ID copied to clipboard!", "success");
+                            }}
+                            className="px-3 py-2 rounded-xl bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition shadow-2xs active:scale-[0.98] shrink-0"
+                            title="Copy Transaction ID"
+                          >
+                            <Copy size={13} />
+                            <span>Copy</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] text-stone-600 leading-tight font-sans">
+                        💡 Verify this Transaction ID in your <strong>{activeVerificationReceipt.paymentDetails?.method || "Wallet"}</strong> merchant account for <strong>{activeVerificationReceipt.totalAmount.toLocaleString()} MMK</strong>.
+                      </p>
+                    </div>
+
+                    {/* 2. Payment Slip Screenshot Verification Card */}
+                    <div className="border border-stone-200 bg-[#FAF8F5] p-4 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+                          <Image size={13} className="text-stone-500" />
+                          <span>Payment Slip Screenshot Evidence</span>
+                        </span>
+                        {activeVerificationReceipt.paymentDetails?.screenshotUrl ? (
+                          <span className="text-[10px] font-mono font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Check size={11} /> Slip Attached
                           </span>
-                          <div className="bg-white border-2 border-indigo-300/80 rounded-xl p-3 shadow-2xs">
-                            <strong className="text-base sm:text-lg font-mono font-bold text-indigo-900 tracking-wider select-all block break-all">
-                              {activeVerificationReceipt.paymentDetails?.transactionId || "No TX ID Submitted"}
-                            </strong>
+                        ) : (
+                          <span className="text-[10px] font-mono text-stone-500 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-full">
+                            No Slip Attached
+                          </span>
+                        )}
+                      </div>
+
+                      {activeVerificationReceipt.paymentDetails?.screenshotUrl ? (
+                        <div className="space-y-2">
+                          <div
+                            className="border border-stone-200 bg-white p-2 rounded-xl text-center relative max-h-[240px] overflow-hidden group cursor-pointer"
+                            onClick={() => setSelectedSlipPreview(activeVerificationReceipt.paymentDetails?.screenshotUrl || null)}
+                            title="Click to view full size slip"
+                          >
+                            <img
+                              src={activeVerificationReceipt.paymentDetails.screenshotUrl}
+                              alt="Customer payment slip proof"
+                              className="w-auto h-auto max-h-[220px] object-contain mx-auto rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute bottom-2 right-2 bg-stone-900/80 text-white text-[10px] font-medium px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition shadow">
+                              Click to expand
+                            </div>
                           </div>
-                        </div>
 
-                        {activeVerificationReceipt.paymentDetails?.transactionId && (
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-between gap-2 pt-1">
                             <button
                               type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(activeVerificationReceipt.paymentDetails!.transactionId);
-                                showToast("Transaction ID copied to clipboard!", "success");
-                              }}
-                              className="px-3.5 py-1.5 rounded-full bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-[0.98]"
+                              onClick={() => setSelectedSlipPreview(activeVerificationReceipt.paymentDetails?.screenshotUrl || null)}
+                              className="text-xs text-[#0069FF] hover:underline font-semibold cursor-pointer"
                             >
-                              <Copy size={12} />
-                              <span>Copy Transaction ID</span>
+                              🔍 View Full Size Slip
                             </button>
-                          </div>
-                        )}
 
-                        <div className="pt-2 border-t border-indigo-200/60 text-left">
-                          <p className="text-[11px] text-stone-600 leading-relaxed font-sans">
-                            💡 Cross-reference this Transaction ID in your <strong>{activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}</strong> merchant account for the amount of <strong>{activeVerificationReceipt.totalAmount.toLocaleString()} MMK</strong> before approving.
-                          </p>
+                            <label className="text-xs text-stone-600 hover:text-stone-900 font-medium cursor-pointer bg-white border border-stone-200 px-2.5 py-1 rounded-lg shadow-2xs hover:bg-stone-50 transition">
+                              <span>Replace Slip</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleAttachSlip(file);
+                                }}
+                              />
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="border border-dashed border-stone-300 bg-white rounded-xl p-4 text-center space-y-2">
+                          <p className="text-xs text-stone-600 font-sans">
+                            Customer did not attach an image slip during checkout.
+                          </p>
+                          <p className="text-[11px] text-stone-400 font-sans">
+                            If customer sent the receipt over Telegram or Viber, you can attach it here:
+                          </p>
+                          <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold cursor-pointer transition border border-stone-200">
+                            <Image size={12} />
+                            <span>Upload / Attach Slip Screenshot</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleAttachSlip(file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
+                </div>
+              )}
+
+              {/* FULL-SIZE SLIP PREVIEW MODAL */}
+              {selectedSlipPreview && (
+                <div
+                  className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4"
+                  onClick={() => setSelectedSlipPreview(null)}
+                >
+                  <div
+                    className="relative max-w-3xl max-h-[92vh] bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200">
+                      <span className="text-xs font-bold font-mono text-stone-800 uppercase tracking-wider">
+                        Payment Slip Verification (Full Size)
+                      </span>
+                      <button
+                        onClick={() => setSelectedSlipPreview(null)}
+                        className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-800 cursor-pointer transition"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="overflow-auto flex-1 flex items-center justify-center bg-stone-50 rounded-xl p-2">
+                      <img
+                        src={selectedSlipPreview}
+                        alt="Full size payment slip"
+                        className="max-h-[80vh] w-auto object-contain rounded-lg shadow-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
