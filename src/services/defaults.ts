@@ -16,5 +16,6 @@ export function createEmptyShopState(): SystemState {
     deliveryZones: [],
     orders: [],
     sessions: {},
+    campaignRecords: [],
   };
 }

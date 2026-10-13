@@ -1,5 +1,5 @@
 import { cloneDefaultState, DEFAULT_STATE } from "../data/defaultState";
-import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order } from "../types";
+import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order, CampaignRecord } from "../types";
 import { processCustomerMessage } from "./botSimulator";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 import { invokeApi } from "./api";
@@ -20,6 +20,9 @@ function load(): SystemState {
       if (!Array.isArray(memoryState.deliveryZones)) {
         memoryState.deliveryZones = [];
       }
+      if (!Array.isArray(memoryState.campaignRecords)) {
+        memoryState.campaignRecords = [];
+      }
       return memoryState;
     }
   } catch {
@@ -28,6 +31,9 @@ function load(): SystemState {
   memoryState = cloneDefaultState();
   if (!Array.isArray(memoryState.deliveryZones)) {
     memoryState.deliveryZones = [];
+  }
+  if (!Array.isArray(memoryState.campaignRecords)) {
+    memoryState.campaignRecords = [];
   }
   save();
   return memoryState;
@@ -260,6 +266,54 @@ export async function getAiMarketingImage(campaignType: string, prompt?: string)
     success: true,
     imageUrl: getMarketingImageUrl(campaignType),
   };
+}
+
+export function mutateCampaignRecord(
+  action: "add" | "update",
+  record: Partial<CampaignRecord> & { id?: string }
+) {
+  const state = load();
+  if (!Array.isArray(state.campaignRecords)) state.campaignRecords = [];
+
+  if (action === "add") {
+    const launchTime = record.launchedAt ?? new Date().toISOString();
+    // Close any previous active campaign so orders are never double-counted
+    state.campaignRecords = state.campaignRecords.map((r) => {
+      if (!r.endedAt) {
+        return { ...r, endedAt: launchTime, status: "ended" as const };
+      }
+      return r;
+    });
+
+    const newRecord: CampaignRecord = {
+      id: `camp-${Date.now()}`,
+      campaignTheme: record.campaignTheme ?? "General",
+      goal: record.goal ?? "more_profit",
+      offer: record.offer ?? "full_price",
+      discountPct: record.discountPct ?? 0,
+      selectedProductIds: record.selectedProductIds ?? [],
+      copyEn: record.copyEn ?? "",
+      copyMy: record.copyMy ?? "",
+      launchedAt: launchTime,
+      endedAt: null,
+      status: "active",
+      measuredAt: null,
+      ordersGenerated: 0,
+      revenueGenerated: 0,
+      baselineOrders: record.baselineOrders ?? 0,
+      winner: null,
+      variants: record.variants ?? [],
+      notes: record.notes ?? "",
+    };
+    state.campaignRecords.unshift(newRecord);
+  } else if (action === "update" && record.id) {
+    state.campaignRecords = state.campaignRecords.map((r) =>
+      r.id === record.id ? { ...r, ...record } : r
+    );
+  }
+
+  save();
+  return state;
 }
 
 /** Seed export for tests */
