@@ -1,5 +1,6 @@
 import type { TeamApproval } from "../types/sales-team";
 import { getState } from "../../../services/clientStore";
+import { saveBusinessMemory } from "./businessMemoryService";
 
 // ============================================================================
 // Deterministic Canonical JSON Stringifier
@@ -212,6 +213,16 @@ export function rejectAction(approvalId: string, reason: string): RejectApproval
   (approval as any).rejectionReason = reason;
 
   saveApprovals(approval.shop_id);
+
+  // Automatically record owner correction in Business Memory
+  saveBusinessMemory({
+    shopId: approval.shop_id,
+    memoryType: "owner_correction",
+    content: `Owner rejected action (${approval.action_type}): ${reason}`,
+    sourceRefs: [approval.id],
+    confidence: "high",
+  });
+
   return approval;
 }
 
@@ -289,6 +300,14 @@ export function verifyAndExecuteAction(approvalId: string): ExecutionResult {
   // 3. Mark Executed
   approval.status = "executed";
   saveApprovals(approval.shop_id);
+
+  saveBusinessMemory({
+    shopId: approval.shop_id,
+    memoryType: "verified_fact",
+    content: `Owner executed approved action (${approval.action_type}): sealed with hash ${approval.approved_payload_hash.slice(0, 16)}`,
+    sourceRefs: [approval.id],
+    confidence: "high",
+  });
 
   return {
     success: true,

@@ -1,5 +1,6 @@
 import { toolRegistry } from "../tools/toolRegistry";
 import type { TeamProposal, ShopBusinessPolicy, TeamEvidence } from "../types/sales-team";
+import { retrieveRelevantMemories } from "../services/businessMemoryService";
 
 export interface MuseCraftOptions {
   shopId: string;
@@ -96,6 +97,25 @@ export function runMuseProposals(options: MuseCraftOptions): MuseRunResult {
     hypothesis = `Revised per Guardian margin veto: Discount scaled down to ${discountPct}%, replacing cash discount with surplus inventory gift item to preserve Guardian margin floor while overcoming buyer hesitation.`;
   }
 
+  // Ingest Business Memories (owner corrections & past lessons)
+  const relevantMemories = retrieveRelevantMemories({
+    shopId,
+    query: goal || anchorProduct.name,
+  });
+
+  relevantMemories.forEach((mem) => {
+    if (mem.memory_type === "owner_correction") {
+      const match = mem.content.match(/(\d+)%/);
+      if (match) {
+        const memCap = parseInt(match[1], 10);
+        if (memCap > 0 && memCap < discountPct) {
+          discountPct = memCap;
+          hypothesis += ` [Honoring owner memory: discount capped at ${discountPct}%]`;
+        }
+      }
+    }
+  });
+
   const allEvidenceRefs = [...scoutEvidenceRefs, ...echoEvidenceRefs, evId];
 
   const primaryProposal: TeamProposal = {
@@ -121,6 +141,11 @@ export function runMuseProposals(options: MuseCraftOptions): MuseRunResult {
       "Stock exhaustion if order velocity exceeds reorder safety buffer.",
     ],
     recommended_action: `Deploy targeted Telegram broadcast to repeat buyer cohorts with 1-click order button and flat-rate delivery guarantee.`,
+    campaign_payload: {
+      proposedDiscountPct: discountPct,
+      anchorProductId: anchorProduct.id,
+      giftProductId: giftProduct?.id,
+    },
     requires_owner_approval: true,
     status: revisionRound > 0 ? "revised" : "draft",
   };

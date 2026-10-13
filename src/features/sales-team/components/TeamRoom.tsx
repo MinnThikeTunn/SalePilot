@@ -19,6 +19,7 @@ import {
   RotateCcw,
   Lock,
   AlertTriangle,
+  Brain,
 } from "lucide-react";
 import {
   getAgentRoster,
@@ -36,11 +37,13 @@ import {
   evaluateDataScarcity,
   type DataScarcityEvaluation,
 } from "../services/dataScarcityService";
+import { getBusinessMemories } from "../services/businessMemoryService";
 import { ShopPoliciesDrawer } from "./ShopPoliciesDrawer";
 import { SingleAgentInquiryDrawer } from "./SingleAgentInquiryDrawer";
 import { StrategyDecisionCard } from "./StrategyDecisionCard";
 import { ActionCenterDrawer } from "./ActionCenterDrawer";
 import { EvidenceExplorerDrawer } from "./EvidenceExplorerDrawer";
+import { BusinessMemoryDrawer } from "./BusinessMemoryDrawer";
 import {
   runCouncilDeliberation,
   type CouncilDeliberationResult,
@@ -62,6 +65,8 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   const [inquiryDrawerOpen, setInquiryDrawerOpen] = useState<boolean>(false);
   const [actionCenterOpen, setActionCenterOpen] = useState<boolean>(false);
   const [evidenceExplorerOpen, setEvidenceExplorerOpen] = useState<boolean>(false);
+  const [memoryDrawerOpen, setMemoryDrawerOpen] = useState<boolean>(false);
+  const [memoryCount, setMemoryCount] = useState<number>(0);
 
   // Council Deliberation State
   const [isDeliberating, setIsDeliberating] = useState<boolean>(false);
@@ -75,6 +80,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     setPendingApprovalsCount(getPendingApprovals(shopId).length);
     setScarcity(evaluateDataScarcity(shopId));
     setFreshness(getDataFreshnessStatus(shopId));
+    setMemoryCount(getBusinessMemories(shopId).length);
   };
 
   useEffect(() => {
@@ -180,6 +186,19 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               <span>Evidence Ledger</span>
               <span className="font-mono text-[10px] bg-stone-100 px-1.5 py-0.5 rounded text-stone-600">
                 {(councilResult?.evidence || []).length}
+              </span>
+            </button>
+
+            {/* Business Memory Button */}
+            <button
+              type="button"
+              onClick={() => setMemoryDrawerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200 text-stone-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            >
+              <Brain size={14} className="text-purple-600" />
+              <span>Business Memory</span>
+              <span className="font-mono text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">
+                {memoryCount}
               </span>
             </button>
 
@@ -565,6 +584,15 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         isOpen={evidenceExplorerOpen}
         evidence={councilResult?.evidence || []}
         onClose={() => setEvidenceExplorerOpen(false)}
+      />
+
+      <BusinessMemoryDrawer
+        isOpen={memoryDrawerOpen}
+        shopId={shopId}
+        onClose={() => {
+          setMemoryDrawerOpen(false);
+          refreshTelemetry();
+        }}
       />
     </div>
   );

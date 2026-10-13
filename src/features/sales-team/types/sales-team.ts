@@ -67,6 +67,7 @@ export interface TeamProposal {
   };
   risks: string[];
   recommended_action: string;
+  campaign_payload?: Record<string, any>;
   requires_owner_approval: true;
   status: "draft" | "audited" | "revised" | "rejected" | "accepted";
 }
