@@ -375,6 +375,7 @@ export function ShopChatbot({
   }, [activeZones, selectedTownship]);
   const [addressDetails, setAddressDetails] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "prepay">("cod");
+  const [prepayProvider, setPrepayProvider] = useState<"KPay" | "WavePay" | "AYA Pay" | "CBPay">("KPay");
   const [prepayTransactionId, setPrepayTransactionId] = useState("");
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
@@ -719,6 +720,10 @@ Candy:`,
       alert("Please provide your delivery address (Street / Building / Room Address).");
       return;
     }
+    if (paymentMethod === "prepay" && !prepayTransactionId.trim()) {
+      alert("Transaction ID / Slip reference is required for Mobile Wallet Transfer. Please provide your transaction ID.");
+      return;
+    }
 
     setOrderSubmitting(true);
     const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
@@ -737,6 +742,16 @@ Candy:`,
 
     const finalTotal = cartTotal + deliveryFee;
 
+    const paymentDetails = paymentMethod === "prepay"
+      ? {
+          method: prepayProvider,
+          transactionId: prepayTransactionId.trim(),
+        }
+      : {
+          method: "CoD" as const,
+          transactionId: "CASH_ON_DELIVERY",
+        };
+
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       invoiceId,
@@ -748,8 +763,9 @@ Candy:`,
       deliveryFee,
       paymentMethod,
       totalAmount: finalTotal,
-      status: "pending",
+      status: paymentMethod === "prepay" ? "verifying" : "pending",
       items: orderItems,
+      paymentDetails,
       createdAt: new Date().toISOString(),
     };
 
@@ -791,8 +807,9 @@ Candy:`,
           address_details: addressDetails.trim(),
           delivery_fee: deliveryFee,
           payment_method: paymentMethod,
+          payment_details: paymentDetails,
           total_amount: finalTotal,
-          status: "pending",
+          status: paymentMethod === "prepay" ? "verifying" : "pending",
           items: orderItems,
           shop_id: targetShopId || "official-store",
           owner_id: ownerId,
@@ -852,7 +869,7 @@ Candy:`,
         window.dispatchEvent(new CustomEvent("sales_brain_cart_cleared", { detail: { shopId, sessionId } }));
       }
 
-      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : "Mobile Wallet"}.\nWe will contact you shortly at ${customerPhone.trim()}!`;
+      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : `Mobile Wallet (${prepayProvider})`}.${paymentMethod === "prepay" ? `\nTransaction ID: ${prepayTransactionId.trim()}` : ""}\nWe will contact you shortly at ${customerPhone.trim()}!`;
 
       setMessages((curr) => [
         ...curr,
@@ -1538,20 +1555,63 @@ Candy:`,
                   </div>
 
                   {paymentMethod === "prepay" && (
-                    <div className="mt-2.5 p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E7E5E4] text-xs space-y-1.5">
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#0069FF]">
-                        Merchant Account Info
-                      </p>
+                    <div className="mt-3 p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E7E5E4] text-xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[#0069FF]">
+                          Merchant Payment Details
+                        </p>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-100 text-[#0069FF] font-semibold">
+                          Required
+                        </span>
+                      </div>
                       <p className="text-xs font-mono font-semibold text-[#1C1917]">
-                        {phone ? `${phone}` : "Please confirm account details with merchant"}
+                        {phone ? `Account / Phone: ${phone}` : "Please confirm account details with merchant"}
                       </p>
-                      <input
-                        type="text"
-                        value={prepayTransactionId}
-                        onChange={(e) => setPrepayTransactionId(e.target.value)}
-                        placeholder="Transaction ID / Slip reference"
-                        className="w-full text-xs px-3 py-2 rounded-lg border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:outline-none mt-1"
-                      />
+
+                      <div>
+                        <label className="text-[11px] font-bold text-[#57534E] block mb-1 uppercase tracking-wider">
+                          Payment Channel *
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {(["KPay", "WavePay", "AYA Pay", "CBPay"] as const).map((method) => (
+                            <button
+                              key={method}
+                              type="button"
+                              onClick={() => setPrepayProvider(method)}
+                              className={`py-1.5 px-2 rounded-lg border text-xs font-medium cursor-pointer transition text-center ${
+                                prepayProvider === method
+                                  ? "border-[#0069FF] bg-white text-[#0069FF] font-semibold shadow-2xs"
+                                  : "border-[#E7E5E4] bg-[#FFFFFF] text-[#57534E] hover:border-stone-400"
+                              }`}
+                            >
+                              {method}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-[#57534E] block mb-1 uppercase tracking-wider">
+                          Transaction ID / Slip Reference *
+                        </label>
+                        <input
+                          type="text"
+                          required={paymentMethod === "prepay"}
+                          value={prepayTransactionId}
+                          onChange={(e) => setPrepayTransactionId(e.target.value)}
+                          placeholder="Enter Transaction ID (e.g. 5002918274) *"
+                          className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none font-mono"
+                        />
+                        {!prepayTransactionId.trim() ? (
+                          <p className="text-[11px] text-red-600 font-medium mt-1">
+                            * Transaction ID is required to complete order with mobile payment.
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-emerald-600 font-medium mt-1">
+                            ✓ Transaction ID provided.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1592,7 +1652,8 @@ Candy:`,
                   !customerName.trim() ||
                   !customerPhone.trim() ||
                   !selectedTownship.trim() ||
-                  !addressDetails.trim()
+                  !addressDetails.trim() ||
+                  (paymentMethod === "prepay" && !prepayTransactionId.trim())
                 }
                 className="flex-1 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] font-semibold text-xs text-white cursor-pointer transition-all active:scale-[0.98] uppercase tracking-wider shadow-xs disabled:opacity-50"
               >
