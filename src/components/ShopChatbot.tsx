@@ -3,11 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart,
+  ShoppingBag,
+  Search,
+  Package,
   Plus,
   Minus,
   Trash2,
   MapPin,
   CreditCard,
+  Image,
   X,
   ChevronRight,
   ArrowRight,
@@ -138,34 +142,66 @@ function buildLocalReply(
 ): string {
   const t = text.toLowerCase();
 
-  // 1. Delivery question - check specific township first
-  if (deliveryZones && deliveryZones.length > 0) {
-    const matchedZone = deliveryZones.find((z) => {
-      const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
-      return name && name.length >= 3 && t.includes(name);
-    });
+  // 1. Delivery & shipping questions
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate/i.test(t)) {
+    const origin = address ? address.trim() : "our store dispatch center";
 
-    if (matchedZone) {
-      const name = matchedZone.township_name || (matchedZone as any).township;
-      const rate = (Number(matchedZone.rate) || 0).toLocaleString();
-      const timeline = matchedZone.estimated_transit_timeline ? ` (${matchedZone.estimated_transit_timeline})` : "";
-      return `Delivery to ${name} is ${rate} MMK${timeline}. Would you like to proceed with your order? [STATE:intent_classification]`;
-    }
-  }
-
-  // General delivery & courier schedule
-  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost/.test(t)) {
+    // 1a. Check if customer specifically asked about a matched township or region
     if (deliveryZones && deliveryZones.length > 0) {
-      const list = deliveryZones
-        .map((z) => `${z.township_name || (z as any).township || ""}: ${(Number(z.rate) || 0).toLocaleString()} MMK${z.estimated_transit_timeline ? ` (${z.estimated_transit_timeline})` : ""}`)
-        .filter(Boolean)
-        .join(" • ");
-      return `Delivery rates for ${businessName}:\n${list}${deliveryInfo ? `\nDispatch Policy: ${deliveryInfo}` : ""} [STATE:intent_classification]`;
-    } else if (deliveryInfo) {
-      return `Delivery information for ${businessName}: ${deliveryInfo} [STATE:intent_classification]`;
-    } else {
-      return `Delivery arrangements for ${businessName} will be confirmed upon order. Please inquire directly with the store. [STATE:intent_classification]`;
+      const matchedZone = deliveryZones.find((z) => {
+        const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
+        return name && name.length >= 3 && t.includes(name);
+      });
+
+      if (matchedZone) {
+        const name = matchedZone.township_name || (matchedZone as any).township;
+        const rate = (Number(matchedZone.rate) || 0).toLocaleString();
+        const timeline = matchedZone.estimated_transit_timeline ? ` (${matchedZone.estimated_transit_timeline})` : "";
+        return `Yes, we deliver to ${name}! Delivery fee is ${rate} MMK${timeline} (dispatched from ${origin}). Would you like to proceed with your order? [STATE:intent_classification]`;
+      }
     }
+
+    // Check if customer asked about a common Myanmar city/region
+    const knownLocations = [
+      "mandalay", "yangon", "naypyitaw", "taunggyi", "bago", "mawlamyine",
+      "monywa", "pathein", "pyinoolwin", "pyin oo lwin", "meiktila", "magway",
+      "myitkyina", "sittwe", "dawei", "lashio", "kalay", "hpa-an", "kengtung"
+    ];
+    const detectedCity = knownLocations.find((loc) => t.includes(loc));
+    if (detectedCity) {
+      const capitalizedCity = detectedCity.charAt(0).toUpperCase() + detectedCity.slice(1);
+      const busGateZone = deliveryZones?.find((z) => /bus gate|other|regional|nationwide|gate/i.test(z.township_name || ""));
+      const feeText = busGateZone
+        ? `${(Number(busGateZone.rate) || 4000).toLocaleString()} MMK (${busGateZone.estimated_transit_timeline || "2-3 Days"})`
+        : "approx 3,500 – 4,500 MMK (2–3 days via Highway Bus Gate / Express Courier)";
+      return `Yes, we dispatch to ${capitalizedCity}! Dispatched from our base in ${origin}. Delivery fee is ${feeText}. You can easily select your destination at checkout without hassle! [STATE:intent_classification]`;
+    }
+
+    // 1b. General delivery inquiry - transparent overview without interrogating customer upfront
+    const busGateZone = deliveryZones?.find((z) => /bus gate|other|regional|nationwide|gate/i.test(z.township_name || ""));
+    const localZones = deliveryZones?.filter((z) => !/bus gate|other|regional|nationwide|gate/i.test(z.township_name || "")) || [];
+
+    let feeSummary = "";
+    if (localZones.length > 0) {
+      const rates = localZones.map(z => Number(z.rate) || 0).filter(r => r > 0);
+      const minRate = rates.length > 0 ? Math.min(...rates).toLocaleString() : "2,000";
+      const maxRate = rates.length > 0 ? Math.max(...rates).toLocaleString() : "3,000";
+      const localStr = minRate === maxRate ? `${minRate} MMK` : `${minRate} – ${maxRate} MMK`;
+      feeSummary += `\n• Local City Delivery: ${localStr} (1–2 days direct rider)`;
+    } else {
+      feeSummary += `\n• Local City Delivery: 2,000 – 3,000 MMK (1–2 days)`;
+    }
+
+    if (busGateZone) {
+      feeSummary += `\n• Other Myanmar States & Regions: ${(Number(busGateZone.rate) || 4000).toLocaleString()} MMK (${busGateZone.estimated_transit_timeline || "2-4 days via Highway Bus Gate / Courier"})`;
+    } else {
+      feeSummary += `\n• Other Myanmar States & Regions: 3,500 – 5,000 MMK (2–4 days via Highway Bus Gate / Courier)`;
+    }
+
+    return `📦 Delivery Matrix for ${businessName}:
+Dispatched from: ${origin}${feeSummary}
+${deliveryInfo ? `\nNote: ${deliveryInfo}\n` : ""}
+Feel free to explore our collection! No need to specify your location now — you can select your township during checkout, or ask me about any specific city anytime. [STATE:intent_classification]`;
   }
 
   // 2. Payment options & mobile wallet accounts
@@ -343,9 +379,14 @@ export function ShopChatbot({
   }, [activeZones, selectedTownship]);
   const [addressDetails, setAddressDetails] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "prepay">("cod");
+  const [prepayProvider, setPrepayProvider] = useState<"KPay" | "WavePay" | "AYA Pay" | "CBPay">("KPay");
   const [prepayTransactionId, setPrepayTransactionId] = useState("");
+  const [prepayScreenshot, setPrepayScreenshot] = useState<string | null>(null);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
+
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLTextAreaElement>(null);
@@ -353,6 +394,17 @@ export function ShopChatbot({
   const copy = COPY;
 
   const featuredProducts = useMemo(() => (products || []).slice(0, 10), [products]);
+
+  const filteredCatalogProducts = useMemo(() => {
+    if (!catalogSearch.trim()) return products || [];
+    const query = catalogSearch.toLowerCase().trim();
+    return (products || []).filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.category && p.category.toLowerCase().includes(query))
+    );
+  }, [products, catalogSearch]);
 
   const cartTotal = useMemo(
     () =>
@@ -370,13 +422,23 @@ export function ShopChatbot({
 
   // Calculate delivery fee dynamically based on user input delivery zones
   const deliveryFee = useMemo(() => {
-    if (!selectedTownship || !activeZones || activeZones.length === 0) return 0;
-    const match = activeZones.find(
-      (z) =>
-        (z?.township_name || (z as any)?.township || "").toLowerCase() ===
-        selectedTownship.toLowerCase()
-    );
-    return match ? (Number(match.rate) || 0) : 0;
+    if (!selectedTownship) return 0;
+    if (activeZones && activeZones.length > 0) {
+      const match = activeZones.find(
+        (z) =>
+          (z?.township_name || (z as any)?.township || "").toLowerCase() ===
+          selectedTownship.toLowerCase()
+      );
+      if (match) return Number(match.rate) || 0;
+      if (/other|bus gate|gate|regional|nationwide|inter-state/i.test(selectedTownship)) {
+        const busGateZone = activeZones.find((z) =>
+          /other|bus gate|gate|regional|nationwide|inter-state/i.test(z?.township_name || "")
+        );
+        if (busGateZone) return Number(busGateZone.rate) || 4000;
+        return 4000;
+      }
+    }
+    return 3000;
   }, [selectedTownship, activeZones]);
 
   // Session ID initialization
@@ -508,9 +570,11 @@ export function ShopChatbot({
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (apiKey && apiKey !== "undefined" && apiKey !== "") {
         try {
-          const productList = products
-            .map((p) => `- ${p.name} (Price: ${p.price} MMK, Stock: ${p.stock}): ${p.description}`)
-            .join("\n");
+          const productList = products.length > 0
+            ? products
+                .map((p) => `- ${p.name} (Price: ${p.price} MMK, Stock: ${p.stock}): ${p.description}`)
+                .join("\n")
+            : "(EMPTY CATALOG - The merchant has not added any products to this store yet.)";
 
           const candidateModels = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
           let botText: string | null = null;
@@ -578,8 +642,10 @@ AUTHORITATIVE STORE KNOWLEDGE INSTRUCTIONS:
   3. Phone / Contact / Call: Provide the store phone number (${effectivePhone || "contact directly via chat"}).
   4. Address / Location / Visit: Provide the boutique address (${effectiveAddress || "online boutique with direct courier delivery"}).
   5. Products / Stock / Price:
-     - SINGLE PRODUCT INQUIRIES (CRITICAL): When the customer asks about ONE specific product (e.g. asks about "Lamp", "Do you have lamp?", "Is lamp in stock?", "Fan price", "Tell me about the lamp"), you MUST respond with ONLY information about THAT SPECIFIC PRODUCT! Provide that product's exact price, stock availability, and description. DO NOT mention, list, or summarize any other products from the catalog.
-     - FULL CATALOG INQUIRIES: ONLY list multiple products or the entire catalog if the customer explicitly asks a broad question like "what do you have?", "show catalog", "list all items", or "what do you sell?".
+     - ZERO PRODUCTS (CRITICAL): If the catalog above is EMPTY (0 products), you MUST explicitly state that the store catalog has no products listed yet (e.g. "Our collection is currently being prepared and will be available soon! Please feel free to check back shortly."). You MUST NEVER invent, hallucinate, imagine, or make up ANY fake products or prices!
+     - STRICT CATALOG GROUNDING: NEVER fabricate items. ONLY reference items explicitly listed in "Available Products in Catalog" above. If an item is not in the list, state politely that it is not available.
+     - SINGLE PRODUCT INQUIRIES: When the customer asks about ONE specific product, you MUST respond with ONLY information about THAT SPECIFIC PRODUCT. DO NOT mention, list, or summarize any other products from the catalog.
+     - FULL CATALOG INQUIRIES: ONLY list products if items exist in the catalog above.
   6. Ordering / Checkout: Guide the customer to add items to their bag and use the Checkout button.
   7. Basket / Cart / Order status:
      - If the customer asks about their cart or basket and it is empty: State clearly that their shopping basket is currently empty (0 items) and offer to help them find items.
@@ -588,11 +654,8 @@ AUTHORITATIVE STORE KNOWLEDGE INSTRUCTIONS:
 - FORMATTING & PLAIN TEXT RULES:
   * Write in normal, clean plain conversational text.
   * NEVER use markdown asterisks (no "**" or "*"), hashtags ("#"), or bolding syntax in your response.
-  * When showing a single product:
-    Lamp — 4,500 MMK (10 pieces available). Handcrafted desk lamp with warm glow. Would you like to add it to your bag?
-  * If broad catalog is requested:
-    • Lamp — 4,500 MMK (10 pieces available)
-    • Fan — 4,500 MMK (4 pieces available)
+  * When showing real items from the catalog, format cleanly:
+    • [Product Name] — [Price] MMK ([Stock] pieces available)
 
 Customer Message: ${trimmed}
 Candy:`,
@@ -676,6 +739,10 @@ Candy:`,
       alert("Please provide your delivery address (Street / Building / Room Address).");
       return;
     }
+    if (paymentMethod === "prepay" && !prepayTransactionId.trim() && !prepayScreenshot) {
+      alert("Please provide either a Transaction ID or upload a Payment Slip Screenshot to confirm mobile payment.");
+      return;
+    }
 
     setOrderSubmitting(true);
     const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
@@ -694,6 +761,17 @@ Candy:`,
 
     const finalTotal = cartTotal + deliveryFee;
 
+    const paymentDetails = paymentMethod === "prepay"
+      ? {
+          method: prepayProvider,
+          transactionId: prepayTransactionId.trim() || (prepayScreenshot ? "SLIP_ATTACHED" : ""),
+          screenshotUrl: prepayScreenshot || undefined,
+        }
+      : {
+          method: "CoD" as const,
+          transactionId: "CASH_ON_DELIVERY",
+        };
+
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       invoiceId,
@@ -705,8 +783,9 @@ Candy:`,
       deliveryFee,
       paymentMethod,
       totalAmount: finalTotal,
-      status: "pending",
+      status: paymentMethod === "prepay" ? "verifying" : "pending",
       items: orderItems,
+      paymentDetails,
       createdAt: new Date().toISOString(),
     };
 
@@ -734,6 +813,9 @@ Candy:`,
         }
       }
 
+      (newOrder as any).owner_id = ownerId;
+      (newOrder as any).shop_id = targetShopId || "official-store";
+
       const { error: insertErr } = await supabase.from("orders").insert([
         {
           id: newOrder.id,
@@ -745,8 +827,9 @@ Candy:`,
           address_details: addressDetails.trim(),
           delivery_fee: deliveryFee,
           payment_method: paymentMethod,
+          payment_details: paymentDetails,
           total_amount: finalTotal,
-          status: "pending",
+          status: paymentMethod === "prepay" ? "verifying" : "pending",
           items: orderItems,
           shop_id: targetShopId || "official-store",
           owner_id: ownerId,
@@ -798,6 +881,7 @@ Candy:`,
       // 4. Reset checkout form fields
       setAddressDetails("");
       setPrepayTransactionId("");
+      setPrepayScreenshot(null);
       setIsCheckoutOpen(false);
       setOrderSuccess(newOrder);
 
@@ -806,7 +890,13 @@ Candy:`,
         window.dispatchEvent(new CustomEvent("sales_brain_cart_cleared", { detail: { shopId, sessionId } }));
       }
 
-      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : "Mobile Wallet"}.\nWe will contact you shortly at ${customerPhone.trim()}!`;
+      const paymentProofNote = paymentMethod === "prepay"
+        ? (prepayTransactionId.trim()
+            ? `\nTransaction ID: ${prepayTransactionId.trim()}`
+            : (prepayScreenshot ? "\nPayment Slip: Screenshot attached" : ""))
+        : "";
+
+      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : `Mobile Wallet (${prepayProvider})`}.${paymentProofNote}\nWe will contact you shortly at ${customerPhone.trim()}!`;
 
       setMessages((curr) => [
         ...curr,
@@ -1067,9 +1157,19 @@ Candy:`,
     );
   }
 
-  const promptBar = suggestedPrompts.length > 0 && (
+  const promptBar = (products.length > 0 || suggestedPrompts.length > 0) && (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-1.5 px-1">
-      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {products && products.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsCatalogOpen(true)}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[#0069FF]/30 bg-[#EFF6FF] px-3.5 py-1.5 text-xs font-semibold text-[#0069FF] shadow-2xs hover:bg-[#DBEAFE] transition-all cursor-pointer active:scale-[0.98]"
+          >
+            <ShoppingBag size={12} className="text-[#0069FF]" />
+            <span>Browse Products ({products.length})</span>
+          </button>
+        )}
         {suggestedPrompts.map((prompt) => (
           <button
             key={prompt}
@@ -1155,6 +1255,27 @@ Candy:`,
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            {products && products.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsCatalogOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full cursor-pointer shadow-2xs transition-all border active:scale-[0.98] ${
+                  isCatalogOpen
+                    ? "bg-[#1C1917] text-white border-[#1C1917]"
+                    : "bg-white hover:bg-stone-50 text-[#1C1917] border-[#E7E5E4]"
+                }`}
+                title="Browse product catalog"
+              >
+                <ShoppingBag size={13} className={isCatalogOpen ? "text-amber-300" : "text-[#0069FF]"} />
+                <span>Products</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                  isCatalogOpen ? "bg-white/20 text-white" : "bg-stone-100 text-stone-700"
+                }`}>
+                  {products.length}
+                </span>
+              </button>
+            )}
+
             {cart.length > 0 && (
               <button
                 onClick={() => setIsCheckoutOpen(true)}
@@ -1235,6 +1356,20 @@ Candy:`,
 
               {/* Product card stream: only show the requested product or catalog */}
               {message.role === "assistant" && renderProductCardsForMessage(message)}
+
+              {/* Instant View Products suggestion below assistant replies if no cards were rendered */}
+              {message.role === "assistant" && !renderProductCardsForMessage(message) && products && products.length > 0 && (
+                <div className="pt-0.5 pl-9">
+                  <button
+                    type="button"
+                    onClick={() => setIsCatalogOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-600 bg-white hover:bg-stone-50 border border-stone-200/80 hover:border-[#0069FF]/50 hover:text-[#0069FF] px-3 py-1 rounded-full shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
+                  >
+                    <ShoppingBag size={11} className="text-[#0069FF]" />
+                    <span>Browse Catalog ({products.length} items)</span>
+                  </button>
+                </div>
+              )}
             </div>
           ))}
 
@@ -1284,6 +1419,214 @@ Candy:`,
         {promptBar}
         {composer}
       </div>
+
+      {/* ─── PRODUCT CATALOG DRAWER / MODAL ────────────────────────────────────── */}
+      {isCatalogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full sm:w-[460px] h-full bg-[#FFFFFF] shadow-2xl flex flex-col justify-between border-l border-[#E7E5E4] animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 sm:p-5 border-b border-[#E7E5E4] bg-[#FAF8F5] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#EFF6FF] text-[#0069FF] flex items-center justify-center border border-[#0069FF]/30">
+                  <ShoppingBag size={16} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base font-semibold text-[#1C1917] tracking-tight">
+                    Store Catalog
+                  </h3>
+                  <p className="text-xs text-[#78716C]">
+                    {products.length} {products.length === 1 ? "piece" : "pieces"} available for order
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCatalogOpen(false)}
+                className="w-8 h-8 rounded-full border border-[#E7E5E4] bg-white text-[#57534E] hover:text-[#1C1917] hover:bg-stone-50 flex items-center justify-center transition cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-3.5 border-b border-[#E7E5E4] bg-white shrink-0">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="Search catalog by name, category..."
+                  className="w-full text-xs pl-8.5 pr-8 py-2 rounded-xl border border-[#E7E5E4] bg-[#FAF8F5] text-[#1C1917] focus:bg-white focus:border-[#0069FF] focus:outline-none transition"
+                />
+                {catalogSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCatalogSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Products List */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 no-scrollbar">
+              {filteredCatalogProducts.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#78716C] space-y-2">
+                  <Package size={28} className="mx-auto text-stone-300" />
+                  <p>{catalogSearch ? `No products match "${catalogSearch}".` : "No products available in this store yet."}</p>
+                  {catalogSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCatalogSearch("")}
+                      className="text-[#0069FF] font-semibold hover:underline cursor-pointer"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredCatalogProducts.map((p) => {
+                  const cartItem = cart.find((it) => it.productId === p.id);
+                  const inCartQty = cartItem ? cartItem.quantity : 0;
+                  return (
+                    <div
+                      key={p.id}
+                      className="rounded-2xl border border-[#E7E5E4] bg-[#FFFFFF] p-3.5 shadow-2xs hover:border-stone-400 transition-all flex flex-col justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-18 h-18 shrink-0 overflow-hidden rounded-xl bg-[#F3EFEA] flex items-center justify-center relative">
+                          {p.image ? (
+                            <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Package size={22} className="text-stone-400" />
+                          )}
+                          {p.stock > 0 ? (
+                            <span className="absolute top-1 left-1 rounded-full px-1.5 py-0.2 text-[9px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {p.stock}
+                            </span>
+                          ) : (
+                            <span className="absolute top-1 left-1 rounded-full px-1.5 py-0.2 text-[9px] font-mono font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                              0
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs sm:text-sm font-sans font-semibold text-[#1C1917] tracking-tight truncate">
+                            {p.name}
+                          </h4>
+                          <p className="mt-1 line-clamp-2 text-[11px] text-[#78716C] leading-relaxed">
+                            {p.description || "Authentic quality handcrafted product."}
+                          </p>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs font-mono font-bold text-[#1C1917]">
+                              {(Number(p.price) || 0).toLocaleString()} MMK
+                            </span>
+                            {p.category && (
+                              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-stone-100 text-stone-600">
+                                {p.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E7E5E4]/80">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCatalogOpen(false);
+                            void sendMessage(`Tell me about ${p.name}`);
+                          }}
+                          className="text-[11px] font-medium text-stone-600 hover:text-[#0069FF] hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <Sparkles size={11} className="text-[#0069FF]" />
+                          <span>Ask Candy</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          {inCartQty > 0 ? (
+                            <div className="flex items-center gap-1 bg-[#FAF8F5] border border-[#E7E5E4] rounded-full px-2 py-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQuantity(p.id, -1)}
+                                className="w-5 h-5 flex items-center justify-center rounded-full text-stone-600 hover:text-stone-900 cursor-pointer"
+                              >
+                                <Minus size={11} />
+                              </button>
+                              <span className="text-xs font-mono font-bold px-1.5 text-[#1C1917]">
+                                {inCartQty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCart(p)}
+                                disabled={p.stock > 0 && inCartQty >= p.stock}
+                                className="w-5 h-5 flex items-center justify-center rounded-full text-stone-600 hover:text-stone-900 disabled:opacity-30 cursor-pointer"
+                              >
+                                <Plus size={11} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCart(p)}
+                              disabled={p.stock <= 0}
+                              className="bg-[#0069FF] hover:bg-[#0052CC] disabled:opacity-40 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-[0.98]"
+                            >
+                              <Plus size={12} />
+                              <span>Add to Bag</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Drawer Footer with Cart and Checkout Shortcut */}
+            <div className="p-4 border-t border-[#E7E5E4] bg-[#FAF8F5] shrink-0">
+              {cart.length > 0 ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] text-[#78716C] block font-mono">Basket Total:</span>
+                    <strong className="text-sm font-mono text-[#0069FF]">
+                      {(Number(cartTotal) || 0).toLocaleString()} MMK
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCatalogOpen(false);
+                      setIsCheckoutOpen(true);
+                    }}
+                    className="px-5 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] font-semibold text-xs text-white cursor-pointer transition shadow-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-[0.98]"
+                  >
+                    <ShoppingCart size={13} className="text-amber-200" />
+                    <span>Checkout ({cartItemCount})</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-xs text-[#78716C]">
+                  <span>Your basket is empty.</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCatalogOpen(false)}
+                    className="font-medium text-stone-800 hover:underline cursor-pointer"
+                  >
+                    Return to Chat
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── CHECKOUT MODAL ─────────────────────────────────────────────────── */}
       {isCheckoutOpen && (
@@ -1413,14 +1756,19 @@ Candy:`,
                       required
                       value={selectedTownship}
                       onChange={(e) => setSelectedTownship(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none cursor-pointer"
                     >
-                      <option value="">-- Select Township * --</option>
+                      <option value="">-- Select Township / Destination * --</option>
                       {activeZones.map((z) => (
                         <option key={z.id || z.township_name} value={z.township_name}>
                           {z.township_name} ({(Number(z.rate) || 0).toLocaleString()} MMK)
                         </option>
                       ))}
+                      {!activeZones.some((z) => /other|bus gate/i.test(z.township_name || "")) && (
+                        <option value="Other Myanmar States & Regions (Highway Bus Gate)">
+                          Other Myanmar States & Regions (Highway Bus Gate) - 4,000 MMK
+                        </option>
+                      )}
                     </select>
                   ) : (
                     <input
@@ -1428,7 +1776,7 @@ Candy:`,
                       required
                       value={selectedTownship}
                       onChange={(e) => setSelectedTownship(e.target.value)}
-                      placeholder="Enter your township or area *"
+                      placeholder="Enter your township or destination *"
                       className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none"
                     />
                   )}
@@ -1487,20 +1835,139 @@ Candy:`,
                   </div>
 
                   {paymentMethod === "prepay" && (
-                    <div className="mt-2.5 p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E7E5E4] text-xs space-y-1.5">
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#0069FF]">
-                        Merchant Account Info
-                      </p>
+                    <div className="mt-3 p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E7E5E4] text-xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[#0069FF]">
+                          Merchant Payment Details
+                        </p>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-100 text-[#0069FF] font-semibold">
+                          Required
+                        </span>
+                      </div>
                       <p className="text-xs font-mono font-semibold text-[#1C1917]">
-                        {phone ? `${phone}` : "Please confirm account details with merchant"}
+                        {phone ? `Account / Phone: ${phone}` : "Please confirm account details with merchant"}
                       </p>
-                      <input
-                        type="text"
-                        value={prepayTransactionId}
-                        onChange={(e) => setPrepayTransactionId(e.target.value)}
-                        placeholder="Transaction ID / Slip reference"
-                        className="w-full text-xs px-3 py-2 rounded-lg border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:outline-none mt-1"
-                      />
+
+                      <div>
+                        <label className="text-[11px] font-bold text-[#57534E] block mb-1 uppercase tracking-wider">
+                          Payment Channel *
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {(["KPay", "WavePay", "AYA Pay", "CBPay"] as const).map((method) => (
+                            <button
+                              key={method}
+                              type="button"
+                              onClick={() => setPrepayProvider(method)}
+                              className={`py-1.5 px-2 rounded-lg border text-xs font-medium cursor-pointer transition text-center ${
+                                prepayProvider === method
+                                  ? "border-[#0069FF] bg-white text-[#0069FF] font-semibold shadow-2xs"
+                                  : "border-[#E7E5E4] bg-[#FFFFFF] text-[#57534E] hover:border-stone-400"
+                              }`}
+                            >
+                              {method}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-stone-50 border border-stone-200/90 rounded-xl p-3.5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[#57534E] uppercase tracking-wider">
+                            Payment Verification Proof *
+                          </span>
+                          {(prepayTransactionId.trim() || prepayScreenshot) && (
+                            <span className="text-[10px] font-semibold text-emerald-600 font-mono flex items-center gap-1">
+                              ✓ Proof Provided
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Option 1: Transaction ID */}
+                        <div>
+                          <label className="text-[11px] font-semibold text-stone-700 block mb-1">
+                            Option 1: Transaction ID / Reference Number
+                          </label>
+                          <input
+                            type="text"
+                            value={prepayTransactionId}
+                            onChange={(e) => setPrepayTransactionId(e.target.value)}
+                            placeholder="e.g. 5002918274 (optional if slip is attached)"
+                            className="w-full text-xs px-3.5 py-2 rounded-xl border border-[#E7E5E4] bg-white text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-px bg-stone-200"></div>
+                          <span className="text-[10px] font-mono font-bold text-stone-400 uppercase">OR</span>
+                          <div className="flex-1 h-px bg-stone-200"></div>
+                        </div>
+
+                        {/* Option 2: Payment Slip Screenshot */}
+                        <div>
+                          <label className="text-[11px] font-semibold text-stone-700 block mb-1">
+                            Option 2: Payment Slip Screenshot
+                          </label>
+
+                          {prepayScreenshot ? (
+                            <div className="relative border border-emerald-200 rounded-xl p-2.5 bg-emerald-50/50 flex items-center gap-3">
+                              <img
+                                src={prepayScreenshot}
+                                alt="Payment Slip Preview"
+                                className="w-14 h-14 object-cover rounded-lg border border-emerald-200 shadow-2xs"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-emerald-900 truncate">Payment Slip Attached</p>
+                                <p className="text-[10px] text-emerald-700">Valid proof attached. Ready to confirm without ID!</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setPrepayScreenshot(null)}
+                                className="p-1.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-700 transition cursor-pointer"
+                                title="Remove Screenshot"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-stone-300 bg-white hover:bg-stone-50 hover:border-stone-400 cursor-pointer transition text-xs text-stone-600 group">
+                              <Image className="w-4 h-4 text-stone-400 group-hover:text-stone-600" />
+                              <span className="font-medium">Attach / Upload Payment Slip Screenshot</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      if (event.target?.result) {
+                                        setPrepayScreenshot(event.target.result as string);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Status feedback */}
+                        {!prepayTransactionId.trim() && !prepayScreenshot ? (
+                          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg p-2 font-medium">
+                            * Provide either <strong>Transaction ID</strong> or <strong>Payment Slip Screenshot</strong> to confirm order.
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-lg p-2 font-medium">
+                            ✓ {prepayTransactionId.trim() && prepayScreenshot
+                              ? "Both Transaction ID & Slip Screenshot provided."
+                              : prepayTransactionId.trim()
+                              ? "Transaction ID provided (screenshot not required)."
+                              : "Payment Slip Screenshot attached (Transaction ID not required)."}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1541,7 +2008,8 @@ Candy:`,
                   !customerName.trim() ||
                   !customerPhone.trim() ||
                   !selectedTownship.trim() ||
-                  !addressDetails.trim()
+                  !addressDetails.trim() ||
+                  (paymentMethod === "prepay" && !prepayTransactionId.trim() && !prepayScreenshot)
                 }
                 className="flex-1 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] font-semibold text-xs text-white cursor-pointer transition-all active:scale-[0.98] uppercase tracking-wider shadow-xs disabled:opacity-50"
               >

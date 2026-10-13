@@ -30,7 +30,10 @@ import {
   Menu,
   LogOut,
   User,
-  Bot
+  Bot,
+  Store,
+  RotateCcw,
+  CreditCard
 } from "lucide-react";
 
 import { CustomChart } from "./components/CustomChart";
@@ -40,6 +43,7 @@ import { Onboarding } from "./components/Onboarding";
 import { LandingPage } from "./components/LandingPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { PublicShop } from "./components/PublicShop";
+import { AIStrategyDesk } from "./components/strategy/AIStrategyDesk";
 import { useAuth } from "./contexts/AuthContext";
 import { invokeApi } from "./services/api";
 import { getShopState, saveShopState } from "./services/shopState";
@@ -48,15 +52,16 @@ import {
   getShopForOwner,
   shopRecordToFormData,
 } from "./services/shopRecord";
-import { getProducts, migrateProductsFromJson, upsertProduct, deleteProduct } from "./services/productService";
+import { getProducts, migrateProductsFromJson, upsertProduct, deleteProduct, deductProductStock } from "./services/productService";
 import type { OnboardingFormState, ShopRecord } from "./types";
 import { Product, DeliveryZone, Order, ShopConfig, TelegramSession, SystemState } from "./types";
 import * as store from "./services/clientStore";
+import { getDefaultSessions } from "./services/defaults";
 import { supabase } from "./utils/supabase";
 import { fetchDeliveryMatrix, addDeliveryZone, deleteDeliveryZone } from "./services/deliveryMatrixApi";
-import { getOrdersForOwner, updateDbOrderStatus } from "./services/ordersApi";
+import { getOrdersForOwner, updateDbOrderStatus, updateDbOrderPaymentDetails } from "./services/ordersApi";
 import { buildShopPublicUrl } from "./utils/shopId";
-import { loadTownships } from "./data/townships";
+import { loadTownships, loadAllDeliveryLocations, MYANMAR_REGIONS } from "./data/townships";
 import QRCode from "qrcode";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations, getTranslation, Language } from "./i18n/translations";
@@ -263,9 +268,41 @@ export default function App() {
 
   // Main Store State
   const [storeState, setStoreState] = useState<SystemState | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "delivery" | "insights" | "bot_config" | "live_support" | "smart_marketing">("orders");
+  const [activeTab, setActiveTab] = useState<
+    | "orders"
+    | "products"
+    | "delivery"
+    | "insights"
+    | "bot_config"
+    | "telegram_bot"
+    | "web_chatbot"
+    | "live_support"
+    | "smart_marketing"
+  >("orders");
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+
+  // Synchronize active user isolation in clientStore
+  useEffect(() => {
+    if (user?.id) {
+      store.setActiveUser(user.id);
+    } else {
+      store.setActiveUser(null);
+      setStoreState(null);
+      setShopRecord(null);
+    }
+  }, [user?.id]);
+
+  const handleSignOut = async () => {
+    if (user?.id) {
+      store.clearUserState(user.id);
+    }
+    store.setActiveUser(null);
+    await signOut();
+    setStoreState(null);
+    setShopRecord(null);
+    setShowLandingPage(true);
+  };
 
   // Onboarding / Config Draft state
   const [shopRecord, setShopRecord] = useState<ShopRecord | null>(null);
@@ -288,8 +325,11 @@ export default function App() {
   const [prodForm, setProdForm] = useState({
     name: "",
     price: 4500,
+    cost_price: 2700,
     description: "",
     stock: 25,
+    lead_time_days: 3,
+    safety_stock_threshold: 5,
     image: "",
     varies: [] as { key: string; value: string }[],
     is_on_demand: false,
@@ -323,6 +363,8 @@ export default function App() {
   // Owner custom live reply states
   const [ownerReplyText, setOwnerReplyText] = useState<string>("");
   const [activeVerificationReceipt, setActiveVerificationReceipt] = useState<Order | null>(null);
+  const [selectedSlipPreview, setSelectedSlipPreview] = useState<string | null>(null);
+  const chatScrollRef = React.useRef<HTMLDivElement>(null);
 
   const onboardingInitialForm: OnboardingFormState = React.useMemo(() => {
     return shopRecord
@@ -336,6 +378,7 @@ export default function App() {
   // Fetch shop state from Supabase Storage
   const fetchState = async (silent = false) => {
     if (!user) return;
+    store.setActiveUser(user.id);
     if (!silent) setLoading(true);
     try {
       // 1. Fetch JSON state from storage
@@ -398,18 +441,32 @@ export default function App() {
       try {
         const dbOrders = await getOrdersForOwner(user.id, data.config.shopId);
         const orderMap = new Map<string, Order>();
+
+        // 1. Strict filter on JSON state orders: must belong to this user or shop
         (data.orders || []).forEach((o) => {
-          const key = o.invoiceId || o.id;
-          if (key) orderMap.set(key, o);
+          const matchesOwner = o.owner_id && o.owner_id === user.id;
+          const matchesShop = data.config.shopId && (o as any).shop_id && (o as any).shop_id === data.config.shopId;
+          if (matchesOwner || matchesShop) {
+            const key = o.invoiceId || o.id;
+            if (key) orderMap.set(key, o);
+          }
         });
+
+        // 2. DB orders from Supabase (already filtered for this user/shop)
         dbOrders.forEach((o) => {
           const key = o.invoiceId || o.id;
           if (key) orderMap.set(key, o);
         });
+
+        // 3. Local store orders (strictly match current owner or shop - NEVER match unowned orders)
         const localState = store.getState();
         (localState.orders || []).forEach((o) => {
           const key = o.invoiceId || o.id;
-          if (key && !orderMap.has(key)) orderMap.set(key, o);
+          const matchesOwner = o.owner_id && o.owner_id === user.id;
+          const matchesShop = data.config.shopId && (o as any).shop_id && (o as any).shop_id === data.config.shopId;
+          if (key && !orderMap.has(key) && (matchesOwner || matchesShop)) {
+            orderMap.set(key, o);
+          }
         });
 
         data.orders = Array.from(orderMap.values()).sort(
@@ -419,18 +476,27 @@ export default function App() {
         console.warn("[App] Error syncing orders from DB:", orderErr);
       }
 
+      // 4.6 Sync and ensure active sessions exist
+      const localSessions = store.getState().sessions || {};
+      const baseDefaults = getDefaultSessions();
+      const combinedSessions = {
+        ...baseDefaults,
+        ...localSessions,
+        ...(data.sessions || {}),
+      };
+      data.sessions = combinedSessions;
+
       // 5. Update states ONLY after all sync logic is done
       setStoreState(data);
+      store.setStoreState(data);
 
       setConfigDraft((prev) => {
-        if (activeTab === "bot_config" && prev) return prev;
+        if ((activeTab === "bot_config" || activeTab === "telegram_bot" || activeTab === "web_chatbot") && prev) return prev;
         return data.config;
       });
-      if (data.sessions && Object.keys(data.sessions).length > 0) {
-        const keys = Object.keys(data.sessions);
-        if (!keys.includes(activeSessionId)) {
-          setActiveSessionId(keys[0]);
-        }
+      const sessionKeys = Object.keys(combinedSessions);
+      if (sessionKeys.length > 0 && !combinedSessions[activeSessionId]) {
+        setActiveSessionId(sessionKeys[0]);
       }
     } catch (err) {
       console.debug("State load err:", err);
@@ -499,6 +565,11 @@ export default function App() {
       const customEvent = event as CustomEvent<Order>;
       if (customEvent.detail) {
         const newOrder = customEvent.detail;
+        if (user?.id) {
+          const matchesOwner = (newOrder as any).owner_id === user.id;
+          const matchesShop = shopRecord?.shop_id && (newOrder as any).shop_id === shopRecord.shop_id;
+          if (!matchesOwner && !matchesShop) return;
+        }
         setStoreState((prev) => {
           if (!prev) return prev;
           const exists = (prev.orders || []).some(
@@ -545,9 +616,28 @@ export default function App() {
       });
     };
 
+    const handleSessionUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<TelegramSession>;
+      if (customEvent.detail) {
+        const updated = customEvent.detail;
+        setStoreState((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sessions: {
+              ...(prev.sessions || {}),
+              [updated.sessionId]: updated,
+            },
+          };
+        });
+      }
+    };
+
+    window.addEventListener("sales_brain_session_updated", handleSessionUpdated);
     window.addEventListener("sales_brain_order_created", handleOrderCreated);
     window.addEventListener("sales_brain_cart_cleared", handleCartCleared);
     return () => {
+      window.removeEventListener("sales_brain_session_updated", handleSessionUpdated);
       window.removeEventListener("sales_brain_order_created", handleOrderCreated);
       window.removeEventListener("sales_brain_cart_cleared", handleCartCleared);
     };
@@ -578,7 +668,13 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (activeTab !== "bot_config") return;
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [storeState?.sessions, activeSessionId, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "bot_config" && activeTab !== "telegram_bot" && activeTab !== "web_chatbot") return;
     if (storeState) {
       setConfigDraft((prev) => prev ?? storeState.config);
     }
@@ -683,6 +779,9 @@ export default function App() {
         id: editingProduct?.id,
         name: prodForm.name,
         price: Number(prodForm.price) || 0,
+        cost_price: Number(prodForm.cost_price) || 0,
+        lead_time_days: Number(prodForm.lead_time_days) || 3,
+        safety_stock_threshold: Number(prodForm.safety_stock_threshold) || 5,
         description: prodForm.description,
         stock: Number(prodForm.stock) || 0,
         image: prodForm.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400",
@@ -702,7 +801,7 @@ export default function App() {
         );
         setShowProductModal(false);
         setEditingProduct(null);
-        setProdForm({ name: "", price: 4500, description: "", stock: 25, image: "", varies: [], is_on_demand: false, waiting_time: "" });
+        setProdForm({ name: "", price: 4500, cost_price: 2700, description: "", stock: 25, lead_time_days: 3, safety_stock_threshold: 5, image: "", varies: [], is_on_demand: false, waiting_time: "" });
         fetchState();
       }
     } catch (err) {
@@ -778,59 +877,172 @@ export default function App() {
   // Order payment screenshot evaluation trigger (Accept / Cancel)
   const handleUpdateOrderStatus = async (orderId: string, status: 'confirmed' | 'cancelled' | 'completed') => {
     try {
+      const targetOrder = storeState?.orders.find((o) => o.id === orderId || o.invoiceId === orderId);
+      const prevStatus = targetOrder?.status;
+
       await invokeApi("orders/update", { orderId, status });
       await updateDbOrderStatus(orderId, status);
       store.updateOrderStatus(orderId, status);
-      {
-        showToast(
-          `Order status marked as [${status.toUpperCase()}]! Invoice sent.`,
-          "success"
-        );
-        setActiveVerificationReceipt(null);
-        fetchState();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  const handleTakeover = async (sessId: string) => {
-    try {
-      await invokeApi("bot/takeover", { sessionId: sessId });
-      {
-        showToast(
-          "🔴 Bot deactivated. Owner intervention launched! Live chat active.",
-          "info"
-        );
-        fetchState();
+      if (status === "confirmed" && prevStatus !== "confirmed" && targetOrder?.items && user) {
+        await deductProductStock(user.id, targetOrder.items);
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  const handleReleaseToAi = async (sessId: string) => {
-    try {
-      await invokeApi("bot/release", { sessionId: sessId });
-      {
-        showToast(
-          "🟢 Bot reactivated. Candy taking over.",
-          "success"
-        );
-        fetchState();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSendOwnerMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ownerReplyText.trim()) return;
-    try {
-      await invokeApi("bot/owner-reply", { sessionId: activeSessionId, content: ownerReplyText });
-      setOwnerReplyText("");
+      showToast(
+        `Order status marked as [${status.toUpperCase()}]! Invoice sent.`,
+        "success"
+      );
+      setActiveVerificationReceipt(null);
       fetchState();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAttachSlip = (file: File) => {
+    if (!activeVerificationReceipt) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl && activeVerificationReceipt) {
+        const updatedPaymentDetails = {
+          method: (activeVerificationReceipt.paymentDetails?.method || "KPay") as "KPay" | "WavePay" | "CBPay" | "AYA Pay" | "CoD",
+          transactionId: activeVerificationReceipt.paymentDetails?.transactionId || "",
+          screenshotUrl: dataUrl,
+        };
+
+        store.updateOrderPaymentDetails(activeVerificationReceipt.id, updatedPaymentDetails);
+        setActiveVerificationReceipt((prev) =>
+          prev ? { ...prev, paymentDetails: updatedPaymentDetails } : null
+        );
+
+        if (user) {
+          await updateDbOrderPaymentDetails(activeVerificationReceipt.id, updatedPaymentDetails);
+        }
+
+        showToast("Payment slip screenshot attached successfully!", "success");
+        fetchState();
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+
+  const handleTakeover = async (sessId?: string) => {
+    const targetId = sessId || activeSessionId;
+    if (!targetId) return;
+
+    // 1. Optimistic UI state update
+    setStoreState((prev) => {
+      if (!prev || !prev.sessions[targetId]) return prev;
+      const sess = prev.sessions[targetId];
+      return {
+        ...prev,
+        sessions: {
+          ...prev.sessions,
+          [targetId]: {
+            ...sess,
+            liveTakeoverActive: true,
+            messages: [
+              ...sess.messages,
+              {
+                id: `sys-${Date.now()}`,
+                sender: "system",
+                content: "Shop Owner has taken over the chat. Candy AI is paused.",
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+        },
+      };
+    });
+
+    showToast(
+      "🔴 Bot deactivated. Owner intervention launched! Live chat active.",
+      "info"
+    );
+
+    try {
+      await invokeApi("bot/takeover", { sessionId: targetId });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleReleaseToAi = async (sessId?: string) => {
+    const targetId = sessId || activeSessionId;
+    if (!targetId) return;
+
+    // 1. Optimistic UI state update
+    setStoreState((prev) => {
+      if (!prev || !prev.sessions[targetId]) return prev;
+      const sess = prev.sessions[targetId];
+      return {
+        ...prev,
+        sessions: {
+          ...prev.sessions,
+          [targetId]: {
+            ...sess,
+            liveTakeoverActive: false,
+            messages: [
+              ...sess.messages,
+              {
+                id: `sys-${Date.now()}`,
+                sender: "system",
+                content: "AI assistant Candy is active again.",
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+        },
+      };
+    });
+
+    showToast(
+      "🟢 Bot reactivated. Candy taking over.",
+      "success"
+    );
+
+    try {
+      await invokeApi("bot/release", { sessionId: targetId });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendOwnerMessage = async (e?: React.FormEvent, customContent?: string) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const contentToSend = (customContent || ownerReplyText).trim();
+    if (!contentToSend || !activeSessionId) return;
+
+    const newMsg = {
+      id: `mo-${Date.now()}`,
+      sender: "owner" as const,
+      content: contentToSend,
+      timestamp: new Date().toISOString(),
+    };
+
+    // 1. Optimistic UI update
+    setStoreState((prev) => {
+      if (!prev || !prev.sessions[activeSessionId]) return prev;
+      const sess = prev.sessions[activeSessionId];
+      return {
+        ...prev,
+        sessions: {
+          ...prev.sessions,
+          [activeSessionId]: {
+            ...sess,
+            lastActive: new Date().toISOString(),
+            messages: [...sess.messages, newMsg],
+          },
+        },
+      };
+    });
+
+    setOwnerReplyText("");
+
+    try {
+      await invokeApi("bot/owner-reply", { sessionId: activeSessionId, content: contentToSend });
     } catch (err) {
       console.error(err);
     }
@@ -875,6 +1087,7 @@ export default function App() {
     return (
       <LandingPage
         isLoggedIn={!!user}
+        onLogout={handleSignOut}
         onGetStarted={() => {
           if (user) {
             setShowLandingPage(false);
@@ -1014,7 +1227,10 @@ export default function App() {
     return days.map(label => ({ label, value: dayTotals[label] || 0 }));
   })();
 
-  const activeSession: TelegramSession | undefined = storeState.sessions[activeSessionId] || Object.values(storeState.sessions)[0];
+  const activeSession: TelegramSession =
+    (storeState.sessions && storeState.sessions[activeSessionId]) ||
+    (storeState.sessions && Object.values(storeState.sessions)[0]) ||
+    getDefaultSessions().default_customer;
 
   const tabTitles: Record<string, string> = {
     orders: t("tabOrders"),
@@ -1022,7 +1238,9 @@ export default function App() {
     delivery: t("tabDelivery"),
     insights: t("tabInsights"),
     smart_marketing: t("tabSmartMarketing"),
-    bot_config: t("tabConfig"),
+    bot_config: t("tabTelegramBot"),
+    telegram_bot: t("tabTelegramBot"),
+    web_chatbot: t("tabWebChatbot"),
     live_support: t("tabLiveSupport"),
   };
 
@@ -1050,15 +1268,15 @@ export default function App() {
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold shadow-xs">
-                    <Sparkles size={16} className="text-amber-400" />
+                  <div className="w-8 h-8 rounded-xl bg-[#1C1917] text-stone-100 flex items-center justify-center shadow-xs">
+                    <Store size={16} strokeWidth={1.8} className="text-stone-200" />
                   </div>
                   <div>
-                    <h1 className="text-xs font-extrabold tracking-wider font-mono text-slate-900 uppercase">
+                    <h1 className="font-serif text-sm font-medium text-stone-900 tracking-tight">
                       Sales Brain
                     </h1>
-                    <span className="text-[9px] font-bold text-slate-400 font-mono tracking-widest uppercase">
-                      AI Commerce Suite
+                    <span className="text-[9px] font-medium text-stone-500 tracking-wide">
+                      Commerce Studio
                     </span>
                   </div>
                 </div>
@@ -1090,7 +1308,8 @@ export default function App() {
                   { id: "insights", label: t("tabInsights"), icon: Sparkles },
                   { id: "smart_marketing", label: t("tabSmartMarketing"), icon: TrendingUp },
                   { id: "live_support", label: t("tabLiveSupport"), icon: MessageSquare },
-                  { id: "bot_config", label: t("tabConfig"), icon: Settings },
+                  { id: "telegram_bot", label: t("tabTelegramBot"), icon: Send },
+                  { id: "web_chatbot", label: t("tabWebChatbot"), icon: Store },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -1117,11 +1336,7 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={async () => {
-                  await signOut();
-                  setStoreState(null);
-                  setShopRecord(null);
-                }}
+                onClick={handleSignOut}
                 className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50 cursor-pointer"
               >
                 <LogOut size={16} />
@@ -1140,22 +1355,18 @@ export default function App() {
           {/* Brand Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#EFF6FF] border border-[#0069FF]/30 text-[#0069FF] flex items-center justify-center font-bold shadow-xs">
-                <Sparkles size={16} />
+              <div className="w-8 h-8 rounded-xl bg-[#1C1917] text-stone-100 flex items-center justify-center shadow-xs">
+                <Store size={16} strokeWidth={1.8} className="text-stone-200" />
               </div>
               <div>
                 <h1 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
                   Sales Brain
                 </h1>
-                <span className="text-[10px] font-bold text-[#78716C] font-mono tracking-widest uppercase block">
-                  AI Commerce Suite
+                <span className="text-[10px] font-medium text-[#78716C] tracking-wide block">
+                  Commerce Studio
                 </span>
               </div>
             </div>
-            <span className="text-[10px] font-mono font-medium bg-[#ECFDF5] text-[#047857] px-2 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Live
-            </span>
           </div>
 
           {/* Active Store Card */}
@@ -1333,27 +1544,47 @@ export default function App() {
             </div>
           </div>
 
-          {/* Section 3: Channels */}
+          {/* Section 3: Bot Connections */}
           <div>
             <p className="px-3 text-[10px] font-bold font-mono tracking-[0.15em] text-[#78716C] uppercase mb-1.5">
-              Channels
+              Bot Connections
             </p>
             <div className="space-y-1">
+              {/* Telegram Bot Connection */}
               <button
                 type="button"
-                onClick={() => setActiveTab("bot_config")}
+                onClick={() => setActiveTab("telegram_bot")}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer group ${
-                  activeTab === "bot_config"
+                  activeTab === "telegram_bot" || activeTab === "bot_config"
                     ? "bg-[#1C1917] text-white font-semibold shadow-xs"
                     : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Settings size={15} className={activeTab === "bot_config" ? "text-white" : "text-stone-400 group-hover:text-stone-700"} />
-                  <span>{t("tabConfig")}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Send size={15} className={`rotate-45 shrink-0 ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "text-white" : "text-stone-400 group-hover:text-stone-700"}`} />
+                  <span className="truncate">{t("tabTelegramBot")}</span>
                 </div>
-                <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
-                  Meta &amp; TG
+                <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-medium whitespace-nowrap shrink-0 ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-stone-100 text-stone-600"}`}>
+                  Telegram
+                </span>
+              </button>
+
+              {/* Public Web Chatbot Connection */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("web_chatbot")}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer group ${
+                  activeTab === "web_chatbot"
+                    ? "bg-[#1C1917] text-white font-semibold shadow-xs"
+                    : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Store size={15} className={`shrink-0 ${activeTab === "web_chatbot" ? "text-white" : "text-stone-400 group-hover:text-stone-700"}`} />
+                  <span className="truncate">{t("tabWebChatbot")}</span>
+                </div>
+                <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-medium whitespace-nowrap shrink-0 ${activeTab === "web_chatbot" ? "bg-stone-800 text-stone-300" : "bg-stone-100 text-stone-600"}`}>
+                  Web Bot
                 </span>
               </button>
             </div>
@@ -1380,11 +1611,7 @@ export default function App() {
             </div>
             <button
               type="button"
-              onClick={async () => {
-                await signOut();
-                setStoreState(null);
-                setShopRecord(null);
-              }}
+              onClick={handleSignOut}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               title="Sign out"
             >
@@ -1635,13 +1862,27 @@ export default function App() {
                         </tr>
                       ) : (
                         storeState.orders.map((o) => {
-                          const isVerifying = o.status === "verifying";
+                          const isVerifying = o.status === "verifying" || (o.paymentMethod === "prepay" && o.status === "pending");
                           const isConfirmed = o.status === "confirmed";
                           const isCancelled = o.status === "cancelled";
                           
                           return (
                             <tr key={o.id} className="hover:bg-[#FAF8F5]/60 transition-colors font-mono">
-                              <td className="p-3 font-semibold text-[#1C1917] text-xs">{o.invoiceId}</td>
+                              <td className="p-3 font-semibold text-[#1C1917] text-xs">
+                                <span className="block">{o.invoiceId}</span>
+                                {o.items && o.items.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1 font-sans">
+                                    {o.items.map((it, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex items-center text-[10px] bg-stone-100 text-stone-700 px-1.5 py-0.5 rounded border border-stone-200/80 font-mono"
+                                      >
+                                        {it.quantity}× {it.productName}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
                               <td className="p-3 whitespace-nowrap font-sans text-xs">
                                 <span className="font-semibold text-[#1C1917] block">{o.customerName}</span>
                                 <span className="text-[11px] text-[#78716C] block">{o.customerPhone}</span>
@@ -1660,12 +1901,21 @@ export default function App() {
                               <td className="p-3 text-right font-semibold text-[#1C1917] text-xs">{o.totalAmount.toLocaleString()} MMK</td>
                               <td className="p-3 text-center">
                                 {isVerifying ? (
-                                  <button
-                                    onClick={() => setActiveVerificationReceipt(o)}
-                                    className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
-                                  >
-                                    {t("evaluateReceipt")}
-                                  </button>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      onClick={() => setActiveVerificationReceipt(o)}
+                                      className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-[0.98] flex items-center gap-1"
+                                    >
+                                      <span>Verify Payment</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleUpdateOrderStatus(o.id, "confirmed")}
+                                      title="Confirm payment and order"
+                                      className="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-[0.98]"
+                                    >
+                                      Confirm
+                                    </button>
+                                  </div>
                                 ) : o.paymentMethod === "cod" && o.status === "pending" ? (
                                   <button
                                     onClick={() => handleUpdateOrderStatus(o.id, "confirmed")}
@@ -1698,9 +1948,10 @@ export default function App() {
               {activeVerificationReceipt && (
                 <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-lg animate-fadeIn grid grid-cols-1 md:grid-cols-12 gap-6">
                   
-                  <div className="md:col-span-7 space-y-4">
+                  {/* LEFT COLUMN: ORDER SUMMARY & APPROVAL ACTIONS */}
+                  <div className="md:col-span-5 space-y-4">
                     <span className="text-xs font-semibold font-mono text-amber-900 select-none block bg-amber-50 p-2.5 rounded-xl border border-amber-200/70">
-                      {t("evaluateReceiptHeader")}
+                      PAYMENT EVALUATOR — Audit Transaction ID & Payment Slip Proof
                     </span>
 
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
@@ -1714,13 +1965,33 @@ export default function App() {
                       </div>
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
                         <span className="text-[10px] text-[#78716C] uppercase">{t("transactionId")}:</span>
-                        <strong className="text-indigo-700 mt-0.5 font-bold">{activeVerificationReceipt.paymentDetails?.transactionId}</strong>
+                        <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-xs break-all">
+                          {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
+                            ? activeVerificationReceipt.paymentDetails.transactionId
+                            : "— (Slip Attached)"}
+                        </strong>
                       </div>
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
                         <span className="text-[10px] text-[#78716C] uppercase">{t("paymentChannel")}:</span>
-                        <strong className="text-[#57534E] mt-0.5">{activeVerificationReceipt.paymentDetails?.method}</strong>
+                        <strong className="text-[#57534E] mt-0.5">{activeVerificationReceipt.paymentDetails?.method || "Mobile Prepay"}</strong>
                       </div>
                     </div>
+
+                    {activeVerificationReceipt.items && activeVerificationReceipt.items.length > 0 && (
+                      <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E7E5E4] space-y-1.5">
+                        <span className="text-[10px] text-[#78716C] uppercase font-mono block font-semibold">
+                          {t("orderItems")}:
+                        </span>
+                        <div className="space-y-1 max-h-36 overflow-y-auto">
+                          {activeVerificationReceipt.items.map((it, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs font-mono text-stone-800">
+                              <span>{it.quantity}× {it.productName}</span>
+                              <span>{((it.price || 0) * (it.quantity || 1)).toLocaleString()} MMK</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="bg-[#FAF8F5] p-3.5 rounded-xl border border-[#E7E5E4] flex items-center justify-between">
                       <span className="text-xs font-semibold text-[#78716C] uppercase font-mono">{t("totalCharged")}:</span>
@@ -1731,16 +2002,23 @@ export default function App() {
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                       <button
-                        onClick={() => handleUpdateOrderStatus(activeVerificationReceipt.id, "confirmed")}
-                        className="w-full sm:flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-full text-xs transition-all cursor-pointer text-center active:scale-[0.98]"
+                        onClick={async () => {
+                          await handleUpdateOrderStatus(activeVerificationReceipt.id, "confirmed");
+                          setActiveVerificationReceipt(null);
+                        }}
+                        className="w-full sm:flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-full text-xs transition-all cursor-pointer text-center active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-2xs"
                       >
-                        {t("confirmGenerateInvoice")}
+                        <Check size={14} />
+                        <span>Confirm & Approve Order</span>
                       </button>
                       <button
-                        onClick={() => handleUpdateOrderStatus(activeVerificationReceipt.id, "cancelled")}
+                        onClick={async () => {
+                          await handleUpdateOrderStatus(activeVerificationReceipt.id, "cancelled");
+                          setActiveVerificationReceipt(null);
+                        }}
                         className="w-full sm:flex-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80 font-semibold py-2.5 rounded-full text-xs transition-all cursor-pointer text-center active:scale-[0.98]"
                       >
-                        {t("rejectScreenshot")}
+                        <span>Reject / Cancel Order</span>
                       </button>
                     </div>
 
@@ -1752,20 +2030,166 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="md:col-span-5 flex flex-col justify-center">
-                    <span className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider block mb-2 font-semibold">
-                      {t("submittedScreenshotEvidence")}
-                    </span>
-                    <div className="border border-[#E7E5E4] bg-[#FAF8F5] p-2.5 rounded-2xl text-center relative max-h-[290px] overflow-hidden">
-                      <img
-                        src={activeVerificationReceipt.paymentDetails?.screenshotUrl}
-                        alt="Submitted receipt attachment proof"
-                        className="w-auto h-auto max-h-[260px] object-contain mx-auto rounded-xl shadow-2xs"
-                        referrerPolicy="no-referrer"
-                      />
+                  {/* RIGHT COLUMN: BOTH TRANSACTION ID AND SCREENSHOT SLIP EVIDENCE */}
+                  <div className="md:col-span-7 space-y-4">
+                    {/* 1. Transaction ID Audit Card */}
+                    <div className="border border-indigo-200 bg-indigo-50/50 p-4 rounded-2xl space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                          <CreditCard size={13} className="text-indigo-600" />
+                          <span>Mobile Remittance Transaction ID</span>
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold bg-white border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                          {activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-white border-2 border-indigo-300/80 rounded-xl px-3 py-2 shadow-2xs">
+                          <strong className="text-sm sm:text-base font-mono font-bold text-indigo-950 tracking-wider select-all block break-all">
+                            {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
+                              ? activeVerificationReceipt.paymentDetails.transactionId
+                              : "No TX ID Provided (Payment Slip Attached)"}
+                          </strong>
+                        </div>
+                        {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(activeVerificationReceipt.paymentDetails!.transactionId);
+                              showToast("Transaction ID copied to clipboard!", "success");
+                            }}
+                            className="px-3 py-2 rounded-xl bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition shadow-2xs active:scale-[0.98] shrink-0"
+                            title="Copy Transaction ID"
+                          >
+                            <Copy size={13} />
+                            <span>Copy</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] text-stone-600 leading-tight font-sans">
+                        💡 Verify this Transaction ID in your <strong>{activeVerificationReceipt.paymentDetails?.method || "Wallet"}</strong> merchant account for <strong>{activeVerificationReceipt.totalAmount.toLocaleString()} MMK</strong>.
+                      </p>
+                    </div>
+
+                    {/* 2. Payment Slip Screenshot Verification Card */}
+                    <div className="border border-stone-200 bg-[#FAF8F5] p-4 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+                          <Image size={13} className="text-stone-500" />
+                          <span>Payment Slip Screenshot Evidence</span>
+                        </span>
+                        {activeVerificationReceipt.paymentDetails?.screenshotUrl ? (
+                          <span className="text-[10px] font-mono font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Check size={11} /> Slip Attached
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-stone-500 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-full">
+                            No Slip Attached
+                          </span>
+                        )}
+                      </div>
+
+                      {activeVerificationReceipt.paymentDetails?.screenshotUrl ? (
+                        <div className="space-y-2">
+                          <div
+                            className="border border-stone-200 bg-white p-2 rounded-xl text-center relative max-h-[240px] overflow-hidden group cursor-pointer"
+                            onClick={() => setSelectedSlipPreview(activeVerificationReceipt.paymentDetails?.screenshotUrl || null)}
+                            title="Click to view full size slip"
+                          >
+                            <img
+                              src={activeVerificationReceipt.paymentDetails.screenshotUrl}
+                              alt="Customer payment slip proof"
+                              className="w-auto h-auto max-h-[220px] object-contain mx-auto rounded-lg transition-transform duration-200 group-hover:scale-[1.02]"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute bottom-2 right-2 bg-stone-900/80 text-white text-[10px] font-medium px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition shadow">
+                              Click to expand
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSlipPreview(activeVerificationReceipt.paymentDetails?.screenshotUrl || null)}
+                              className="text-xs text-[#0069FF] hover:underline font-semibold cursor-pointer"
+                            >
+                              🔍 View Full Size Slip
+                            </button>
+
+                            <label className="text-xs text-stone-600 hover:text-stone-900 font-medium cursor-pointer bg-white border border-stone-200 px-2.5 py-1 rounded-lg shadow-2xs hover:bg-stone-50 transition">
+                              <span>Replace Slip</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleAttachSlip(file);
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border border-dashed border-stone-300 bg-white rounded-xl p-4 text-center space-y-2">
+                          <p className="text-xs text-stone-600 font-sans">
+                            Customer did not attach an image slip during checkout.
+                          </p>
+                          <p className="text-[11px] text-stone-400 font-sans">
+                            If customer sent the receipt over Telegram, you can attach it here:
+                          </p>
+                          <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold cursor-pointer transition border border-stone-200">
+                            <Image size={12} />
+                            <span>Upload / Attach Slip Screenshot</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleAttachSlip(file);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
 
+                </div>
+              )}
+
+              {/* FULL-SIZE SLIP PREVIEW MODAL */}
+              {selectedSlipPreview && (
+                <div
+                  className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4"
+                  onClick={() => setSelectedSlipPreview(null)}
+                >
+                  <div
+                    className="relative max-w-3xl max-h-[92vh] bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200">
+                      <span className="text-xs font-bold font-mono text-stone-800 uppercase tracking-wider">
+                        Payment Slip Verification (Full Size)
+                      </span>
+                      <button
+                        onClick={() => setSelectedSlipPreview(null)}
+                        className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-800 cursor-pointer transition"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="overflow-auto flex-1 flex items-center justify-center bg-stone-50 rounded-xl p-2">
+                      <img
+                        src={selectedSlipPreview}
+                        alt="Full size payment slip"
+                        className="max-h-[80vh] w-auto object-contain rounded-lg shadow-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1784,7 +2208,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setEditingProduct(null);
-                    setProdForm({ name: "", price: 4500, description: "", stock: 25, image: "", varies: [], is_on_demand: false, waiting_time: "" });
+                    setProdForm({ name: "", price: 4500, cost_price: 2700, description: "", stock: 25, lead_time_days: 3, safety_stock_threshold: 5, image: "", varies: [], is_on_demand: false, waiting_time: "" });
                     setShowProductModal(true);
                   }}
                   className="bg-[#0069FF] hover:bg-[#0052CC] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-[0.98]"
@@ -1847,8 +2271,11 @@ export default function App() {
                             setProdForm({
                               name: p.name,
                               price: p.price,
+                              cost_price: p.cost_price || Math.round(p.price * 0.6),
                               description: p.description,
                               stock: p.stock,
+                              lead_time_days: p.lead_time_days || 3,
+                              safety_stock_threshold: p.safety_stock_threshold || 5,
                               image: p.image,
                               varies: p.varies || [],
                               is_on_demand: p.is_on_demand || false,
@@ -1901,16 +2328,29 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-semibold text-[#78716C] block uppercase">{t("unitPriceLabel")}</label>
-                        <input
-                          type="number"
-                          required
-                          value={prodForm.price}
-                          onChange={(e) => setProdForm({ ...prodForm, price: Number(e.target.value) })}
-                          className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-xs text-[#1C1917] font-mono focus:outline-none focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF] transition-colors"
-                          placeholder="e.g., 4500"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-semibold text-[#78716C] block uppercase">{t("unitPriceLabel")}</label>
+                          <input
+                            type="number"
+                            required
+                            value={prodForm.price}
+                            onChange={(e) => setProdForm({ ...prodForm, price: Number(e.target.value) })}
+                            className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-xs text-[#1C1917] font-mono focus:outline-none focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF] transition-colors"
+                            placeholder="e.g., 4500"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-semibold text-[#78716C] block uppercase">Cost / COGS (MMK)</label>
+                          <input
+                            type="number"
+                            value={prodForm.cost_price}
+                            onChange={(e) => setProdForm({ ...prodForm, cost_price: Number(e.target.value) })}
+                            className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-xs text-[#1C1917] font-mono focus:outline-none focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF] transition-colors"
+                            placeholder="e.g., 2700"
+                          />
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -2087,13 +2527,53 @@ export default function App() {
           {activeTab === "delivery" && (
             <div className="space-y-4">
               <div className="bg-white border border-[#E7E5E4] p-5 rounded-2xl shadow-2xs">
-                <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
-                  {t("townshipDeliveryRateMatrix")}
-                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                      {t("townshipDeliveryRateMatrix")}
+                    </h3>
+                    <p className="text-xs text-[#78716C] mt-0.5">
+                      {t("defineDeliveryFees")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-[#E7E5E4]/80">
+                  <span className="text-[11px] font-medium text-[#78716C] mr-1">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Local City Delivery", region: "", division: "", rate: 2500, estimated_transit_timeline: "1-2 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Local City (2,500 MMK)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Mandalay Region (Bus Gate)", region: "Mandalay Region", division: "", rate: 4000, estimated_transit_timeline: "2-3 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Mandalay Region (4,000 MMK)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Yangon Region (Bus Gate)", region: "Yangon Region", division: "", rate: 4000, estimated_transit_timeline: "2-3 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Yangon Region (4,000 MMK)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewZone({ township_name: "Other States & Regions (Highway Bus Gate)", region: "", division: "", rate: 4500, estimated_transit_timeline: "2-4 Days" })}
+                    className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] rounded-full text-[11px] font-medium text-[#1C1917] cursor-pointer transition-colors"
+                  >
+                    + Inter-State Bus Gate (4,500 MMK)
+                  </button>
+                </div>
 
                 {/* Insertion row */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-4 items-end text-xs text-[#57534E]">
-                  <div className="space-y-1 sm:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mt-4 items-end text-xs text-[#57534E]">
+                  <div className="space-y-1 sm:col-span-5">
                     <label className="text-[10px] text-[#78716C] block font-mono font-semibold uppercase">{t("townshipNameLabel")}</label>
                     <div className="relative">
                       <input
@@ -2104,14 +2584,14 @@ export default function App() {
                           setShowTownshipSuggestions(true);
                         }}
                         onFocus={() => setShowTownshipSuggestions(true)}
-                        placeholder="e.g., Yankin, Tamwe, North Dagon"
+                        placeholder="e.g., Kamayut, Chanayethazan, Taunggyi, or Mandalay Region"
                         className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF]"
                       />
                       {showTownshipSuggestions && newZone.township_name.trim().length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-[#E7E5E4] rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                          {loadTownships()
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-[#E7E5E4] rounded-xl shadow-lg max-h-44 overflow-y-auto">
+                          {loadAllDeliveryLocations()
                             .filter(t => t.toLowerCase().includes(newZone.township_name.toLowerCase()))
-                            .slice(0, 10)
+                            .slice(0, 12)
                             .map((township, idx) => (
                               <div
                                 key={`${township}-${idx}`}
@@ -2129,7 +2609,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 sm:col-span-3">
                     <label className="text-[10px] text-[#78716C] block font-mono font-semibold uppercase">{t("rateLabel")}</label>
                     <input
                       type="number"
@@ -2139,12 +2619,29 @@ export default function App() {
                     />
                   </div>
 
-                  <button
-                    onClick={handleAddZone}
-                    className="bg-[#0069FF] hover:bg-[#0052CC] text-white font-semibold py-2 px-5 rounded-full text-xs cursor-pointer h-10 transition-all active:scale-[0.98] shadow-2xs"
-                  >
-                    {t("addRateRule")}
-                  </button>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-[10px] text-[#78716C] block font-mono font-semibold uppercase">Transit Time</label>
+                    <select
+                      value={newZone.estimated_transit_timeline}
+                      onChange={(e) => setNewZone({ ...newZone, estimated_transit_timeline: e.target.value })}
+                      className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF] cursor-pointer"
+                    >
+                      <option value="1-2 Days">1-2 Days</option>
+                      <option value="2-3 Days">2-3 Days</option>
+                      <option value="2-4 Days">2-4 Days</option>
+                      <option value="3-5 Days">3-5 Days</option>
+                      <option value="Same Day">Same Day</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <button
+                      onClick={handleAddZone}
+                      className="w-full bg-[#0069FF] hover:bg-[#0052CC] text-white font-semibold py-2 px-4 rounded-xl text-xs cursor-pointer h-10 transition-all active:scale-[0.98] shadow-2xs"
+                    >
+                      {t("addRateRule")}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2157,7 +2654,7 @@ export default function App() {
                     setDeliveryZonesSearch(e.target.value);
                     setDeliveryZonesPage(1);
                   }}
-                  placeholder="Search township name..."
+                  placeholder="Search township or region name..."
                   className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF]"
                 />
               </div>
@@ -2237,140 +2734,175 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 4: AI STRATEGY & REAL BUSINESS INSIGHTS */}
-          {activeTab === "insights" && (
-            <div className="space-y-6">
-              
-              {/* SVG Charts section */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                <div className="md:col-span-8 flex flex-col justify-between">
-                  <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-2xs flex-1">
-                    <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight mb-2">
-                      {t("weeklyStoreVolume")}
-                    </h3>
-                    <CustomChart data={weekdaysChartData} color="#0069FF" title="Revenue Matrix" unit="MMK" />
-                  </div>
-                </div>
-
-                <div className="md:col-span-4 bg-white border border-[#E7E5E4] rounded-2xl p-5 flex flex-col justify-between shadow-2xs">
-                  <div>
-                    <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight mb-2">
-                      {t("leanAccountingStatsSummary")}
-                    </h3>
-                    
-                    <div className="mt-4 space-y-3 text-xs font-mono">
-                      <div className="flex justify-between items-center border-b border-[#E7E5E4] pb-2.5">
-                        <span className="text-[#78716C] font-sans">{t("grossSalesValue")}</span>
-                        <strong className="text-[#1C1917]">{totalSalesRevenue.toLocaleString()} MMK</strong>
-                      </div>
-                      <div className="flex justify-between items-center border-b border-[#E7E5E4] pb-2.5">
-                        <span className="text-[#78716C] font-sans">{t("ordersCompiled")}</span>
-                        <strong className="text-[#57534E]">{storeState.orders.length} orders</strong>
-                      </div>
-                      <div className="flex justify-between items-center border-b border-[#E7E5E4] pb-2.5">
-                        <span className="text-[#78716C] font-sans">{t("canceledTransactions")}</span>
-                        <strong className="text-rose-600 font-semibold">{storeState.orders.filter(o => o.status === 'cancelled').length} entries</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={exportExcelReport}
-                    className="w-full bg-[#1C1917] hover:bg-stone-850 text-white py-2.5 rounded-full font-semibold text-xs flex items-center justify-center gap-2 mt-4 cursor-pointer shadow-2xs active:scale-[0.98]"
-                  >
-                    <Download size={13} className="text-stone-300" /> {t("downloadLedgerCsv")}
-                  </button>
-                </div>
-              </div>
-
-               {/* LIVE GEMINI STRATEGIST ADVICE CARD */}
-              <div className="bg-white border border-[#E7E5E4] p-6 rounded-2xl space-y-4 shadow-2xs">
-                <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200/70">
-                      <Sparkles size={16} />
-                    </div>
-                    <div>
-                      <h4 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
-                        {t("salesBrainAdvisorDesk")}
-                      </h4>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => fetchAiStrategy(true)}
-                    disabled={loadingAi}
-                    className="text-xs font-semibold text-[#1C1917] hover:text-[#0069FF] bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] px-3.5 py-1.5 rounded-full flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-                  >
-                    <RefreshCw size={11} className={loadingAi ? "animate-spin text-[#0069FF]" : "text-stone-400"} /> {loadingAi ? t("analyzingPatterns").substring(0, 10) : t("reEvaluateStrategy")}
-                  </button>
-                </div>
-
-                {loadingAi ? (
-                  <div className="py-12 text-center text-[#78716C] font-mono text-xs space-y-2">
-                    <div className="w-6 h-6 border-2 border-[#0069FF]/20 border-t-[#0069FF] rounded-full animate-spin mx-auto"></div>
-                    <div>{t("analyzingPatterns")}</div>
-                  </div>
-                ) : (
-                  <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E7E5E4] leading-relaxed text-xs text-[#1C1917] space-y-3 font-sans max-w-none whitespace-pre-line select-text">
-                    {aiAnalysisText}
-                  </div>
-                )}
-              </div>
-
-            </div>
+          {/* TAB 4: AI STRATEGY DESK */}
+          {activeTab === "insights" && storeState && (
+            <AIStrategyDesk
+              shopId={storeState.config.shopId || user?.id || "default_shop"}
+              ownerId={user?.id || "default_owner"}
+              products={storeState.products || []}
+              orders={storeState.orders || []}
+              sessionsCount={Object.keys(storeState.sessions || {}).length}
+              weekdaysChartData={weekdaysChartData}
+              onExportCsv={exportExcelReport}
+            />
           )}
 
-          {/* TAB 5: BOT ACTIVATION SETUP */}
-          {activeTab === "bot_config" && (
-            <div className="space-y-4">
-              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] animate-fadeIn">
-                  <h3 className="font-serif text-lg font-medium text-[#1C1917] flex items-center gap-2 mb-1 tracking-tight">
-                    {t("telegramBotActivationWorkspace")}
-                  </h3>
-                <p className="text-xs text-[#78716C]">{t("oneClickOnboardingDesc")}</p>
-
-                {storeState.config.telegramBotUsername && (
-                  <div className="mt-5 p-4 bg-[#FAF8F5] border border-sky-200/70 rounded-2xl flex items-center justify-between gap-3 text-[#1C1917]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm shrink-0 border border-sky-200/60">
+          {/* TAB 5A: TELEGRAM BOT CONNECTION */}
+          {(activeTab === "telegram_bot" || activeTab === "bot_config") && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* TELEGRAM BOT INTEGRATION */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F5F5F4]">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
                         <Send size={15} className="rotate-45" />
                       </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-[#1C1917]">
-                          Direct Link to Active Telegram Bot
-                        </h4>
-                        <p className="text-[11px] text-[#78716C] font-mono">
-                          @{storeState.config.telegramBotUsername.replace("@", "")}
-                        </p>
-                      </div>
+                      <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                        Telegram Commerce Bot
+                      </h3>
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60">
+                        Direct Channel
+                      </span>
                     </div>
+                    <p className="text-xs text-[#78716C] mt-1">
+                      Connect your Telegram bot for automatic order capture, stock inquiries, and live customer takeover.
+                    </p>
+                  </div>
+                  {storeState.config.telegramBotUsername && (
                     <a
                       href={`https://t.me/${storeState.config.telegramBotUsername.replace("@", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-full text-xs font-semibold bg-[#229ED9] hover:bg-[#1E8EC4] text-white flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-[0.98]"
+                      className="px-4 py-2 rounded-full text-xs font-semibold bg-[#229ED9] hover:bg-[#1E8EC4] text-white flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 self-start sm:self-auto active:scale-[0.98]"
                     >
                       <Send size={11} className="rotate-45" />
-                      <span>{t("liveBot")}</span>
+                      <span>Open in Telegram</span>
                       <ExternalLink size={11} />
                     </a>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {storeState.config.shopId && (
-                  <div className="mt-4 p-4 bg-[#FAF8F5] border border-indigo-200/70 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-200/60">
-                        <ShoppingBag size={15} />
+                {/* Telegram Bot Handle & Status Card */}
+                <div className="p-4 bg-[#FAF8F5] border border-sky-200/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[#1C1917]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm shrink-0 border border-sky-200/60">
+                      <Send size={15} className="rotate-45" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-[#1C1917]">
+                        Active Telegram Bot Handle
+                      </h4>
+                      <p className="text-[11px] text-[#78716C] font-mono">
+                        @{storeState.config.telegramBotUsername?.replace("@", "") || "Jjkql_bot"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Webhook Active
+                    </span>
+                  </div>
+                </div>
+
+                {/* Telegram Store Handshake (Token & QR Code) */}
+                <TelegramConnectSection user={user} t={t} />
+              </div>
+
+              {/* STORE MERCHANT PROFILE */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#F5F5F4]">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
+                      Merchant Store Profile
+                    </h3>
+                    <p className="text-xs text-[#78716C] mt-0.5">
+                      Business identity synced with bot replies and customer receipts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingOnboarding(true)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-800 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Edit2 size={12} />
+                    <span>Edit Profile</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("storeNameLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.shopName || "—"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("smeOwnerNameLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.ownerName || "—"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("contactPhoneLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.phone || "—"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5B: PUBLIC WEB CHATBOT & STOREFRONT */}
+          {activeTab === "web_chatbot" && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* PUBLIC WEB CHATBOT & STOREFRONT */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F5F5F4]">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-stone-100 text-stone-800 flex items-center justify-center border border-stone-200">
+                        <Store size={15} />
                       </div>
-                      <div>
+                      <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                        Public Web Chatbot &amp; Storefront
+                      </h3>
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200/80">
+                        Browser &amp; Social
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#78716C] mt-1">
+                      Shareable interactive store link for customers arriving from Facebook, Instagram, TikTok, or Viber.
+                    </p>
+                  </div>
+                  {storeState.config.shopId && (
+                    <a
+                      href={buildShopPublicUrl(storeState.config.shopId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full text-xs font-semibold bg-[#1C1917] hover:bg-stone-800 text-white flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 self-start sm:self-auto active:scale-[0.98]"
+                    >
+                      <ExternalLink size={12} />
+                      <span>Preview Storefront</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Shareable Link Box */}
+                {storeState.config.shopId ? (
+                  <div className="p-4 bg-[#FAF8F5] border border-stone-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <ShoppingBag size={15} className="text-stone-700" />
                         <h4 className="text-xs font-semibold text-[#1C1917]">
-                          Your Public Shop Link
+                          Your Dedicated Storefront URL
                         </h4>
-                        <p className="text-[11px] text-[#78716C]">
-                          Share this with your customers
-                        </p>
                       </div>
+                      <span className="text-[10px] font-mono text-stone-500">
+                        Shop ID: {storeState.config.shopId}
+                      </span>
                     </div>
                     
                     <div className="flex gap-2">
@@ -2378,6 +2910,7 @@ export default function App() {
                         {buildShopPublicUrl(storeState.config.shopId)}
                       </div>
                       <button
+                        type="button"
                         onClick={() => {
                           const url = buildShopPublicUrl(storeState.config.shopId!);
                           navigator.clipboard.writeText(url);
@@ -2391,97 +2924,184 @@ export default function App() {
                         }`}
                       >
                         {copiedConfigLink ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{copiedConfigLink ? "Copied" : "Copy"}</span>
+                        <span>{copiedConfigLink ? "Copied" : "Copy Link"}</span>
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800">
+                    Complete store onboarding to generate your public storefront URL.
+                  </div>
                 )}
 
-                <form onSubmit={handleOnboardingSubmit} className="space-y-4 mt-6 text-xs text-[#57534E]">
+                {/* Feature Highlights Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="p-3 bg-white border border-stone-200/70 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                      <Bot size={13} className="text-stone-700" />
+                      <span>Natural Order Bot</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Customers chat in Myanmar or English to inquire and build carts.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white border border-stone-200/70 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                      <Truck size={13} className="text-stone-700" />
+                      <span>Township Rates</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Instant delivery rate calculation based on customer township.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white border border-stone-200/70 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                      <Check size={13} className="text-emerald-600" />
+                      <span>Slip Settlement</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Mobile wallet screenshot verification and cash on delivery.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* STORE MERCHANT PROFILE */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#F5F5F4]">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
+                      Merchant Store Profile
+                    </h3>
+                    <p className="text-xs text-[#78716C] mt-0.5">
+                      Business identity synced with bot replies and customer receipts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingOnboarding(true)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-800 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Edit2 size={12} />
+                    <span>Edit Profile</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div className="space-y-1">
                     <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("storeNameLabel")}</label>
-                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
                       {storeState.config.shopName || "—"}
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("smeOwnerNameLabel")}</label>
-                      <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
-                        {storeState.config.ownerName || "—"}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("contactPhoneLabel")}</label>
-                      <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
-                        {storeState.config.phone || "—"}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("telegramBotUsernameLabel")}</label>
-                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
-                      {storeState.config.telegramBotUsername || "@Jjkql_bot"}
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("smeOwnerNameLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.ownerName || "—"}
                     </div>
-                    <a
-                      href="https://t.me/Jjkql_bot"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:text-sky-700 font-mono mt-1"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.942z"/></svg>
-                      t.me/Jjkql_bot
-                    </a>
                   </div>
-
-                  <TelegramConnectSection user={user} t={t} />
-
-                  <button
-                    type="submit"
-                    disabled={savingAction}
-                    className="w-full bg-[#1C1917] hover:bg-stone-850 text-white font-semibold py-3 rounded-full cursor-pointer uppercase text-xs tracking-wider transition-all active:scale-[0.98] shadow-2xs"
-                  >
-                    {savingAction ? "Re-connecting..." : t("saveStoreSettingsBtn")}
-                  </button>
-                </form>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("contactPhoneLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.phone || "—"}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* CRM DIRECT SUPPORT LIVE WORKSPACE & CHAT TAKE-OVER CRM */}
+          {/* CRM DIRECT SUPPORT LIVE WORKSPACE & CHAT TAKE-OVER CRM */}
           {activeTab === "live_support" && (
-            <section className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#E7E5E4] pb-4">
-                <div>
-                  <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
-                    {t("liveSupportRoomHeader")}
-                  </h3>
+            <section className="bg-white border border-stone-200/70 rounded-[32px] p-6 sm:p-8 shadow-xs">
+              {/* Header & Session Action Bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-stone-100">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-serif text-xl font-normal text-[#0A1B2A] tracking-tight">
+                      {t("liveSupportRoomHeader")}
+                    </h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600">
+                      <span className={`w-1.5 h-1.5 rounded-full ${activeSession?.liveTakeoverActive ? "bg-amber-500" : "bg-emerald-500"}`} />
+                      {activeSession?.liveTakeoverActive ? "Personal" : "AI Agent"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 leading-relaxed max-w-xl">
+                    {t("chatTakeoverDesc")}
+                  </p>
                 </div>
 
-                {/* Selector for active customer chat session */}
-                <select
-                  value={activeSessionId}
-                  onChange={(e) => setActiveSessionId(e.target.value)}
-                  className="bg-[#FAF8F5] border border-[#E7E5E4] text-[#1C1917] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#0069FF]"
-                >
-                  {(Object.values(storeState.sessions) as TelegramSession[]).map((sess) => (
-                    <option key={sess.sessionId} value={sess.sessionId}>
-                      {sess.customerName || "Web Simulator"} ({sess.liveTakeoverActive ? "Owner Active" : "AI Powered"})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defs = getDefaultSessions();
+                      if (storeState) {
+                        const updated = { ...storeState, sessions: defs };
+                        setStoreState(updated);
+                        store.setStoreState(updated);
+                      }
+                      setActiveSessionId("default_customer");
+                      showToast("Reset chats to English defaults", "info");
+                    }}
+                    title="Reset sample conversations to fresh English defaults"
+                    className="px-3.5 py-2 rounded-full text-xs font-medium bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-stone-600 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw size={13} className="text-stone-400" />
+                    <span>Reset Chats</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSess = store.createSimulationCustomer();
+                      setActiveSessionId(newSess.sessionId);
+                      showToast(`✨ Added new test customer (${newSess.customerName})`, "info");
+                    }}
+                    className="flex-1 sm:flex-initial px-3.5 py-2 rounded-full text-xs font-medium bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-stone-700 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Plus size={13} className="text-stone-500" />
+                    <span>New Test Buyer</span>
+                  </button>
+
+                  {/* Selector for active customer chat session */}
+                  <div className="relative flex-1 sm:flex-initial">
+                    <select
+                      value={activeSessionId}
+                      onChange={(e) => setActiveSessionId(e.target.value)}
+                      className="w-full bg-stone-50 hover:bg-stone-100/80 border border-stone-200/70 text-stone-800 text-xs rounded-full px-3.5 py-2 pr-8 appearance-none focus:outline-none focus:border-stone-400 cursor-pointer transition-colors"
+                    >
+                      {(Object.values(storeState?.sessions || {}) as TelegramSession[]).map((sess) => (
+                        <option key={sess.sessionId} value={sess.sessionId}>
+                          {sess.customerName || "Customer"} · {sess.liveTakeoverActive ? "Personal" : "AI"}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-stone-400">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Chat list visual layout */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5 text-[#1C1917]">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 text-[#0A1B2A]">
                 
                 {/* Session list items sidebar */}
-                <div className="md:col-span-1 space-y-2.5 border-r border-[#E7E5E4] pr-4">
-                  <span className="text-[11px] font-mono font-semibold text-[#78716C] block tracking-wider uppercase">{t("activeUserSessionsLabel")}</span>
-                  {(Object.values(storeState.sessions) as TelegramSession[]).map((sess) => {
+                <div className="md:col-span-1 space-y-2 border-r border-stone-100 pr-5 max-h-[500px] overflow-y-auto">
+                  <div className="flex items-center justify-between px-1 pb-1">
+                    <span className="text-[11px] font-medium text-stone-400 tracking-wide uppercase">
+                      {t("activeUserSessionsLabel")}
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      {Object.keys(storeState?.sessions || {}).length}
+                    </span>
+                  </div>
+
+                  {(Object.values(storeState?.sessions || {}) as TelegramSession[]).map((sess) => {
                     const isSessActive = sess.sessionId === activeSessionId;
                     const latestMsg = sess.messages[sess.messages.length - 1];
 
@@ -2489,25 +3109,29 @@ export default function App() {
                       <div
                         key={sess.sessionId}
                         onClick={() => setActiveSessionId(sess.sessionId)}
-                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                        className={`p-3.5 rounded-2xl cursor-pointer transition-all ${
                           isSessActive
-                            ? "bg-[#FAF8F5] border-[#1C1917] text-[#1C1917] shadow-2xs"
-                            : "bg-white border-[#E7E5E4] text-[#57534E] hover:bg-[#FAF8F5]/60"
+                            ? "bg-stone-100/70 text-stone-900 border border-stone-200/80"
+                            : "bg-white hover:bg-stone-50/70 border border-transparent text-stone-600"
                         }`}
                       >
-                        <div className="font-semibold text-xs flex items-center justify-between">
-                          <span>{sess.customerName || "Customer Client"}</span>
-                          <span className={`w-2 h-2 rounded-full ${sess.liveTakeoverActive ? "bg-amber-500" : "bg-[#1C1917]"}`}></span>
+                        <div className="text-xs font-medium flex items-center justify-between text-stone-900">
+                          <span className="truncate pr-2">{sess.customerName || "Customer"}</span>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              sess.liveTakeoverActive ? "bg-amber-500" : "bg-emerald-500"
+                            }`}
+                          />
                         </div>
-                        <p className="text-[11px] text-[#78716C] mt-1 truncate">
+                        <p className="text-[11px] text-stone-500 mt-1 line-clamp-1 leading-normal">
                           {latestMsg ? latestMsg.content : "No messages recorded"}
                         </p>
                         
-                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-[#E7E5E4]/70 text-[11px] font-mono leading-none">
-                          <span className={sess.liveTakeoverActive ? "text-amber-700 font-semibold" : "text-[#1C1917] font-semibold"}>
+                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-stone-100 text-[10px] text-stone-400">
+                          <span className={`font-medium ${sess.liveTakeoverActive ? "text-amber-700" : "text-emerald-700"}`}>
                             {sess.liveTakeoverActive ? t("supportLabel") : t("aiAutoLabel")}
                           </span>
-                          <span className="text-[#78716C]">
+                          <span>
                             {new Date(sess.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
@@ -2517,51 +3141,112 @@ export default function App() {
                 </div>
 
                 {/* CRM Live Dialogue monitor screen */}
-                <div className="md:col-span-2 space-y-4 flex flex-col justify-between min-h-[260px]">
+                <div className="md:col-span-2 space-y-4 flex flex-col justify-between min-h-[460px]">
                   
-                  <div className="p-4 bg-[#FAF8F5] border border-[#E7E5E4] rounded-2xl space-y-3 max-h-[220px] overflow-y-auto">
-                    
-                    {activeSession ? (
+                  {/* Messages stream */}
+                  <div
+                    ref={chatScrollRef}
+                    className="p-5 bg-stone-50/50 border border-stone-200/60 rounded-2xl space-y-3.5 max-h-[340px] overflow-y-auto"
+                  >
+                    {activeSession && activeSession.messages && activeSession.messages.length > 0 ? (
                       activeSession.messages.map((m, idx) => (
-                        <div key={idx} className="text-xs leading-relaxed">
-                          <span className={`font-semibold font-mono text-[11px] uppercase tracking-wide ${
-                            m.sender === "customer" ? "text-indigo-700" : m.sender === "owner" ? "text-amber-800" : "text-[#78716C]"
-                          }`}>
-                            {m.sender === "customer" ? "CLIENT" : m.sender === "owner" ? "SALES HUB" : "SYSTEM CANDY"}:
-                          </span>
-                          <span className="text-[#1C1917] ml-1.5 whitespace-pre-line">{m.content}</span>
+                        <div key={idx} className="text-xs">
+                          {m.sender === "system" ? (
+                            <div className="flex justify-center my-2">
+                              <span className="bg-stone-200/60 text-stone-600 text-[10px] px-3 py-1 rounded-full font-medium">
+                                {m.content}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className={`flex flex-col gap-1 ${m.sender === "owner" ? "items-end" : "items-start"}`}>
+                              <span className="text-[10px] text-stone-400 font-medium px-1">
+                                {m.sender === "customer"
+                                  ? activeSession.customerName || "Customer"
+                                  : m.sender === "owner"
+                                  ? "You (Store Owner)"
+                                  : "Candy AI"}
+                              </span>
+                              <div
+                                className={`rounded-2xl px-3.5 py-2.5 max-w-[85%] text-xs leading-relaxed ${
+                                  m.sender === "owner"
+                                    ? "bg-stone-900 text-stone-50 rounded-tr-xs"
+                                    : m.sender === "customer"
+                                    ? "bg-white border border-stone-200/70 text-stone-800 rounded-tl-xs shadow-2xs"
+                                    : "bg-stone-100/90 text-stone-700 rounded-tl-xs"
+                                }`}
+                              >
+                                <span className="whitespace-pre-line">{m.content}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     ) : (
-                      <div className="text-[#78716C] italic p-4 text-center text-xs font-sans">{t("noMessagesChosen")}</div>
+                      <div className="text-stone-400 italic py-12 text-center text-xs">
+                        {t("noMessagesChosen")}
+                      </div>
                     )}
                   </div>
 
-                  {/* Direct Owner Intervention replies */}
-                  <form onSubmit={handleSendOwnerMessage} className="space-y-3">
-                    <div className="flex items-center justify-between text-[11px] text-[#78716C] font-mono">
-                      <span>
-                        {t("activeModeLabel")} {activeSession?.liveTakeoverActive ? `${t("manualSupportOverrideLabel")}` : `${t("automatedBotActiveLabel")}`}
-                      </span>
-                      {activeSession?.liveTakeoverActive ? (
-                        <button
-                          type="button"
-                          onClick={() => handleReleaseToAi(activeSession.sessionId)}
-                          className="text-emerald-700 hover:text-emerald-800 font-semibold underline cursor-pointer"
-                        >
-                          {t("turnOnAiBotLabel")}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleTakeover(activeSession.sessionId)}
-                          className="text-amber-700 hover:text-amber-800 font-semibold underline cursor-pointer"
-                        >
-                          {t("switchToManualLabel")}
-                        </button>
-                      )}
+                  {/* Mode Banner & Switcher (Subdued, calm pill bar) */}
+                  {!activeSession?.liveTakeoverActive ? (
+                    <div className="px-4 py-2.5 bg-stone-50 border border-stone-200/60 rounded-2xl flex items-center justify-between text-xs text-stone-600 gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Candy AI is currently responding to this customer automatically.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleTakeover(activeSession.sessionId)}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-stone-900 hover:bg-stone-800 text-white cursor-pointer transition-colors shrink-0"
+                      >
+                        {t("switchToManualLabel")}
+                      </button>
                     </div>
+                  ) : (
+                    <div className="px-4 py-2.5 bg-amber-50/60 border border-amber-200/70 rounded-2xl flex items-center justify-between text-xs text-amber-900 gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <span>Personal VIP mode active. Candy AI is paused while you converse directly.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleReleaseToAi(activeSession.sessionId)}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-white hover:bg-amber-100/60 border border-amber-300/80 text-amber-900 cursor-pointer transition-colors shrink-0"
+                      >
+                        {t("turnOnAiBotLabel")}
+                      </button>
+                    </div>
+                  )}
 
+                  {/* Quick Canned Suggestions when Takeover is Active */}
+                  {activeSession?.liveTakeoverActive && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-stone-400 font-medium tracking-wide uppercase px-0.5">
+                        Suggested replies
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "Hello! Both items are in stock and ready to ship.",
+                          "Yes, we can offer a 5% bundle discount if you purchase both today.",
+                          "We accept KPay, WavePay, and Cash on Delivery.",
+                          "Would you like me to prepare and confirm your invoice now?"
+                        ].map((chip, cIdx) => (
+                          <button
+                            key={cIdx}
+                            type="button"
+                            onClick={() => setOwnerReplyText(chip)}
+                            className="text-[11px] bg-white border border-stone-200/70 hover:border-stone-400 hover:bg-stone-50 text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Direct Owner Intervention replies */}
+                  <form onSubmit={handleSendOwnerMessage} className="pt-1">
                     <div className="flex gap-2 items-center">
                       <input
                         type="text"
@@ -2569,12 +3254,12 @@ export default function App() {
                         value={ownerReplyText}
                         onChange={(e) => setOwnerReplyText(e.target.value)}
                         placeholder={activeSession?.liveTakeoverActive ? t("ownerChatInputPlaceholder") : t("takeoverPlaceholder")}
-                        className="flex-1 bg-white border border-[#E7E5E4] rounded-full px-4 py-2.5 text-xs text-[#1C1917] disabled:opacity-50 focus:outline-none focus:border-[#0069FF]"
+                        className="flex-1 bg-stone-50 hover:bg-stone-100/60 border border-stone-200/70 rounded-full px-4 py-2.5 text-xs text-[#0A1B2A] placeholder:text-stone-400 disabled:opacity-40 disabled:hover:bg-stone-50 focus:outline-none focus:border-stone-400 focus:bg-white transition-colors"
                       />
                       <button
                         type="submit"
                         disabled={!activeSession?.liveTakeoverActive || !ownerReplyText.trim()}
-                        className="bg-[#1C1917] hover:bg-stone-850 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-full text-xs cursor-pointer transition-all shrink-0 uppercase active:scale-[0.98] shadow-2xs"
+                        className="bg-stone-900 hover:bg-stone-800 disabled:opacity-30 text-white font-medium px-5 py-2.5 rounded-full text-xs cursor-pointer transition-colors shrink-0"
                       >
                         {t("sendMessageBtn")}
                       </button>

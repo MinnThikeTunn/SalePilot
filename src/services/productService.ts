@@ -2,6 +2,7 @@ import { supabase } from "../utils/supabase";
 import type { Product } from "../types";
 
 export async function getProducts(userId: string): Promise<Product[]> {
+  if (!userId) return [];
   const { data, error } = await supabase
     .from("products")
     .select("*")
@@ -23,6 +24,9 @@ export async function getProducts(userId: string): Promise<Product[]> {
     varies: row.Varies || [],
     is_on_demand: row.is_on_demand || false,
     waiting_time: row.waiting_time ? String(row.waiting_time) : "",
+    cost_price: row.cost_price !== undefined ? Number(row.cost_price) : 0,
+    lead_time_days: row.lead_time_days !== undefined ? Number(row.lead_time_days) : 3,
+    safety_stock_threshold: row.safety_stock_threshold !== undefined ? Number(row.safety_stock_threshold) : 5,
   }));
 }
 
@@ -39,6 +43,9 @@ export async function upsertProduct(userId: string, product: Partial<Product> & 
     Varies: product.varies || [],
     is_on_demand: product.is_on_demand || false,
     waiting_time: product.waiting_time ? parseInt(product.waiting_time) || 0 : 0,
+    cost_price: product.cost_price !== undefined ? Number(product.cost_price) : 0,
+    lead_time_days: product.lead_time_days !== undefined ? Number(product.lead_time_days) : 3,
+    safety_stock_threshold: product.safety_stock_threshold !== undefined ? Number(product.safety_stock_threshold) : 5,
   };
 
   if (product.id) {
@@ -110,4 +117,40 @@ export async function migrateProductsFromJson(userId: string, jsonProducts: Prod
   }
 
   return { success: true, count: jsonProducts.length };
+}
+
+export async function deductProductStock(
+  userId: string,
+  items: { productId?: string; productName?: string; quantity: number }[]
+): Promise<boolean> {
+  if (!userId || !items || items.length === 0) return true;
+
+  try {
+    for (const item of items) {
+      const qty = Math.max(1, Number(item.quantity) || 1);
+      let query = supabase.from("products").select("id, stock").eq("owner_id", userId);
+      if (item.productId) {
+        query = query.eq("id", item.productId);
+      } else if (item.productName) {
+        query = query.eq("name", item.productName);
+      } else {
+        continue;
+      }
+
+      const { data: prodRow } = await query.maybeSingle();
+      if (prodRow) {
+        const currentStock = Math.max(0, Number(prodRow.stock) || 0);
+        const newStock = Math.max(0, currentStock - qty);
+        await supabase
+          .from("products")
+          .update({ stock: newStock, updated_at: new Date().toISOString() })
+          .eq("id", prodRow.id)
+          .eq("owner_id", userId);
+      }
+    }
+    return true;
+  } catch (err) {
+    console.warn("[productService] Exception deducting product stock in DB:", err);
+    return false;
+  }
 }

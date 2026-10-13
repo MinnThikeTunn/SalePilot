@@ -8,7 +8,9 @@ import {
   Headphones,
   Check,
   ChevronRight,
-  X
+  X,
+  Store,
+  LogOut
 } from "lucide-react";
 
 type LandingPageProps = {
@@ -16,6 +18,7 @@ type LandingPageProps = {
   onLogin?: () => void;
   isLoggedIn?: boolean;
   onDashboard?: () => void;
+  onLogout?: () => void;
   lang?: string;
   onLangChange?: (l: string) => void;
 };
@@ -25,6 +28,7 @@ export function LandingPage({
   onLogin,
   isLoggedIn = false,
   onDashboard,
+  onLogout,
 }: LandingPageProps) {
   const [emailInput, setEmailInput] = useState("");
   const [subscribed, setSubscribed] = useState(false);
@@ -54,7 +58,7 @@ export function LandingPage({
       {bannerVisible && (
         <div className="bg-[#70B4FF] text-[#0A1B2A] py-2 px-4 sm:px-8 text-xs font-medium flex items-center justify-between border-b border-[#5B9FEA]/40 transition-all">
           <div className="flex-1 text-center flex items-center justify-center gap-2">
-            <span className="font-semibold">⚡ Introducing the new Sales Brain AI, built to automate social commerce.</span>
+            <span className="font-semibold">Introducing the new Sales Brain AI, built to automate social commerce.</span>
             <button
               type="button"
               onClick={onGetStarted}
@@ -81,12 +85,12 @@ export function LandingPage({
           <button
             type="button"
             onClick={onGetStarted}
-            className="font-serif text-2xl sm:text-[26px] tracking-tight text-stone-900 font-medium hover:opacity-80 transition text-left cursor-pointer flex items-center gap-2"
+            className="font-serif text-2xl sm:text-[26px] tracking-tight text-stone-900 font-medium hover:opacity-80 transition text-left cursor-pointer flex items-center gap-2.5"
           >
+            <div className="w-8 h-8 rounded-xl bg-stone-900 text-stone-100 flex items-center justify-center shadow-xs">
+              <Store className="w-4 h-4 text-stone-200" strokeWidth={1.8} />
+            </div>
             <span>Sales Brain</span>
-            <span className="text-[10px] font-sans font-bold bg-[#0069FF]/10 text-[#0069FF] px-2 py-0.5 rounded-full uppercase tracking-wider">
-              AI
-            </span>
           </button>
 
           {/* Center Navigation Links */}
@@ -106,37 +110,48 @@ export function LandingPage({
           </nav>
 
           {/* Right Action Icons & Buttons */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={handleLoginClick}
-              className="text-stone-600 hover:text-stone-950 transition text-xs font-medium cursor-pointer flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-stone-100"
-              title={isLoggedIn ? "Dashboard" : "Sign In"}
-              aria-label={isLoggedIn ? "Dashboard" : "Sign In"}
-            >
-              <User className="w-4 h-4 stroke-[1.75]" />
-              <span className="hidden sm:inline">
-                {isLoggedIn ? "Dashboard" : "Sign In"}
-              </span>
-            </button>
-
-            {isLoggedIn && onDashboard && (
-              <button
-                type="button"
-                onClick={onDashboard}
-                className="hidden md:inline-flex items-center text-xs font-medium text-stone-700 bg-stone-200/70 hover:bg-stone-300 px-3 py-2 rounded-md transition cursor-pointer"
-              >
-                Dashboard →
-              </button>
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {isLoggedIn ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onDashboard || onGetStarted}
+                  className="bg-black hover:bg-stone-900 text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98] flex items-center gap-2"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Dashboard →</span>
+                </button>
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-100 text-stone-700 hover:text-stone-900 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleLoginClick}
+                  className="text-stone-600 hover:text-stone-950 transition text-xs font-medium cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-stone-100"
+                >
+                  <User className="w-4 h-4 stroke-[1.75]" />
+                  <span>Sign In</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onGetStarted}
+                  className="bg-black hover:bg-stone-900 text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98]"
+                >
+                  Get Started
+                </button>
+              </>
             )}
-
-            <button
-              type="button"
-              onClick={onGetStarted}
-              className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98]"
-            >
-              Get Started
-            </button>
           </div>
         </div>
       </header>
@@ -159,7 +174,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onGetStarted}
-                  className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-8 py-3.5 rounded-xl text-sm font-semibold tracking-wide shadow-xs transition duration-200 cursor-pointer active:scale-[0.99]"
+                  className="bg-black hover:bg-stone-900 text-white px-8 py-3.5 rounded-xl text-sm font-semibold tracking-wide shadow-xs transition duration-200 cursor-pointer active:scale-[0.99]"
                 >
                   Get Started
                 </button>
@@ -182,18 +197,18 @@ export function LandingPage({
                   className="w-full h-full object-cover object-center transition duration-700 group-hover:scale-[1.02]"
                 />
 
-                {/* Subtle Floating AI Commerce Overlay Badge */}
-                <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md border border-stone-200/80 rounded-full px-4 py-2 flex items-center gap-2 shadow-sm">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-medium text-stone-700 tracking-wide">
-                    Live Bot Active · Telegram &amp; Web
+                {/* Subtle Floating Cozy Storefront Badge */}
+                <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-sm border border-stone-200/80 rounded-full px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
+                  <Store className="w-3.5 h-3.5 text-stone-700" />
+                  <span className="text-xs font-medium text-stone-800 tracking-wide">
+                    Telegram &amp; Web Storefront
                   </span>
                 </div>
 
                 {/* Bottom Verified Slip Card */}
                 <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md border border-stone-200/80 rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold tracking-wider uppercase text-[#0069FF]">
+                    <span className="text-[11px] font-semibold tracking-wider uppercase text-stone-900">
                       Automated Checkout
                     </span>
                     <span className="text-xs font-mono text-stone-400">
@@ -236,7 +251,7 @@ export function LandingPage({
             <button
               type="button"
               onClick={onGetStarted}
-              className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-[#0069FF] hover:text-[#0052CC] transition cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-black hover:text-stone-700 transition cursor-pointer"
             >
               <span>View All</span> <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -313,7 +328,7 @@ export function LandingPage({
               <button
                 type="button"
                 onClick={onGetStarted}
-                className="border border-stone-300 hover:border-stone-900 text-stone-800 hover:text-stone-950 px-6 py-2.5 rounded-xl text-xs font-medium uppercase tracking-wider transition bg-white/40 cursor-pointer"
+                className="bg-black hover:bg-stone-900 text-white px-7 py-3 rounded-xl text-xs font-semibold uppercase tracking-wider transition duration-200 cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 Get Started Free
               </button>
@@ -456,11 +471,11 @@ export function LandingPage({
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="Your email address"
-                  className="bg-white border border-stone-300 border-r-0 px-4 py-3 rounded-l-xl text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#0069FF] w-full"
+                  className="bg-white border border-stone-300 border-r-0 px-4 py-3 rounded-l-xl text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 w-full"
                 />
                 <button
                   type="submit"
-                  className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-6 py-3 rounded-r-xl text-sm font-semibold tracking-wide transition shrink-0 cursor-pointer"
+                  className="bg-black hover:bg-stone-900 text-white px-6 py-3 rounded-r-xl text-sm font-semibold tracking-wide transition shrink-0 cursor-pointer active:scale-[0.98]"
                 >
                   Get Started
                 </button>
@@ -472,7 +487,7 @@ export function LandingPage({
 
       {/* Footer */}
       <footer id="about" className="bg-[#F5F1EA] border-t border-stone-200/80 pt-16 pb-12 text-stone-600 text-xs">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 grid grid-cols-2 md:grid-cols-4 gap-10">
+        <div className="max-w-7xl mx-auto px-6 sm:px-12 grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-14">
           <div>
             <h4 className="font-serif text-lg text-stone-900 mb-4 font-normal">
               Sales Brain
@@ -524,23 +539,6 @@ export function LandingPage({
                 <a href="#workflows" className="hover:text-stone-900 transition">
                   Workflows
                 </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h5 className="font-medium text-stone-900 mb-4 tracking-wider uppercase text-[11px]">
-              Help &amp; Legal
-            </h5>
-            <ul className="space-y-2.5">
-              <li>
-                <span className="text-stone-500">Shipping &amp; Delivery Matrix</span>
-              </li>
-              <li>
-                <span className="text-stone-500">FAQ</span>
-              </li>
-              <li>
-                <span className="text-stone-500">Privacy Policy</span>
               </li>
             </ul>
           </div>
