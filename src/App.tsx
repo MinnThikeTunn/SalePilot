@@ -1898,7 +1898,7 @@ export default function App() {
                                   {o.paymentMethod.toUpperCase()}
                                 </span>
                                 <div className="mt-1 flex flex-col gap-1 items-start">
-                                  {o.paymentDetails?.transactionId && o.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && (
+                                  {o.paymentDetails?.transactionId && o.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && o.paymentDetails.transactionId !== "SLIP_ATTACHED" && (
                                     <button
                                       type="button"
                                       onClick={() => setActiveVerificationReceipt(o)}
@@ -1992,7 +1992,9 @@ export default function App() {
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
                         <span className="text-[10px] text-[#78716C] uppercase">{t("transactionId")}:</span>
                         <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-xs break-all">
-                          {activeVerificationReceipt.paymentDetails?.transactionId || "—"}
+                          {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
+                            ? activeVerificationReceipt.paymentDetails.transactionId
+                            : "— (Slip Attached)"}
                         </strong>
                       </div>
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
@@ -2071,10 +2073,12 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-white border-2 border-indigo-300/80 rounded-xl px-3 py-2 shadow-2xs">
                           <strong className="text-sm sm:text-base font-mono font-bold text-indigo-950 tracking-wider select-all block break-all">
-                            {activeVerificationReceipt.paymentDetails?.transactionId || "No TX ID Submitted"}
+                            {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
+                              ? activeVerificationReceipt.paymentDetails.transactionId
+                              : "No TX ID Provided (Payment Slip Attached)"}
                           </strong>
                         </div>
-                        {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && (
+                        {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED" && (
                           <button
                             type="button"
                             onClick={() => {

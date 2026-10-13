@@ -739,8 +739,8 @@ Candy:`,
       alert("Please provide your delivery address (Street / Building / Room Address).");
       return;
     }
-    if (paymentMethod === "prepay" && !prepayTransactionId.trim()) {
-      alert("Transaction ID / Slip reference is required for Mobile Wallet Transfer. Please provide your transaction ID.");
+    if (paymentMethod === "prepay" && !prepayTransactionId.trim() && !prepayScreenshot) {
+      alert("Please provide either a Transaction ID or upload a Payment Slip Screenshot to confirm mobile payment.");
       return;
     }
 
@@ -764,7 +764,7 @@ Candy:`,
     const paymentDetails = paymentMethod === "prepay"
       ? {
           method: prepayProvider,
-          transactionId: prepayTransactionId.trim(),
+          transactionId: prepayTransactionId.trim() || (prepayScreenshot ? "SLIP_ATTACHED" : ""),
           screenshotUrl: prepayScreenshot || undefined,
         }
       : {
@@ -890,7 +890,13 @@ Candy:`,
         window.dispatchEvent(new CustomEvent("sales_brain_cart_cleared", { detail: { shopId, sessionId } }));
       }
 
-      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : `Mobile Wallet (${prepayProvider})`}.${paymentMethod === "prepay" ? `\nTransaction ID: ${prepayTransactionId.trim()}` : ""}\nWe will contact you shortly at ${customerPhone.trim()}!`;
+      const paymentProofNote = paymentMethod === "prepay"
+        ? (prepayTransactionId.trim()
+            ? `\nTransaction ID: ${prepayTransactionId.trim()}`
+            : (prepayScreenshot ? "\nPayment Slip: Screenshot attached" : ""))
+        : "";
+
+      const confirmMessage = `🎉 Thank you, ${customerName.trim()}! Your order (${invoiceId}) has been received.\nDelivery: ${addressDetails.trim()}, ${selectedTownship.trim()}.\nTotal: ${finalTotal.toLocaleString()} MMK (including ${deliveryFee > 0 ? `${deliveryFee.toLocaleString()} MMK delivery` : "delivery"}).\nMethod: ${paymentMethod === "cod" ? "Cash on Delivery" : `Mobile Wallet (${prepayProvider})`}.${paymentProofNote}\nWe will contact you shortly at ${customerPhone.trim()}!`;
 
       setMessages((curr) => [
         ...curr,
@@ -1864,83 +1870,102 @@ Candy:`,
                         </div>
                       </div>
 
-                      <div>
-                        <label className="text-[11px] font-bold text-[#57534E] block mb-1 uppercase tracking-wider">
-                          Transaction ID / Slip Reference *
-                        </label>
-                        <input
-                          type="text"
-                          required={paymentMethod === "prepay"}
-                          value={prepayTransactionId}
-                          onChange={(e) => setPrepayTransactionId(e.target.value)}
-                          placeholder="Enter Transaction ID (e.g. 5002918274) *"
-                          className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#E7E5E4] bg-[#FFFFFF] text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none font-mono"
-                        />
-                        {!prepayTransactionId.trim() ? (
-                          <p className="text-[11px] text-red-600 font-medium mt-1">
-                            * Transaction ID is required to complete order with mobile payment.
-                          </p>
-                        ) : (
-                          <p className="text-[11px] text-emerald-600 font-medium mt-1">
-                            ✓ Transaction ID provided.
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[11px] font-bold text-[#57534E] uppercase tracking-wider">
-                            Payment Slip Screenshot (Optional)
-                          </label>
-                          {prepayScreenshot && (
-                            <span className="text-[10px] text-emerald-600 font-semibold font-mono">
-                              ✓ Slip Attached
+                      <div className="bg-stone-50 border border-stone-200/90 rounded-xl p-3.5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[#57534E] uppercase tracking-wider">
+                            Payment Verification Proof *
+                          </span>
+                          {(prepayTransactionId.trim() || prepayScreenshot) && (
+                            <span className="text-[10px] font-semibold text-emerald-600 font-mono flex items-center gap-1">
+                              ✓ Proof Provided
                             </span>
                           )}
                         </div>
 
-                        {prepayScreenshot ? (
-                          <div className="relative border border-stone-200 rounded-xl p-2.5 bg-[#FAF8F5] flex items-center gap-3">
-                            <img
-                              src={prepayScreenshot}
-                              alt="Payment Slip Preview"
-                              className="w-14 h-14 object-cover rounded-lg border border-stone-200 shadow-2xs"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-stone-800 truncate">Payment Slip Attached</p>
-                              <p className="text-[10px] text-stone-500">Image will be attached to order for verification</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setPrepayScreenshot(null)}
-                              className="p-1.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-700 transition cursor-pointer"
-                              title="Remove Screenshot"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <label className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-stone-300 bg-[#FAF8F5] hover:bg-stone-100 hover:border-stone-400 cursor-pointer transition text-xs text-stone-600 group">
-                            <Image className="w-4 h-4 text-stone-400 group-hover:text-stone-600" />
-                            <span className="font-medium">Attach / Upload Payment Slip Screenshot</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    if (event.target?.result) {
-                                      setPrepayScreenshot(event.target.result as string);
-                                    }
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                            />
+                        {/* Option 1: Transaction ID */}
+                        <div>
+                          <label className="text-[11px] font-semibold text-stone-700 block mb-1">
+                            Option 1: Transaction ID / Reference Number
                           </label>
+                          <input
+                            type="text"
+                            value={prepayTransactionId}
+                            onChange={(e) => setPrepayTransactionId(e.target.value)}
+                            placeholder="e.g. 5002918274 (optional if slip is attached)"
+                            className="w-full text-xs px-3.5 py-2 rounded-xl border border-[#E7E5E4] bg-white text-[#1C1917] focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF]/20 focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-px bg-stone-200"></div>
+                          <span className="text-[10px] font-mono font-bold text-stone-400 uppercase">OR</span>
+                          <div className="flex-1 h-px bg-stone-200"></div>
+                        </div>
+
+                        {/* Option 2: Payment Slip Screenshot */}
+                        <div>
+                          <label className="text-[11px] font-semibold text-stone-700 block mb-1">
+                            Option 2: Payment Slip Screenshot
+                          </label>
+
+                          {prepayScreenshot ? (
+                            <div className="relative border border-emerald-200 rounded-xl p-2.5 bg-emerald-50/50 flex items-center gap-3">
+                              <img
+                                src={prepayScreenshot}
+                                alt="Payment Slip Preview"
+                                className="w-14 h-14 object-cover rounded-lg border border-emerald-200 shadow-2xs"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-emerald-900 truncate">Payment Slip Attached</p>
+                                <p className="text-[10px] text-emerald-700">Valid proof attached. Ready to confirm without ID!</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setPrepayScreenshot(null)}
+                                className="p-1.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-700 transition cursor-pointer"
+                                title="Remove Screenshot"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-stone-300 bg-white hover:bg-stone-50 hover:border-stone-400 cursor-pointer transition text-xs text-stone-600 group">
+                              <Image className="w-4 h-4 text-stone-400 group-hover:text-stone-600" />
+                              <span className="font-medium">Attach / Upload Payment Slip Screenshot</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      if (event.target?.result) {
+                                        setPrepayScreenshot(event.target.result as string);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Status feedback */}
+                        {!prepayTransactionId.trim() && !prepayScreenshot ? (
+                          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg p-2 font-medium">
+                            * Provide either <strong>Transaction ID</strong> or <strong>Payment Slip Screenshot</strong> to confirm order.
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-lg p-2 font-medium">
+                            ✓ {prepayTransactionId.trim() && prepayScreenshot
+                              ? "Both Transaction ID & Slip Screenshot provided."
+                              : prepayTransactionId.trim()
+                              ? "Transaction ID provided (screenshot not required)."
+                              : "Payment Slip Screenshot attached (Transaction ID not required)."}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1984,7 +2009,7 @@ Candy:`,
                   !customerPhone.trim() ||
                   !selectedTownship.trim() ||
                   !addressDetails.trim() ||
-                  (paymentMethod === "prepay" && !prepayTransactionId.trim())
+                  (paymentMethod === "prepay" && !prepayTransactionId.trim() && !prepayScreenshot)
                 }
                 className="flex-1 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] font-semibold text-xs text-white cursor-pointer transition-all active:scale-[0.98] uppercase tracking-wider shadow-xs disabled:opacity-50"
               >
