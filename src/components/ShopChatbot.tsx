@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart,
+  ShoppingBag,
+  Search,
+  Package,
   Plus,
   Minus,
   Trash2,
@@ -380,12 +383,26 @@ export function ShopChatbot({
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
 
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState("");
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const hasStarted = messages.length > 0;
   const copy = COPY;
 
   const featuredProducts = useMemo(() => (products || []).slice(0, 10), [products]);
+
+  const filteredCatalogProducts = useMemo(() => {
+    if (!catalogSearch.trim()) return products || [];
+    const query = catalogSearch.toLowerCase().trim();
+    return (products || []).filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.category && p.category.toLowerCase().includes(query))
+    );
+  }, [products, catalogSearch]);
 
   const cartTotal = useMemo(
     () =>
@@ -1130,9 +1147,19 @@ Candy:`,
     );
   }
 
-  const promptBar = suggestedPrompts.length > 0 && (
+  const promptBar = (products.length > 0 || suggestedPrompts.length > 0) && (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-1.5 px-1">
-      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {products && products.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsCatalogOpen(true)}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[#0069FF]/30 bg-[#EFF6FF] px-3.5 py-1.5 text-xs font-semibold text-[#0069FF] shadow-2xs hover:bg-[#DBEAFE] transition-all cursor-pointer active:scale-[0.98]"
+          >
+            <ShoppingBag size={12} className="text-[#0069FF]" />
+            <span>Browse Products ({products.length})</span>
+          </button>
+        )}
         {suggestedPrompts.map((prompt) => (
           <button
             key={prompt}
@@ -1218,6 +1245,27 @@ Candy:`,
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            {products && products.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsCatalogOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full cursor-pointer shadow-2xs transition-all border active:scale-[0.98] ${
+                  isCatalogOpen
+                    ? "bg-[#1C1917] text-white border-[#1C1917]"
+                    : "bg-white hover:bg-stone-50 text-[#1C1917] border-[#E7E5E4]"
+                }`}
+                title="Browse product catalog"
+              >
+                <ShoppingBag size={13} className={isCatalogOpen ? "text-amber-300" : "text-[#0069FF]"} />
+                <span>Products</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                  isCatalogOpen ? "bg-white/20 text-white" : "bg-stone-100 text-stone-700"
+                }`}>
+                  {products.length}
+                </span>
+              </button>
+            )}
+
             {cart.length > 0 && (
               <button
                 onClick={() => setIsCheckoutOpen(true)}
@@ -1298,6 +1346,20 @@ Candy:`,
 
               {/* Product card stream: only show the requested product or catalog */}
               {message.role === "assistant" && renderProductCardsForMessage(message)}
+
+              {/* Instant View Products suggestion below assistant replies if no cards were rendered */}
+              {message.role === "assistant" && !renderProductCardsForMessage(message) && products && products.length > 0 && (
+                <div className="pt-0.5 pl-9">
+                  <button
+                    type="button"
+                    onClick={() => setIsCatalogOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-600 bg-white hover:bg-stone-50 border border-stone-200/80 hover:border-[#0069FF]/50 hover:text-[#0069FF] px-3 py-1 rounded-full shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
+                  >
+                    <ShoppingBag size={11} className="text-[#0069FF]" />
+                    <span>Browse Catalog ({products.length} items)</span>
+                  </button>
+                </div>
+              )}
             </div>
           ))}
 
@@ -1347,6 +1409,214 @@ Candy:`,
         {promptBar}
         {composer}
       </div>
+
+      {/* ─── PRODUCT CATALOG DRAWER / MODAL ────────────────────────────────────── */}
+      {isCatalogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full sm:w-[460px] h-full bg-[#FFFFFF] shadow-2xl flex flex-col justify-between border-l border-[#E7E5E4] animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 sm:p-5 border-b border-[#E7E5E4] bg-[#FAF8F5] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#EFF6FF] text-[#0069FF] flex items-center justify-center border border-[#0069FF]/30">
+                  <ShoppingBag size={16} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base font-semibold text-[#1C1917] tracking-tight">
+                    Store Catalog
+                  </h3>
+                  <p className="text-xs text-[#78716C]">
+                    {products.length} {products.length === 1 ? "piece" : "pieces"} available for order
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCatalogOpen(false)}
+                className="w-8 h-8 rounded-full border border-[#E7E5E4] bg-white text-[#57534E] hover:text-[#1C1917] hover:bg-stone-50 flex items-center justify-center transition cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-3.5 border-b border-[#E7E5E4] bg-white shrink-0">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="Search catalog by name, category..."
+                  className="w-full text-xs pl-8.5 pr-8 py-2 rounded-xl border border-[#E7E5E4] bg-[#FAF8F5] text-[#1C1917] focus:bg-white focus:border-[#0069FF] focus:outline-none transition"
+                />
+                {catalogSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCatalogSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Products List */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 no-scrollbar">
+              {filteredCatalogProducts.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#78716C] space-y-2">
+                  <Package size={28} className="mx-auto text-stone-300" />
+                  <p>{catalogSearch ? `No products match "${catalogSearch}".` : "No products available in this store yet."}</p>
+                  {catalogSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCatalogSearch("")}
+                      className="text-[#0069FF] font-semibold hover:underline cursor-pointer"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredCatalogProducts.map((p) => {
+                  const cartItem = cart.find((it) => it.productId === p.id);
+                  const inCartQty = cartItem ? cartItem.quantity : 0;
+                  return (
+                    <div
+                      key={p.id}
+                      className="rounded-2xl border border-[#E7E5E4] bg-[#FFFFFF] p-3.5 shadow-2xs hover:border-stone-400 transition-all flex flex-col justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-18 h-18 shrink-0 overflow-hidden rounded-xl bg-[#F3EFEA] flex items-center justify-center relative">
+                          {p.image ? (
+                            <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Package size={22} className="text-stone-400" />
+                          )}
+                          {p.stock > 0 ? (
+                            <span className="absolute top-1 left-1 rounded-full px-1.5 py-0.2 text-[9px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {p.stock}
+                            </span>
+                          ) : (
+                            <span className="absolute top-1 left-1 rounded-full px-1.5 py-0.2 text-[9px] font-mono font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                              0
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs sm:text-sm font-sans font-semibold text-[#1C1917] tracking-tight truncate">
+                            {p.name}
+                          </h4>
+                          <p className="mt-1 line-clamp-2 text-[11px] text-[#78716C] leading-relaxed">
+                            {p.description || "Authentic quality handcrafted product."}
+                          </p>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs font-mono font-bold text-[#1C1917]">
+                              {(Number(p.price) || 0).toLocaleString()} MMK
+                            </span>
+                            {p.category && (
+                              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-stone-100 text-stone-600">
+                                {p.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E7E5E4]/80">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCatalogOpen(false);
+                            void sendMessage(`Tell me about ${p.name}`);
+                          }}
+                          className="text-[11px] font-medium text-stone-600 hover:text-[#0069FF] hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <Sparkles size={11} className="text-[#0069FF]" />
+                          <span>Ask Candy</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          {inCartQty > 0 ? (
+                            <div className="flex items-center gap-1 bg-[#FAF8F5] border border-[#E7E5E4] rounded-full px-2 py-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQuantity(p.id, -1)}
+                                className="w-5 h-5 flex items-center justify-center rounded-full text-stone-600 hover:text-stone-900 cursor-pointer"
+                              >
+                                <Minus size={11} />
+                              </button>
+                              <span className="text-xs font-mono font-bold px-1.5 text-[#1C1917]">
+                                {inCartQty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCart(p)}
+                                disabled={p.stock > 0 && inCartQty >= p.stock}
+                                className="w-5 h-5 flex items-center justify-center rounded-full text-stone-600 hover:text-stone-900 disabled:opacity-30 cursor-pointer"
+                              >
+                                <Plus size={11} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCart(p)}
+                              disabled={p.stock <= 0}
+                              className="bg-[#0069FF] hover:bg-[#0052CC] disabled:opacity-40 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-[0.98]"
+                            >
+                              <Plus size={12} />
+                              <span>Add to Bag</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Drawer Footer with Cart and Checkout Shortcut */}
+            <div className="p-4 border-t border-[#E7E5E4] bg-[#FAF8F5] shrink-0">
+              {cart.length > 0 ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] text-[#78716C] block font-mono">Basket Total:</span>
+                    <strong className="text-sm font-mono text-[#0069FF]">
+                      {(Number(cartTotal) || 0).toLocaleString()} MMK
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCatalogOpen(false);
+                      setIsCheckoutOpen(true);
+                    }}
+                    className="px-5 py-2.5 rounded-full bg-[#0069FF] hover:bg-[#0052CC] font-semibold text-xs text-white cursor-pointer transition shadow-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-[0.98]"
+                  >
+                    <ShoppingCart size={13} className="text-amber-200" />
+                    <span>Checkout ({cartItemCount})</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-xs text-[#78716C]">
+                  <span>Your basket is empty.</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCatalogOpen(false)}
+                    className="font-medium text-stone-800 hover:underline cursor-pointer"
+                  >
+                    Return to Chat
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── CHECKOUT MODAL ─────────────────────────────────────────────────── */}
       {isCheckoutOpen && (
