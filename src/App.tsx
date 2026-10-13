@@ -60,26 +60,187 @@ import { loadTownships } from "./data/townships";
 import QRCode from "qrcode";
 import { useLanguage } from "./contexts/LanguageContext";
 import { translations, getTranslation, Language } from "./i18n/translations";
+import {
+  createTelegramLinkToken,
+  subscribeToTokenVerification,
+  getLinkedTelegramAccount,
+  TARGET_BOT_USERNAME,
+} from "./services/telegramAuthService";
 
 const dict = translations;
 
-function TelegramQRCode() {
+function TelegramConnectSection({ user, t }: { user: any; t: any }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [token, setToken] = React.useState<string | null>(null);
+  const [deepLink, setDeepLink] = React.useState<string>(`https://t.me/${TARGET_BOT_USERNAME}`);
+  const [isGenerating, setIsGenerating] = React.useState<boolean>(false);
+  const [linkStatus, setLinkStatus] = React.useState<"idle" | "waiting" | "connected">("idle");
+  const [linkedInfo, setLinkedInfo] = React.useState<{ telegramUserId?: number; telegramUsername?: string } | null>(null);
+  const [copied, setCopied] = React.useState<boolean>(false);
 
+  // Check if User A already has a linked Telegram account
   React.useEffect(() => {
-    if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, "https://t.me/Jjkql_bot", { width: 160, margin: 2 });
+    if (!user?.id) return;
+    getLinkedTelegramAccount(user.id).then((res) => {
+      if (res.linked) {
+        setLinkStatus("connected");
+        setLinkedInfo({
+          telegramUserId: res.telegramUserId,
+          telegramUsername: res.telegramUsername,
+        });
+      }
+    });
+  }, [user?.id]);
+
+  // Render QR code whenever deepLink changes
+  React.useEffect(() => {
+    if (canvasRef.current && deepLink) {
+      QRCode.toCanvas(canvasRef.current, deepLink, {
+        width: 160,
+        margin: 2,
+        color: {
+          dark: "#0F172A",
+          light: "#FFFFFF",
+        },
+      });
     }
-  }, []);
+  }, [deepLink]);
+
+  const handleGenerateLink = async () => {
+    if (!user?.id) return;
+    setIsGenerating(true);
+    try {
+      const res = await createTelegramLinkToken(user.id);
+      setToken(res.token);
+      setDeepLink(res.deepLink);
+      setLinkStatus("waiting");
+
+      // Subscribe to Supabase Realtime verification
+      const unsubscribe = subscribeToTokenVerification(res.token, (record) => {
+        setLinkStatus("connected");
+        setLinkedInfo({
+          telegramUserId: record.telegram_user_id ?? undefined,
+          telegramUsername: record.telegram_username ?? undefined,
+        });
+        unsubscribe();
+      });
+    } catch (err) {
+      console.error("Failed to generate link token:", err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(deepLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="flex flex-col items-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-      <canvas ref={canvasRef} className="rounded-lg" />
-      <p className="text-[10px] font-mono text-slate-500">@Jjkql_bot</p>
-      <p className="text-[9px] text-slate-400">Scan to open bot in Telegram</p>
+    <div className="p-6 bg-slate-50/70 border border-slate-200/80 rounded-[32px] space-y-5 transition-all shadow-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="font-black text-sm tracking-tight text-slate-900">
+            Telegram Store Handshake (@{TARGET_BOT_USERNAME})
+          </h4>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Link your authenticated merchant account so @{TARGET_BOT_USERNAME} automatically syncs your products and orders.
+          </p>
+        </div>
+        {linkStatus === "connected" && (
+          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
+            ● LINKED
+          </span>
+        )}
+        {linkStatus === "waiting" && (
+          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+            ⏳ WAITING FOR TELEGRAM
+          </span>
+        )}
+      </div>
+
+      {linkStatus === "connected" ? (
+        <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+              ✓
+            </div>
+            <div>
+              <p className="text-xs font-bold text-emerald-900">Store Successfully Connected</p>
+              <p className="text-[11px] text-emerald-700 font-mono">
+                {linkedInfo?.telegramUsername ? `@${linkedInfo.telegramUsername}` : "Verified Account"} (ID: {linkedInfo?.telegramUserId || "Linked"})
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateLink}
+            className="px-3.5 py-1.5 rounded-full text-[11px] font-semibold bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer shadow-xs"
+          >
+            Re-link Account
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-center">
+          <div className="flex flex-col items-center justify-center p-3 bg-white border border-slate-200/90 rounded-2xl shadow-xs">
+            <canvas ref={canvasRef} className="rounded-xl" />
+            <p className="text-[10px] font-mono text-slate-400 mt-2">Scan with Telegram Camera</p>
+          </div>
+
+          <div className="md:col-span-2 space-y-3">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Launch <strong>@{TARGET_BOT_USERNAME}</strong> with your unique single-use token. Once opened, the bot will verify your authenticated identity and load your store catalog into memory.
+            </p>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              {linkStatus === "idle" ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateLink}
+                  disabled={isGenerating || !user}
+                  className="px-5 py-2.5 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white flex items-center gap-2 cursor-pointer shadow-sm transition-all active:scale-[0.98]"
+                >
+                  <Sparkles size={13} className="text-amber-400" />
+                  <span>{isGenerating ? "Generating..." : "Generate 1-Click Link"}</span>
+                </button>
+              ) : (
+                <>
+                  <a
+                    href={deepLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-5 py-2.5 rounded-full text-xs font-bold bg-[#229ED9] hover:bg-[#1E8EC4] text-white flex items-center gap-2 cursor-pointer shadow-sm transition-all active:scale-[0.98]"
+                  >
+                    <Send size={13} className="rotate-45" />
+                    <span>Open in Telegram (@{TARGET_BOT_USERNAME})</span>
+                    <ExternalLink size={12} />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="px-4 py-2.5 rounded-full text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                  >
+                    {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    <span>{copied ? "Copied" : "Copy Link"}</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {!user && (
+              <p className="text-[11px] text-amber-600 font-medium">
+                * Please sign in to your merchant account to generate a link token.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -2276,7 +2437,7 @@ export default function App() {
                     </a>
                   </div>
 
-                  <TelegramQRCode />
+                  <TelegramConnectSection user={user} t={t} />
 
                   <button
                     type="submit"
