@@ -4,7 +4,7 @@
 
 **Blocked by:** 01: Sales Team Workspace Shell & Navigation
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Apply database migration creating `team_sessions`, `team_agent_runs`, and `team_evidence` with UUID foreign keys to `public.shops(id)` and tenant RLS
 - [x] Implement Scout agent runner service querying live inventory, sales trends, and buffer thresholds with Zod schema validation

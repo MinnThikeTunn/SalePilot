@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Add `sales_team` tab to navigation in `src/App.tsx` positioned between operational tools and existing strategy desk
 - [x] Render a new decoupled component tree in `src/features/sales-team/components/TeamRoom.tsx`
