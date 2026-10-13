@@ -30,7 +30,8 @@ import {
   Menu,
   LogOut,
   User,
-  Bot
+  Bot,
+  Store
 } from "lucide-react";
 
 import { CustomChart } from "./components/CustomChart";
@@ -267,6 +268,25 @@ export default function App() {
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
+  // Synchronize active user isolation in clientStore
+  useEffect(() => {
+    if (user?.id) {
+      store.setActiveUser(user.id);
+    } else {
+      store.setActiveUser(null);
+      setStoreState(null);
+      setShopRecord(null);
+    }
+  }, [user?.id]);
+
+  const handleSignOut = async () => {
+    store.setActiveUser(null);
+    await signOut();
+    setStoreState(null);
+    setShopRecord(null);
+    setShowLandingPage(true);
+  };
+
   // Onboarding / Config Draft state
   const [shopRecord, setShopRecord] = useState<ShopRecord | null>(null);
   const [editingOnboarding, setEditingOnboarding] = useState(false);
@@ -409,7 +429,11 @@ export default function App() {
         const localState = store.getState();
         (localState.orders || []).forEach((o) => {
           const key = o.invoiceId || o.id;
-          if (key && !orderMap.has(key)) orderMap.set(key, o);
+          const matchesOwner = !o.owner_id || o.owner_id === user.id;
+          const matchesShop = !data.config.shopId || !(o as any).shop_id || (o as any).shop_id === data.config.shopId;
+          if (key && !orderMap.has(key) && matchesOwner && matchesShop) {
+            orderMap.set(key, o);
+          }
         });
 
         data.orders = Array.from(orderMap.values()).sort(
@@ -421,6 +445,7 @@ export default function App() {
 
       // 5. Update states ONLY after all sync logic is done
       setStoreState(data);
+      store.setStoreState(data);
 
       setConfigDraft((prev) => {
         if (activeTab === "bot_config" && prev) return prev;
@@ -499,6 +524,8 @@ export default function App() {
       const customEvent = event as CustomEvent<Order>;
       if (customEvent.detail) {
         const newOrder = customEvent.detail;
+        if (user?.id && (newOrder as any).owner_id && (newOrder as any).owner_id !== user.id) return;
+        if (shopRecord?.shop_id && (newOrder as any).shop_id && (newOrder as any).shop_id !== shopRecord.shop_id) return;
         setStoreState((prev) => {
           if (!prev) return prev;
           const exists = (prev.orders || []).some(
@@ -875,6 +902,7 @@ export default function App() {
     return (
       <LandingPage
         isLoggedIn={!!user}
+        onLogout={handleSignOut}
         onGetStarted={() => {
           if (user) {
             setShowLandingPage(false);
@@ -1050,15 +1078,15 @@ export default function App() {
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold shadow-xs">
-                    <Sparkles size={16} className="text-amber-400" />
+                  <div className="w-8 h-8 rounded-xl bg-[#1C1917] text-stone-100 flex items-center justify-center shadow-xs">
+                    <Store size={16} strokeWidth={1.8} className="text-stone-200" />
                   </div>
                   <div>
-                    <h1 className="text-xs font-extrabold tracking-wider font-mono text-slate-900 uppercase">
+                    <h1 className="font-serif text-sm font-medium text-stone-900 tracking-tight">
                       Sales Brain
                     </h1>
-                    <span className="text-[9px] font-bold text-slate-400 font-mono tracking-widest uppercase">
-                      AI Commerce Suite
+                    <span className="text-[9px] font-medium text-stone-500 tracking-wide">
+                      Commerce Studio
                     </span>
                   </div>
                 </div>
@@ -1117,11 +1145,7 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={async () => {
-                  await signOut();
-                  setStoreState(null);
-                  setShopRecord(null);
-                }}
+                onClick={handleSignOut}
                 className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50 cursor-pointer"
               >
                 <LogOut size={16} />
@@ -1140,22 +1164,18 @@ export default function App() {
           {/* Brand Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#EFF6FF] border border-[#0069FF]/30 text-[#0069FF] flex items-center justify-center font-bold shadow-xs">
-                <Sparkles size={16} />
+              <div className="w-8 h-8 rounded-xl bg-[#1C1917] text-stone-100 flex items-center justify-center shadow-xs">
+                <Store size={16} strokeWidth={1.8} className="text-stone-200" />
               </div>
               <div>
                 <h1 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
                   Sales Brain
                 </h1>
-                <span className="text-[10px] font-bold text-[#78716C] font-mono tracking-widest uppercase block">
-                  AI Commerce Suite
+                <span className="text-[10px] font-medium text-[#78716C] tracking-wide block">
+                  Commerce Studio
                 </span>
               </div>
             </div>
-            <span className="text-[10px] font-mono font-medium bg-[#ECFDF5] text-[#047857] px-2 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Live
-            </span>
           </div>
 
           {/* Active Store Card */}
@@ -1380,11 +1400,7 @@ export default function App() {
             </div>
             <button
               type="button"
-              onClick={async () => {
-                await signOut();
-                setStoreState(null);
-                setShopRecord(null);
-              }}
+              onClick={handleSignOut}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               title="Sign out"
             >
@@ -2322,55 +2338,112 @@ export default function App() {
 
           {/* TAB 5: BOT ACTIVATION SETUP */}
           {activeTab === "bot_config" && (
-            <div className="space-y-4">
-              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] animate-fadeIn">
-                  <h3 className="font-serif text-lg font-medium text-[#1C1917] flex items-center gap-2 mb-1 tracking-tight">
-                    {t("telegramBotActivationWorkspace")}
-                  </h3>
-                <p className="text-xs text-[#78716C]">{t("oneClickOnboardingDesc")}</p>
-
-                {storeState.config.telegramBotUsername && (
-                  <div className="mt-5 p-4 bg-[#FAF8F5] border border-sky-200/70 rounded-2xl flex items-center justify-between gap-3 text-[#1C1917]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm shrink-0 border border-sky-200/60">
+            <div className="space-y-6 animate-fadeIn">
+              {/* SECTION 1: TELEGRAM BOT INTEGRATION */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F5F5F4]">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
                         <Send size={15} className="rotate-45" />
                       </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-[#1C1917]">
-                          Direct Link to Active Telegram Bot
-                        </h4>
-                        <p className="text-[11px] text-[#78716C] font-mono">
-                          @{storeState.config.telegramBotUsername.replace("@", "")}
-                        </p>
-                      </div>
+                      <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                        Telegram Commerce Bot
+                      </h3>
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/60">
+                        Direct Channel
+                      </span>
                     </div>
+                    <p className="text-xs text-[#78716C] mt-1">
+                      Connect your Telegram bot for automatic order capture, stock inquiries, and live customer takeover.
+                    </p>
+                  </div>
+                  {storeState.config.telegramBotUsername && (
                     <a
                       href={`https://t.me/${storeState.config.telegramBotUsername.replace("@", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-full text-xs font-semibold bg-[#229ED9] hover:bg-[#1E8EC4] text-white flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 active:scale-[0.98]"
+                      className="px-4 py-2 rounded-full text-xs font-semibold bg-[#229ED9] hover:bg-[#1E8EC4] text-white flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 self-start sm:self-auto active:scale-[0.98]"
                     >
                       <Send size={11} className="rotate-45" />
-                      <span>{t("liveBot")}</span>
+                      <span>Open in Telegram</span>
                       <ExternalLink size={11} />
                     </a>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {storeState.config.shopId && (
-                  <div className="mt-4 p-4 bg-[#FAF8F5] border border-indigo-200/70 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-200/60">
-                        <ShoppingBag size={15} />
+                {/* Telegram Bot Handle & Status Card */}
+                <div className="p-4 bg-[#FAF8F5] border border-sky-200/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[#1C1917]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm shrink-0 border border-sky-200/60">
+                      <Send size={15} className="rotate-45" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-[#1C1917]">
+                        Active Telegram Bot Handle
+                      </h4>
+                      <p className="text-[11px] text-[#78716C] font-mono">
+                        @{storeState.config.telegramBotUsername?.replace("@", "") || "Jjkql_bot"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Webhook Active
+                    </span>
+                  </div>
+                </div>
+
+                {/* Telegram Store Handshake (Token & QR Code) */}
+                <TelegramConnectSection user={user} t={t} />
+              </div>
+
+              {/* SECTION 2: PUBLIC WEB CHATBOT & STOREFRONT */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F5F5F4]">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-stone-100 text-stone-800 flex items-center justify-center border border-stone-200">
+                        <Store size={15} />
                       </div>
-                      <div>
+                      <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                        Public Web Chatbot &amp; Storefront
+                      </h3>
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200/80">
+                        Browser &amp; Social
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#78716C] mt-1">
+                      Shareable interactive store link for customers arriving from Facebook, Instagram, TikTok, or Viber.
+                    </p>
+                  </div>
+                  {storeState.config.shopId && (
+                    <a
+                      href={buildShopPublicUrl(storeState.config.shopId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full text-xs font-semibold bg-[#1C1917] hover:bg-stone-800 text-white flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs shrink-0 self-start sm:self-auto active:scale-[0.98]"
+                    >
+                      <ExternalLink size={12} />
+                      <span>Preview Storefront</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Shareable Link Box */}
+                {storeState.config.shopId ? (
+                  <div className="p-4 bg-[#FAF8F5] border border-stone-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <ShoppingBag size={15} className="text-stone-700" />
                         <h4 className="text-xs font-semibold text-[#1C1917]">
-                          Your Public Shop Link
+                          Your Dedicated Storefront URL
                         </h4>
-                        <p className="text-[11px] text-[#78716C]">
-                          Share this with your customers
-                        </p>
                       </div>
+                      <span className="text-[10px] font-mono text-stone-500">
+                        Shop ID: {storeState.config.shopId}
+                      </span>
                     </div>
                     
                     <div className="flex gap-2">
@@ -2378,6 +2451,7 @@ export default function App() {
                         {buildShopPublicUrl(storeState.config.shopId)}
                       </div>
                       <button
+                        type="button"
                         onClick={() => {
                           const url = buildShopPublicUrl(storeState.config.shopId!);
                           navigator.clipboard.writeText(url);
@@ -2391,62 +2465,89 @@ export default function App() {
                         }`}
                       >
                         {copiedConfigLink ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{copiedConfigLink ? "Copied" : "Copy"}</span>
+                        <span>{copiedConfigLink ? "Copied" : "Copy Link"}</span>
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800">
+                    Complete store onboarding to generate your public storefront URL.
+                  </div>
                 )}
 
-                <form onSubmit={handleOnboardingSubmit} className="space-y-4 mt-6 text-xs text-[#57534E]">
+                {/* Feature Highlights Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="p-3 bg-white border border-stone-200/70 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                      <Bot size={13} className="text-stone-700" />
+                      <span>Natural Order Bot</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Customers chat in Myanmar or English to inquire and build carts.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white border border-stone-200/70 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                      <Truck size={13} className="text-stone-700" />
+                      <span>Township Rates</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Instant delivery rate calculation based on customer township.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white border border-stone-200/70 rounded-xl space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                      <Check size={13} className="text-emerald-600" />
+                      <span>Slip Settlement</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 leading-relaxed">
+                      Mobile wallet screenshot verification and cash on delivery.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: STORE MERCHANT PROFILE */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#F5F5F4]">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
+                      Merchant Store Profile
+                    </h3>
+                    <p className="text-xs text-[#78716C] mt-0.5">
+                      Business identity synced with bot replies and customer receipts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingOnboarding(true)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-800 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Edit2 size={12} />
+                    <span>Edit Profile</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div className="space-y-1">
                     <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("storeNameLabel")}</label>
-                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
                       {storeState.config.shopName || "—"}
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("smeOwnerNameLabel")}</label>
-                      <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
-                        {storeState.config.ownerName || "—"}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("contactPhoneLabel")}</label>
-                      <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
-                        {storeState.config.phone || "—"}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("telegramBotUsernameLabel")}</label>
-                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#57534E] font-mono text-xs cursor-not-allowed select-none">
-                      {storeState.config.telegramBotUsername || "@Jjkql_bot"}
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("smeOwnerNameLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.ownerName || "—"}
                     </div>
-                    <a
-                      href="https://t.me/Jjkql_bot"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:text-sky-700 font-mono mt-1"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.942z"/></svg>
-                      t.me/Jjkql_bot
-                    </a>
                   </div>
-
-                  <TelegramConnectSection user={user} t={t} />
-
-                  <button
-                    type="submit"
-                    disabled={savingAction}
-                    className="w-full bg-[#1C1917] hover:bg-stone-850 text-white font-semibold py-3 rounded-full cursor-pointer uppercase text-xs tracking-wider transition-all active:scale-[0.98] shadow-2xs"
-                  >
-                    {savingAction ? "Re-connecting..." : t("saveStoreSettingsBtn")}
-                  </button>
-                </form>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("contactPhoneLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.phone || "—"}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

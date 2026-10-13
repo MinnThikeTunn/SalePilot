@@ -85,7 +85,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col justify-between selection:bg-[#0069FF] selection:text-white font-sans antialiased">
+    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col justify-between selection:bg-stone-900 selection:text-white font-sans antialiased">
       {/* Top Header Navigation */}
       <header className="max-w-6xl w-full mx-auto px-6 pt-6 sm:pt-8 flex items-center justify-between">
         {onBackToHome ? (
@@ -116,8 +116,8 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
         <div className="bg-white rounded-[32px] border border-stone-200/80 p-8 sm:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition-all">
           {/* Brand & Editorial Title */}
           <div className="text-center mb-8">
-            <span className="text-[11px] font-mono font-semibold tracking-[0.2em] uppercase text-[#0069FF] inline-flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-[#0069FF]" />
+            <span className="text-[11px] font-mono font-semibold tracking-[0.2em] uppercase text-stone-700 inline-flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-stone-700" />
               Merchant Sanctuary
             </span>
             <h1 className="font-serif text-3xl sm:text-4xl text-stone-900 font-normal tracking-tight mt-2.5">
@@ -206,7 +206,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                   placeholder="merchant@shop.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl bg-[#FAF8F5]/60 border border-stone-200 pl-10 pr-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:border-[#0069FF] focus:ring-2 focus:ring-[#0069FF]/15 transition-all"
+                  className="w-full rounded-xl bg-[#FAF8F5]/60 border border-stone-200 pl-10 pr-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:border-stone-900 focus:ring-2 focus:ring-stone-900/10 transition-all"
                 />
               </div>
             </div>
@@ -238,7 +238,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl bg-[#FAF8F5]/60 border border-stone-200 pl-10 pr-11 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:border-[#0069FF] focus:ring-2 focus:ring-[#0069FF]/15 transition-all"
+                  className="w-full rounded-xl bg-[#FAF8F5]/60 border border-stone-200 pl-10 pr-11 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:border-stone-900 focus:ring-2 focus:ring-stone-900/10 transition-all"
                 />
                 <button
                   type="button"
@@ -272,7 +272,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full rounded-xl bg-[#FAF8F5]/60 border border-stone-200 pl-10 pr-11 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:border-[#0069FF] focus:ring-2 focus:ring-[#0069FF]/15 transition-all"
+                    className="w-full rounded-xl bg-[#FAF8F5]/60 border border-stone-200 pl-10 pr-11 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:border-stone-900 focus:ring-2 focus:ring-stone-900/10 transition-all"
                   />
                   <button
                     type="button"
@@ -289,7 +289,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
             <button
               type="submit"
               disabled={busy}
-              className="w-full mt-2 py-3.5 px-4 rounded-xl text-xs font-semibold tracking-wider uppercase text-white bg-[#0069FF] hover:bg-[#0052CC] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
+              className="w-full mt-2 py-3.5 px-4 rounded-xl text-xs font-semibold tracking-wider uppercase text-white bg-black hover:bg-stone-900 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
             >
               {busy
                 ? "Processing..."
@@ -309,7 +309,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
             <button
               type="button"
               onClick={() => switchMode(mode === "login" ? "signup" : "login")}
-              className="text-stone-700 hover:text-[#0069FF] font-medium transition cursor-pointer"
+              className="text-stone-700 hover:text-stone-950 font-medium transition cursor-pointer underline underline-offset-4"
             >
               {mode === "login"
                 ? "Need an account? Sign up"

@@ -67,6 +67,8 @@ export interface Order {
     screenshotUrl?: string; // base64 encoded or placeholder image
   };
   createdAt: string;
+  owner_id?: string;
+  shop_id?: string;
 }
 
 export interface ChatMessage {

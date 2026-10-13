@@ -1,22 +1,48 @@
 import { cloneDefaultState, DEFAULT_STATE } from "../data/defaultState";
+import { createEmptyShopState } from "./defaults";
 import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order } from "../types";
 import { processCustomerMessage } from "./botSimulator";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 import { invokeApi } from "./api";
 
-const STORAGE_KEY = "sales_brain_state_v2";
-
+let activeUserId: string | null = null;
 let memoryState: SystemState | null = null;
+
+export function setActiveUser(userId: string | null) {
+  if (activeUserId !== userId) {
+    activeUserId = userId;
+    memoryState = null;
+  }
+}
+
+export function clearUserState(userId?: string) {
+  memoryState = null;
+  if (typeof localStorage !== "undefined") {
+    const key = userId ? `sales_brain_state_${userId}` : (activeUserId ? `sales_brain_state_${activeUserId}` : "sales_brain_state_guest");
+    localStorage.removeItem(key);
+    localStorage.removeItem("sales_brain_state_v2");
+    localStorage.removeItem("sales_brain_state_v1");
+  }
+}
+
+function getStorageKey(): string {
+  if (activeUserId) {
+    return `sales_brain_state_${activeUserId}`;
+  }
+  return "sales_brain_state_guest";
+}
 
 function load(): SystemState {
   if (memoryState) return memoryState;
+  const key = getStorageKey();
   try {
     if (typeof localStorage !== "undefined" && localStorage.getItem("sales_brain_state_v1")) {
       localStorage.removeItem("sales_brain_state_v1");
     }
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
     if (raw) {
-      memoryState = { ...cloneDefaultState(), ...JSON.parse(raw) };
+      const base = activeUserId ? createEmptyShopState() : cloneDefaultState();
+      memoryState = { ...base, ...JSON.parse(raw) };
       if (!Array.isArray(memoryState.deliveryZones)) {
         memoryState.deliveryZones = [];
       }
@@ -25,7 +51,9 @@ function load(): SystemState {
   } catch {
     /* ignore */
   }
-  memoryState = cloneDefaultState();
+
+  // Brand new logged-in account starts with clean, isolated empty state
+  memoryState = activeUserId ? createEmptyShopState() : cloneDefaultState();
   if (!Array.isArray(memoryState.deliveryZones)) {
     memoryState.deliveryZones = [];
   }
@@ -36,7 +64,7 @@ function load(): SystemState {
 function save() {
   if (!memoryState) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState));
+    localStorage.setItem(getStorageKey(), JSON.stringify(memoryState));
   } catch (e) {
     console.warn("Could not persist state to localStorage", e);
   }
@@ -46,8 +74,13 @@ export function getState(): SystemState {
   return load();
 }
 
+export function setStoreState(next: SystemState): void {
+  memoryState = next;
+  save();
+}
+
 export function resetState(): SystemState {
-  memoryState = cloneDefaultState();
+  memoryState = activeUserId ? createEmptyShopState() : cloneDefaultState();
   save();
   return memoryState;
 }
