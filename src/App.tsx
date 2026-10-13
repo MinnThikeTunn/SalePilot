@@ -41,6 +41,7 @@ import { Onboarding } from "./components/Onboarding";
 import { LandingPage } from "./components/LandingPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { PublicShop } from "./components/PublicShop";
+import { AIStrategyDesk } from "./components/strategy/AIStrategyDesk";
 import { useAuth } from "./contexts/AuthContext";
 import { invokeApi } from "./services/api";
 import { getShopState, saveShopState } from "./services/shopState";
@@ -49,7 +50,7 @@ import {
   getShopForOwner,
   shopRecordToFormData,
 } from "./services/shopRecord";
-import { getProducts, migrateProductsFromJson, upsertProduct, deleteProduct } from "./services/productService";
+import { getProducts, migrateProductsFromJson, upsertProduct, deleteProduct, deductProductStock } from "./services/productService";
 import type { OnboardingFormState, ShopRecord } from "./types";
 import { Product, DeliveryZone, Order, ShopConfig, TelegramSession, SystemState } from "./types";
 import * as store from "./services/clientStore";
@@ -308,8 +309,11 @@ export default function App() {
   const [prodForm, setProdForm] = useState({
     name: "",
     price: 4500,
+    cost_price: 2700,
     description: "",
     stock: 25,
+    lead_time_days: 3,
+    safety_stock_threshold: 5,
     image: "",
     varies: [] as { key: string; value: string }[],
     is_on_demand: false,
@@ -710,6 +714,9 @@ export default function App() {
         id: editingProduct?.id,
         name: prodForm.name,
         price: Number(prodForm.price) || 0,
+        cost_price: Number(prodForm.cost_price) || 0,
+        lead_time_days: Number(prodForm.lead_time_days) || 3,
+        safety_stock_threshold: Number(prodForm.safety_stock_threshold) || 5,
         description: prodForm.description,
         stock: Number(prodForm.stock) || 0,
         image: prodForm.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400",
@@ -729,7 +736,7 @@ export default function App() {
         );
         setShowProductModal(false);
         setEditingProduct(null);
-        setProdForm({ name: "", price: 4500, description: "", stock: 25, image: "", varies: [], is_on_demand: false, waiting_time: "" });
+        setProdForm({ name: "", price: 4500, cost_price: 2700, description: "", stock: 25, lead_time_days: 3, safety_stock_threshold: 5, image: "", varies: [], is_on_demand: false, waiting_time: "" });
         fetchState();
       }
     } catch (err) {
@@ -805,17 +812,23 @@ export default function App() {
   // Order payment screenshot evaluation trigger (Accept / Cancel)
   const handleUpdateOrderStatus = async (orderId: string, status: 'confirmed' | 'cancelled' | 'completed') => {
     try {
+      const targetOrder = storeState?.orders.find((o) => o.id === orderId || o.invoiceId === orderId);
+      const prevStatus = targetOrder?.status;
+
       await invokeApi("orders/update", { orderId, status });
       await updateDbOrderStatus(orderId, status);
       store.updateOrderStatus(orderId, status);
-      {
-        showToast(
-          `Order status marked as [${status.toUpperCase()}]! Invoice sent.`,
-          "success"
-        );
-        setActiveVerificationReceipt(null);
-        fetchState();
+
+      if (status === "confirmed" && prevStatus !== "confirmed" && targetOrder?.items && user) {
+        await deductProductStock(user.id, targetOrder.items);
       }
+
+      showToast(
+        `Order status marked as [${status.toUpperCase()}]! Invoice sent.`,
+        "success"
+      );
+      setActiveVerificationReceipt(null);
+      fetchState();
     } catch (err) {
       console.error(err);
     }
@@ -1657,7 +1670,21 @@ export default function App() {
                           
                           return (
                             <tr key={o.id} className="hover:bg-[#FAF8F5]/60 transition-colors font-mono">
-                              <td className="p-3 font-semibold text-[#1C1917] text-xs">{o.invoiceId}</td>
+                              <td className="p-3 font-semibold text-[#1C1917] text-xs">
+                                <span className="block">{o.invoiceId}</span>
+                                {o.items && o.items.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1 font-sans">
+                                    {o.items.map((it, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex items-center text-[10px] bg-stone-100 text-stone-700 px-1.5 py-0.5 rounded border border-stone-200/80 font-mono"
+                                      >
+                                        {it.quantity}× {it.productName}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
                               <td className="p-3 whitespace-nowrap font-sans text-xs">
                                 <span className="font-semibold text-[#1C1917] block">{o.customerName}</span>
                                 <span className="text-[11px] text-[#78716C] block">{o.customerPhone}</span>
@@ -1738,6 +1765,22 @@ export default function App() {
                       </div>
                     </div>
 
+                    {activeVerificationReceipt.items && activeVerificationReceipt.items.length > 0 && (
+                      <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E7E5E4] space-y-1.5">
+                        <span className="text-[10px] text-[#78716C] uppercase font-mono block font-semibold">
+                          {t("orderItems")}:
+                        </span>
+                        <div className="space-y-1">
+                          {activeVerificationReceipt.items.map((it, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs font-mono text-stone-800">
+                              <span>{it.quantity}× {it.productName}</span>
+                              <span>{((it.price || 0) * (it.quantity || 1)).toLocaleString()} MMK</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-[#FAF8F5] p-3.5 rounded-xl border border-[#E7E5E4] flex items-center justify-between">
                       <span className="text-xs font-semibold text-[#78716C] uppercase font-mono">{t("totalCharged")}:</span>
                       <strong className="text-[#1C1917] font-semibold font-mono text-base">
@@ -1800,7 +1843,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setEditingProduct(null);
-                    setProdForm({ name: "", price: 4500, description: "", stock: 25, image: "", varies: [], is_on_demand: false, waiting_time: "" });
+                    setProdForm({ name: "", price: 4500, cost_price: 2700, description: "", stock: 25, lead_time_days: 3, safety_stock_threshold: 5, image: "", varies: [], is_on_demand: false, waiting_time: "" });
                     setShowProductModal(true);
                   }}
                   className="bg-[#0069FF] hover:bg-[#0052CC] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-[0.98]"
@@ -1863,8 +1906,11 @@ export default function App() {
                             setProdForm({
                               name: p.name,
                               price: p.price,
+                              cost_price: p.cost_price || Math.round(p.price * 0.6),
                               description: p.description,
                               stock: p.stock,
+                              lead_time_days: p.lead_time_days || 3,
+                              safety_stock_threshold: p.safety_stock_threshold || 5,
                               image: p.image,
                               varies: p.varies || [],
                               is_on_demand: p.is_on_demand || false,
@@ -1917,16 +1963,29 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-semibold text-[#78716C] block uppercase">{t("unitPriceLabel")}</label>
-                        <input
-                          type="number"
-                          required
-                          value={prodForm.price}
-                          onChange={(e) => setProdForm({ ...prodForm, price: Number(e.target.value) })}
-                          className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-xs text-[#1C1917] font-mono focus:outline-none focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF] transition-colors"
-                          placeholder="e.g., 4500"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-semibold text-[#78716C] block uppercase">{t("unitPriceLabel")}</label>
+                          <input
+                            type="number"
+                            required
+                            value={prodForm.price}
+                            onChange={(e) => setProdForm({ ...prodForm, price: Number(e.target.value) })}
+                            className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-xs text-[#1C1917] font-mono focus:outline-none focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF] transition-colors"
+                            placeholder="e.g., 4500"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-semibold text-[#78716C] block uppercase">Cost / COGS (MMK)</label>
+                          <input
+                            type="number"
+                            value={prodForm.cost_price}
+                            onChange={(e) => setProdForm({ ...prodForm, cost_price: Number(e.target.value) })}
+                            className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-xs text-[#1C1917] font-mono focus:outline-none focus:border-[#0069FF] focus:ring-1 focus:ring-[#0069FF] transition-colors"
+                            placeholder="e.g., 2700"
+                          />
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
@@ -2253,87 +2312,17 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 4: AI STRATEGY & REAL BUSINESS INSIGHTS */}
-          {activeTab === "insights" && (
-            <div className="space-y-6">
-              
-              {/* SVG Charts section */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                <div className="md:col-span-8 flex flex-col justify-between">
-                  <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-2xs flex-1">
-                    <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight mb-2">
-                      {t("weeklyStoreVolume")}
-                    </h3>
-                    <CustomChart data={weekdaysChartData} color="#0069FF" title="Revenue Matrix" unit="MMK" />
-                  </div>
-                </div>
-
-                <div className="md:col-span-4 bg-white border border-[#E7E5E4] rounded-2xl p-5 flex flex-col justify-between shadow-2xs">
-                  <div>
-                    <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight mb-2">
-                      {t("leanAccountingStatsSummary")}
-                    </h3>
-                    
-                    <div className="mt-4 space-y-3 text-xs font-mono">
-                      <div className="flex justify-between items-center border-b border-[#E7E5E4] pb-2.5">
-                        <span className="text-[#78716C] font-sans">{t("grossSalesValue")}</span>
-                        <strong className="text-[#1C1917]">{totalSalesRevenue.toLocaleString()} MMK</strong>
-                      </div>
-                      <div className="flex justify-between items-center border-b border-[#E7E5E4] pb-2.5">
-                        <span className="text-[#78716C] font-sans">{t("ordersCompiled")}</span>
-                        <strong className="text-[#57534E]">{storeState.orders.length} orders</strong>
-                      </div>
-                      <div className="flex justify-between items-center border-b border-[#E7E5E4] pb-2.5">
-                        <span className="text-[#78716C] font-sans">{t("canceledTransactions")}</span>
-                        <strong className="text-rose-600 font-semibold">{storeState.orders.filter(o => o.status === 'cancelled').length} entries</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={exportExcelReport}
-                    className="w-full bg-[#1C1917] hover:bg-stone-850 text-white py-2.5 rounded-full font-semibold text-xs flex items-center justify-center gap-2 mt-4 cursor-pointer shadow-2xs active:scale-[0.98]"
-                  >
-                    <Download size={13} className="text-stone-300" /> {t("downloadLedgerCsv")}
-                  </button>
-                </div>
-              </div>
-
-               {/* LIVE GEMINI STRATEGIST ADVICE CARD */}
-              <div className="bg-white border border-[#E7E5E4] p-6 rounded-2xl space-y-4 shadow-2xs">
-                <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200/70">
-                      <Sparkles size={16} />
-                    </div>
-                    <div>
-                      <h4 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
-                        {t("salesBrainAdvisorDesk")}
-                      </h4>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => fetchAiStrategy(true)}
-                    disabled={loadingAi}
-                    className="text-xs font-semibold text-[#1C1917] hover:text-[#0069FF] bg-[#FAF8F5] hover:bg-stone-100 border border-[#E7E5E4] px-3.5 py-1.5 rounded-full flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-                  >
-                    <RefreshCw size={11} className={loadingAi ? "animate-spin text-[#0069FF]" : "text-stone-400"} /> {loadingAi ? t("analyzingPatterns").substring(0, 10) : t("reEvaluateStrategy")}
-                  </button>
-                </div>
-
-                {loadingAi ? (
-                  <div className="py-12 text-center text-[#78716C] font-mono text-xs space-y-2">
-                    <div className="w-6 h-6 border-2 border-[#0069FF]/20 border-t-[#0069FF] rounded-full animate-spin mx-auto"></div>
-                    <div>{t("analyzingPatterns")}</div>
-                  </div>
-                ) : (
-                  <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E7E5E4] leading-relaxed text-xs text-[#1C1917] space-y-3 font-sans max-w-none whitespace-pre-line select-text">
-                    {aiAnalysisText}
-                  </div>
-                )}
-              </div>
-
-            </div>
+          {/* TAB 4: AI STRATEGY DESK */}
+          {activeTab === "insights" && storeState && (
+            <AIStrategyDesk
+              shopId={storeState.config.shopId || user?.id || "default_shop"}
+              ownerId={user?.id || "default_owner"}
+              products={storeState.products || []}
+              orders={storeState.orders || []}
+              sessionsCount={Object.keys(storeState.sessions || {}).length}
+              weekdaysChartData={weekdaysChartData}
+              onExportCsv={exportExcelReport}
+            />
           )}
 
           {/* TAB 5: BOT ACTIVATION SETUP */}

@@ -9,6 +9,9 @@ export interface Product {
   varies: { key: string; value: string }[];
   is_on_demand?: boolean;
   waiting_time?: string;
+  cost_price?: number; // COGS in MMK
+  lead_time_days?: number; // Days to replenish
+  safety_stock_threshold?: number; // Buffer stock minimum
 }
 
 export interface DeliveryZone {
@@ -184,3 +187,150 @@ export interface SystemState {
   orders: Order[];
   sessions: { [id: string]: TelegramSession };
 }
+
+// ==============================================================================
+// AI Strategy Desk Interfaces (per docs/AI_Strategy_Feature.md)
+// ==============================================================================
+
+export type OpportunityType =
+  | 'sales_decline'
+  | 'stock_risk'
+  | 'cancellation_risk'
+  | 'conversion_gap'
+  | 'unconverted_inquiries'
+  | 'margin_opportunity'
+  | 'repeat_purchase';
+
+export type LifecycleStatus =
+  | 'open'
+  | 'accepted'
+  | 'dismissed'
+  | 'in_progress'
+  | 'completed'
+  | 'expired';
+
+export type DataQualityStatus = 'good' | 'limited' | 'insufficient';
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+export interface ScoreBreakdown {
+  impact: number;       // 0-100 (35% weight)
+  evidence: number;     // 0-100 (25% weight)
+  urgency: number;      // 0-100 (20% weight)
+  actionability: number;// 0-100 (20% weight)
+}
+
+export interface RecommendedAction {
+  action_type: string;
+  title: string;
+  description: string;
+  requires_approval: boolean;
+  suggested_params?: Record<string, unknown>;
+}
+
+export interface AiExplanation {
+  why_it_matters: string;
+  action_rationale: string;
+  expected_outcome?: string;
+  limitations?: string;
+  generated_by: 'gemini' | 'template_fallback';
+}
+
+export interface SalesOpportunity {
+  id: string;
+  shop_id: string;
+  owner_id: string;
+  run_id?: string;
+  opportunity_key: string;
+  opportunity_type: OpportunityType;
+  title: string;
+  problem_description: string;
+  priority_score: number; // 0 - 100
+  score_breakdown: ScoreBreakdown;
+  evidence_confidence: ConfidenceLevel;
+  evidence_snapshot: {
+    metrics: Record<string, number | string | boolean>;
+    analysis_period: string;
+    comparison_period?: string;
+    comparison_values?: Record<string, number | string>;
+    source_records: string;
+    warnings?: string[];
+  };
+  expected_impact: {
+    revenue_at_risk_mmk?: number;
+    potential_gain_mmk?: number;
+    units_impacted?: number;
+    assumptions?: string;
+  };
+  recommended_action: RecommendedAction;
+  data_quality_warnings: string[];
+  ai_explanation: AiExplanation;
+  status: LifecycleStatus;
+  dismissed_reason?: string;
+  detected_at: string;
+  expires_at?: string;
+  updated_at: string;
+}
+
+export interface AnalyticsRun {
+  id: string;
+  shop_id: string;
+  owner_id: string;
+  analysis_window_start: string;
+  analysis_window_end: string;
+  comparison_window_start?: string;
+  comparison_window_end?: string;
+  timezone: string;
+  currency: string;
+  data_quality_status: DataQualityStatus;
+  data_quality_summary: {
+    completeness_score: number; // 0 - 100
+    missing_data: string[];
+    warnings: string[];
+    freshness_timestamp: string;
+  };
+  metrics_summary: {
+    current_period: {
+      revenue: number;
+      completed_orders: number;
+      aov: number;
+      cancellation_rate: number;
+      total_units_sold: number;
+    };
+    comparison_period: {
+      revenue: number;
+      completed_orders: number;
+      aov: number;
+      cancellation_rate: number;
+      total_units_sold: number;
+    };
+    changes: {
+      revenue_pct: number | null;
+      orders_pct: number | null;
+      aov_pct: number | null;
+      cancellation_rate_pct: number | null;
+    };
+  };
+  metric_version: string;
+  scoring_version: string;
+  status: 'completed' | 'failed' | 'limited';
+  source_watermark: string;
+  created_at: string;
+}
+
+export interface OpportunityOutcome {
+  id: string;
+  opportunity_id: string;
+  opportunity_key: string;
+  shop_id: string;
+  owner_id: string;
+  action_type: string;
+  baseline_metrics: Record<string, unknown>;
+  observed_metrics?: Record<string, unknown>;
+  observation_period_days: number;
+  outcome_status: 'monitoring' | 'measured' | 'inconclusive';
+  attribution_method: string;
+  notes?: string;
+  completed_at: string;
+  created_at: string;
+}
+
