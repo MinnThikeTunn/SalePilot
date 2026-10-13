@@ -29,6 +29,8 @@ export interface Translations {
   tabInsights: string;
   tabSmartMarketing: string;
   tabConfig: string;
+  tabTelegramBot: string;
+  tabWebChatbot: string;
   tabLiveSupport: string;
 
   // KPIs & Stats
@@ -247,6 +249,8 @@ export const translations: Record<Language, Translations> = {
     tabInsights: "AI Strategy",
     tabSmartMarketing: "Smart Marketing",
     tabConfig: "Bot Connection",
+    tabTelegramBot: "Telegram Bot Connection",
+    tabWebChatbot: "Public Web Chatbot Connection",
     tabLiveSupport: "Live VIP Support",
 
     // KPIs & Stats
@@ -446,6 +450,8 @@ const EXACT_PHRASE_MAP: Record<string, keyof Translations> = {
   "AI Strategy": "tabInsights",
   "Smart Marketing": "tabSmartMarketing",
   "Bot Connection": "tabConfig",
+  "Telegram Bot Connection": "tabTelegramBot",
+  "Public Web Chatbot Connection": "tabWebChatbot",
   "Live VIP Support": "tabLiveSupport",
   "Total Store Revenue": "totalStoreRevenue",
   "Validated Orders": "validatedOrders",

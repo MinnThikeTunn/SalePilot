@@ -266,7 +266,17 @@ export default function App() {
 
   // Main Store State
   const [storeState, setStoreState] = useState<SystemState | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "delivery" | "insights" | "bot_config" | "live_support" | "smart_marketing">("orders");
+  const [activeTab, setActiveTab] = useState<
+    | "orders"
+    | "products"
+    | "delivery"
+    | "insights"
+    | "bot_config"
+    | "telegram_bot"
+    | "web_chatbot"
+    | "live_support"
+    | "smart_marketing"
+  >("orders");
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
@@ -478,7 +488,7 @@ export default function App() {
       store.setStoreState(data);
 
       setConfigDraft((prev) => {
-        if (activeTab === "bot_config" && prev) return prev;
+        if ((activeTab === "bot_config" || activeTab === "telegram_bot" || activeTab === "web_chatbot") && prev) return prev;
         return data.config;
       });
       const sessionKeys = Object.keys(combinedSessions);
@@ -661,7 +671,7 @@ export default function App() {
   }, [storeState?.sessions, activeSessionId, activeTab]);
 
   useEffect(() => {
-    if (activeTab !== "bot_config") return;
+    if (activeTab !== "bot_config" && activeTab !== "telegram_bot" && activeTab !== "web_chatbot") return;
     if (storeState) {
       setConfigDraft((prev) => prev ?? storeState.config);
     }
@@ -1196,7 +1206,9 @@ export default function App() {
     delivery: t("tabDelivery"),
     insights: t("tabInsights"),
     smart_marketing: t("tabSmartMarketing"),
-    bot_config: t("tabConfig"),
+    bot_config: t("tabTelegramBot"),
+    telegram_bot: t("tabTelegramBot"),
+    web_chatbot: t("tabWebChatbot"),
     live_support: t("tabLiveSupport"),
   };
 
@@ -1264,7 +1276,8 @@ export default function App() {
                   { id: "insights", label: t("tabInsights"), icon: Sparkles },
                   { id: "smart_marketing", label: t("tabSmartMarketing"), icon: TrendingUp },
                   { id: "live_support", label: t("tabLiveSupport"), icon: MessageSquare },
-                  { id: "bot_config", label: t("tabConfig"), icon: Settings },
+                  { id: "telegram_bot", label: t("tabTelegramBot"), icon: Send },
+                  { id: "web_chatbot", label: t("tabWebChatbot"), icon: Store },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -1499,27 +1512,47 @@ export default function App() {
             </div>
           </div>
 
-          {/* Section 3: Channels */}
+          {/* Section 3: Bot Connections */}
           <div>
             <p className="px-3 text-[10px] font-bold font-mono tracking-[0.15em] text-[#78716C] uppercase mb-1.5">
-              Channels
+              Bot Connections
             </p>
             <div className="space-y-1">
+              {/* Telegram Bot Connection */}
               <button
                 type="button"
-                onClick={() => setActiveTab("bot_config")}
+                onClick={() => setActiveTab("telegram_bot")}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer group ${
-                  activeTab === "bot_config"
+                  activeTab === "telegram_bot" || activeTab === "bot_config"
                     ? "bg-[#1C1917] text-white font-semibold shadow-xs"
                     : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Settings size={15} className={activeTab === "bot_config" ? "text-white" : "text-stone-400 group-hover:text-stone-700"} />
-                  <span>{t("tabConfig")}</span>
+                  <Send size={15} className={`rotate-45 ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "text-white" : "text-sky-500 group-hover:text-sky-600"}`} />
+                  <span>{t("tabTelegramBot")}</span>
                 </div>
-                <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
-                  Meta &amp; TG
+                <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
+                  Telegram
+                </span>
+              </button>
+
+              {/* Public Web Chatbot Connection */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("web_chatbot")}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer group ${
+                  activeTab === "web_chatbot"
+                    ? "bg-[#1C1917] text-white font-semibold shadow-xs"
+                    : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Store size={15} className={activeTab === "web_chatbot" ? "text-white" : "text-emerald-500 group-hover:text-emerald-600"} />
+                  <span>{t("tabWebChatbot")}</span>
+                </div>
+                <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "web_chatbot" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
+                  Web Bot
                 </span>
               </button>
             </div>
@@ -2458,10 +2491,10 @@ export default function App() {
             />
           )}
 
-          {/* TAB 5: BOT ACTIVATION SETUP */}
-          {activeTab === "bot_config" && (
+          {/* TAB 5A: TELEGRAM BOT CONNECTION */}
+          {(activeTab === "telegram_bot" || activeTab === "bot_config") && (
             <div className="space-y-6 animate-fadeIn">
-              {/* SECTION 1: TELEGRAM BOT INTEGRATION */}
+              {/* TELEGRAM BOT INTEGRATION */}
               <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F5F5F4]">
                   <div>
@@ -2521,7 +2554,55 @@ export default function App() {
                 <TelegramConnectSection user={user} t={t} />
               </div>
 
-              {/* SECTION 2: PUBLIC WEB CHATBOT & STOREFRONT */}
+              {/* STORE MERCHANT PROFILE */}
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#F5F5F4]">
+                  <div>
+                    <h3 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
+                      Merchant Store Profile
+                    </h3>
+                    <p className="text-xs text-[#78716C] mt-0.5">
+                      Business identity synced with bot replies and customer receipts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingOnboarding(true)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-800 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Edit2 size={12} />
+                    <span>Edit Profile</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("storeNameLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.shopName || "—"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("smeOwnerNameLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.ownerName || "—"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">{t("contactPhoneLabel")}</label>
+                    <div className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-medium truncate">
+                      {storeState.config.phone || "—"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5B: PUBLIC WEB CHATBOT & STOREFRONT */}
+          {activeTab === "web_chatbot" && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* PUBLIC WEB CHATBOT & STOREFRONT */}
               <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F5F5F4]">
                   <div>
@@ -2629,7 +2710,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* SECTION 3: STORE MERCHANT PROFILE */}
+              {/* STORE MERCHANT PROFILE */}
               <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#F5F5F4]">
                   <div>
