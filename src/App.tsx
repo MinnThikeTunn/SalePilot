@@ -3009,10 +3009,10 @@ export default function App() {
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          "မင်္ဂလာပါရှင့်! ၂ မျိုးလုံး stock ရှိပါတယ်ရှင် (Both in stock)",
-                          "ဟုတ်ကဲ့ ၂ မျိုးလုံးယူရင် 5% discount ပေးပါမယ်ရှင် (5% discount)",
-                          "KPay / WavePay လက်ခံပါတယ်ရှင် (KPay/WavePay accepted)",
-                          "အော်ဒါ confirm လုပ်ပေးရမလားရှင်? (Confirm order?)"
+                          "Hello! Both items are currently in stock.",
+                          "Yes, we can offer a 5% bundle discount for both pieces.",
+                          "KBZPay and WavePay are accepted for prepay.",
+                          "Would you like us to confirm this order for you?"
                         ].map((chip, cIdx) => (
                           <button
                             key={cIdx}

@@ -198,7 +198,7 @@ export function processCustomerMessage(
     (p.category && lContent.includes(p.category.toLowerCase()))
   );
 
-  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate|ကားဂိတ်|ပို့ခ|ပို့ပေး|ပို့ဆောင်/i.test(lContent)) {
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate/i.test(lContent)) {
     const origin = (state as any).onboardingProfile?.business_address || (state.config as any).businessAddress || "our store hub";
     if (state.deliveryZones && state.deliveryZones.length > 0) {
       const matched = state.deliveryZones.find((z) => {

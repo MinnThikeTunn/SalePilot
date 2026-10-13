@@ -304,13 +304,13 @@ export function createSimulationCustomer(name?: string): TelegramSession {
       {
         id: `msg-${Date.now()}`,
         sender: "customer",
-        content: "မင်္ဂလာပါ! ပစ္စည်းအသစ်တွေ စုံစမ်းချင်လို့ပါ (Hi! I'd like to ask about new products).",
+        content: "Hi! I would like to inquire about your latest products.",
         timestamp: new Date().toISOString(),
       },
       {
         id: `msg-${Date.now() + 1}`,
         sender: "bot",
-        content: "မင်္ဂလာပါရှင်! Candy မှ ကူညီပေးပါရစေရှင့်။ ဘာပစ္စည်းများ စိတ်ဝင်စားပါသလဲရှင် (Welcome! Candy is happy to help you. Which items are you interested in)?",
+        content: "Hello! Candy is happy to assist you. Which items are you interested in today?",
         timestamp: new Date().toISOString(),
       },
     ],

@@ -138,8 +138,8 @@ function buildLocalReply(
 ): string {
   const t = text.toLowerCase();
 
-  // 1. Delivery & shipping questions (English & Burmese)
-  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate|ကားဂိတ်|ပို့ခ|ပို့ပေး|ပို့ဆောင်/i.test(t)) {
+  // 1. Delivery & shipping questions
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate/i.test(t)) {
     const origin = address ? address.trim() : "our store dispatch center";
 
     // 1a. Check if customer specifically asked about a matched township or region
@@ -410,9 +410,9 @@ export function ShopChatbot({
           selectedTownship.toLowerCase()
       );
       if (match) return Number(match.rate) || 0;
-      if (/other|bus gate|gate|regional|nationwide|inter-state|ဂိတ်/i.test(selectedTownship)) {
+      if (/other|bus gate|gate|regional|nationwide|inter-state/i.test(selectedTownship)) {
         const busGateZone = activeZones.find((z) =>
-          /other|bus gate|gate|regional|nationwide|inter-state|ဂိတ်/i.test(z?.township_name || "")
+          /other|bus gate|gate|regional|nationwide|inter-state/i.test(z?.township_name || "")
         );
         if (busGateZone) return Number(busGateZone.rate) || 4000;
         return 4000;

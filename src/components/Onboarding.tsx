@@ -457,7 +457,7 @@ export function Onboarding({
                 <div className="pt-2 space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                      Store State / Region (ပြည်နယ် / တိုင်းဒေသကြီး) <span className="text-[#0069FF]">*</span>
+                      Store State / Region <span className="text-[#0069FF]">*</span>
                     </label>
                     <div className="relative">
                       <select
