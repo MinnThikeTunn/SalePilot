@@ -249,8 +249,8 @@ export const translations: Record<Language, Translations> = {
     tabInsights: "AI Strategy",
     tabSmartMarketing: "Smart Marketing",
     tabConfig: "Bot Connection",
-    tabTelegramBot: "Telegram Bot Connection",
-    tabWebChatbot: "Public Web Chatbot Connection",
+    tabTelegramBot: "Telegram Bot",
+    tabWebChatbot: "Web Chatbot",
     tabLiveSupport: "Live VIP Support",
 
     // KPIs & Stats
@@ -450,7 +450,10 @@ const EXACT_PHRASE_MAP: Record<string, keyof Translations> = {
   "AI Strategy": "tabInsights",
   "Smart Marketing": "tabSmartMarketing",
   "Bot Connection": "tabConfig",
+  "Telegram Bot": "tabTelegramBot",
   "Telegram Bot Connection": "tabTelegramBot",
+  "Web Chatbot": "tabWebChatbot",
+  "Public Web Chatbot": "tabWebChatbot",
   "Public Web Chatbot Connection": "tabWebChatbot",
   "Live VIP Support": "tabLiveSupport",
   "Total Store Revenue": "totalStoreRevenue",

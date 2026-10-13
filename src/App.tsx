@@ -1528,11 +1528,11 @@ export default function App() {
                     : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Send size={15} className={`rotate-45 ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "text-white" : "text-sky-500 group-hover:text-sky-600"}`} />
-                  <span>{t("tabTelegramBot")}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Send size={15} className={`rotate-45 shrink-0 ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "text-white" : "text-stone-400 group-hover:text-stone-700"}`} />
+                  <span className="truncate">{t("tabTelegramBot")}</span>
                 </div>
-                <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
+                <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-medium whitespace-nowrap shrink-0 ${activeTab === "telegram_bot" || activeTab === "bot_config" ? "bg-stone-800 text-stone-300" : "bg-stone-100 text-stone-600"}`}>
                   Telegram
                 </span>
               </button>
@@ -1547,11 +1547,11 @@ export default function App() {
                     : "text-[#57534E] hover:text-[#1C1917] hover:bg-[#FAF8F5] font-medium"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Store size={15} className={activeTab === "web_chatbot" ? "text-white" : "text-emerald-500 group-hover:text-emerald-600"} />
-                  <span>{t("tabWebChatbot")}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Store size={15} className={`shrink-0 ${activeTab === "web_chatbot" ? "text-white" : "text-stone-400 group-hover:text-stone-700"}`} />
+                  <span className="truncate">{t("tabWebChatbot")}</span>
                 </div>
-                <span className={`text-[9px] px-2 py-0.5 rounded-md font-mono ${activeTab === "web_chatbot" ? "bg-stone-800 text-stone-300" : "bg-[#FAF8F5] border border-[#E7E5E4] text-[#57534E]"}`}>
+                <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md font-medium whitespace-nowrap shrink-0 ${activeTab === "web_chatbot" ? "bg-stone-800 text-stone-300" : "bg-stone-100 text-stone-600"}`}>
                   Web Bot
                 </span>
               </button>
