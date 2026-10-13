@@ -30,6 +30,7 @@ export interface Translations {
   tabSmartMarketing: string;
   tabConfig: string;
   tabLiveSupport: string;
+  tabSalesTeam: string;
 
   // KPIs & Stats
   totalStoreRevenue: string;
@@ -248,6 +249,7 @@ export const translations: Record<Language, Translations> = {
     tabSmartMarketing: "Smart Marketing",
     tabConfig: "Bot Connection",
     tabLiveSupport: "Live VIP Support",
+    tabSalesTeam: "Sales Team",
 
     // KPIs & Stats
     totalStoreRevenue: "Total Store Revenue",
