@@ -3,7 +3,7 @@ import React from 'react';
 interface RadioOption {
   id: string;
   labelEn: string;
-  labelMy: string;
+  labelMy?: string;
 }
 
 interface RadioGroupProps {
@@ -11,7 +11,7 @@ interface RadioGroupProps {
   options: RadioOption[];
   value: string;
   onChange: (value: string) => void;
-  lang: 'en' | 'my';
+  lang?: string;
   required?: boolean;
 }
 
@@ -20,7 +20,6 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
   options,
   value,
   onChange,
-  lang,
   required = false,
 }) => {
   return (
@@ -35,7 +34,7 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {options.map((option) => {
           const isSelected = value === option.id;
-          const displayLabel = lang === 'my' && option.labelMy ? option.labelMy : option.labelEn;
+          const displayLabel = option.labelEn;
 
           return (
             <label

@@ -36,7 +36,7 @@ export function getMarketingInsights(
     lowStockAlerts: state.products.filter((p) => p.stock < 10).map((p) => `${p.name}: ${p.stock} units left`),
     analyticsSummary: {
       salesGrowthEstimate: `Estimated uplift for ${campaignType} campaign`,
-      engagementLevel: "Strong evening Messenger & Telegram peaks",
+      engagementLevel: "Strong evening Telegram & online store peaks",
     },
     recommendations: [
       {

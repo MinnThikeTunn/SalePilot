@@ -122,6 +122,13 @@ export function mutateDeliveryZone(
   return state;
 }
 
+export function setClientDeliveryZones(zones: DeliveryZone[]) {
+  const state = load();
+  state.deliveryZones = zones;
+  save();
+  return state;
+}
+
 export function addOrder(order: Order) {
   const state = load();
   state.orders.unshift(order);
@@ -129,10 +136,33 @@ export function addOrder(order: Order) {
   return state;
 }
 
+export function clearSessionCart(sessionId?: string) {
+  const state = load();
+  if (sessionId && state.sessions[sessionId]) {
+    state.sessions[sessionId].cart = [];
+  }
+  Object.values(state.sessions).forEach((s) => {
+    if (!sessionId || s.sessionId === sessionId || s.customerTelegramId === sessionId) {
+      s.cart = [];
+    }
+  });
+  save();
+  return state;
+}
+
 export function updateOrderStatus(orderId: string, status: "confirmed" | "cancelled" | "completed") {
   const state = load();
   const order = state.orders.find((o) => o.id === orderId);
-  if (order) order.status = status;
+  if (order) {
+    order.status = status;
+    if (status === "confirmed" || status === "completed") {
+      Object.values(state.sessions).forEach((s) => {
+        if (s.activeOrderId === orderId || s.customerTelegramId === order.customerTelegramId) {
+          s.cart = [];
+        }
+      });
+    }
+  }
   save();
   return state;
 }
@@ -197,7 +227,7 @@ export function botSimulateInput(body: {
   return result;
 }
 
-export async function getAiStrategy(lang: "en" | "my") {
+export async function getAiStrategy(lang: string = "en") {
   try {
     const data = await invokeApi<{ strategy: string }>("ai/strategy", { lang });
     if (data.strategy) return { success: true, strategy: data.strategy };
