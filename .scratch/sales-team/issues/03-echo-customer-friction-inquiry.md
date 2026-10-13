@@ -4,11 +4,11 @@
 
 **Blocked by:** 02: Scout Inquiry & Core Evidence Schema
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Implement anonymized customer friction extractor mapping Telegram conversation steps to structured categories (`delivery_fee_too_high`, `prepayment_hesitation`, `unanswered_inquiry`)
-- [ ] Enforce zero-PII guarantee: customer phone numbers, names, and raw chat messages are excluded from `team_evidence` and prompt contexts
-- [ ] Implement Echo agent runner service with Zod schema validation returning classified objections, counts, and funnel drop-off rates
-- [ ] Add Echo to the interactive Agent Roster with quick triggers ("Analyze Customer Objections", "Scan Incomplete Orders")
-- [ ] Render Echo's findings with objection breakdown charts and verifiable evidence references
-- [ ] Add automated verification test checking that friction signals are extracted correctly without PII leakage
+- [x] Implement anonymized customer friction extractor mapping Telegram conversation steps to structured categories (`delivery_fee_too_high`, `prepayment_hesitation`, `unanswered_inquiry`)
+- [x] Enforce zero-PII guarantee: customer phone numbers, names, and raw chat messages are excluded from `team_evidence` and prompt contexts
+- [x] Implement Echo agent runner service with Zod schema validation returning classified objections, counts, and funnel drop-off rates
+- [x] Add Echo to the interactive Agent Roster with quick triggers ("Analyze Customer Objections", "Scan Incomplete Orders")
+- [x] Render Echo's findings with objection breakdown charts and verifiable evidence references
+- [x] Add automated verification test checking that friction signals are extracted correctly without PII leakage

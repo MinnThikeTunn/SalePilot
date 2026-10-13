@@ -12,9 +12,15 @@ import {
   ExternalLink,
   Bot,
   Sparkles,
+  HelpCircle,
+  TrendingDown,
+  Lightbulb,
+  ShieldCheck,
+  Lock,
 } from "lucide-react";
 import type { AgentRosterInfo } from "../services/salesTeamApi";
 import { runScoutInquiry, type ScoutInquiryResult } from "../agents/scoutRunner";
+import { runEchoInquiry, type EchoInquiryResult } from "../agents/echoRunner";
 import type { TeamEvidence } from "../types/sales-team";
 
 interface SingleAgentInquiryDrawerProps {
@@ -31,7 +37,8 @@ export function SingleAgentInquiryDrawer({
   onClose,
 }: SingleAgentInquiryDrawerProps) {
   const [isRunning, setIsRunning] = useState(false);
-  const [inquiryResult, setInquiryResult] = useState<ScoutInquiryResult | null>(null);
+  const [scoutResult, setScoutResult] = useState<ScoutInquiryResult | null>(null);
+  const [echoResult, setEchoResult] = useState<EchoInquiryResult | null>(null);
   const [expandedEvidenceId, setExpandedEvidenceId] = useState<string | null>(null);
   const [customQuery, setCustomQuery] = useState("");
 
@@ -39,7 +46,6 @@ export function SingleAgentInquiryDrawer({
 
   const handleRunInquiry = (triggerPreset?: any) => {
     setIsRunning(true);
-    // Simulate brief execution loop
     setTimeout(() => {
       if (agent.key === "scout") {
         const result = runScoutInquiry({
@@ -47,7 +53,16 @@ export function SingleAgentInquiryDrawer({
           trigger: triggerPreset || "general",
           customPrompt: customQuery,
         });
-        setInquiryResult(result);
+        setScoutResult(result);
+        setEchoResult(null);
+      } else if (agent.key === "echo") {
+        const result = runEchoInquiry({
+          shopId,
+          trigger: triggerPreset || "general",
+          customPrompt: customQuery,
+        });
+        setEchoResult(result);
+        setScoutResult(null);
       }
       setIsRunning(false);
     }, 450);
@@ -116,6 +131,16 @@ export function SingleAgentInquiryDrawer({
             </p>
           </div>
 
+          {/* Privacy Guarantee Note for Echo */}
+          {agent.key === "echo" && (
+            <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 flex items-center gap-2.5">
+              <Lock size={15} className="text-emerald-700 shrink-0" />
+              <span>
+                <strong>ADR-0002 Zero-PII Guarantee:</strong> Echo inspects anonymized conversation stages and drop-offs. Customer names, phone numbers, and raw chat logs are strictly omitted from analysis.
+              </span>
+            </div>
+          )}
+
           {/* Preset Investigation Triggers for Scout */}
           {agent.key === "scout" && (
             <div className="space-y-2.5">
@@ -168,6 +193,58 @@ export function SingleAgentInquiryDrawer({
             </div>
           )}
 
+          {/* Preset Investigation Triggers for Echo */}
+          {agent.key === "echo" && (
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold text-stone-700 uppercase tracking-wider font-mono">
+                Echo Customer Friction Inquiries
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRunInquiry("analyze_customer_objections")}
+                  disabled={isRunning}
+                  className="p-3 text-left rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200/80 transition-all text-xs font-bold text-stone-800 space-y-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-amber-600">
+                    <HelpCircle size={14} />
+                    <ArrowRight size={12} />
+                  </div>
+                  <p>Analyze Objections</p>
+                  <p className="text-[10px] font-normal text-stone-500">Find why buyers hesitate</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRunInquiry("inspect_funnel_dropoffs")}
+                  disabled={isRunning}
+                  className="p-3 text-left rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200/80 transition-all text-xs font-bold text-stone-800 space-y-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-rose-600">
+                    <TrendingDown size={14} />
+                    <ArrowRight size={12} />
+                  </div>
+                  <p>Funnel Drop-offs</p>
+                  <p className="text-[10px] font-normal text-stone-500">Inspect abandonment steps</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRunInquiry("suggest_faq_and_scripts")}
+                  disabled={isRunning}
+                  className="p-3 text-left rounded-2xl bg-[#FAF8F5] hover:bg-stone-100 border border-stone-200/80 transition-all text-xs font-bold text-stone-800 space-y-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-blue-600">
+                    <Lightbulb size={14} />
+                    <ArrowRight size={12} />
+                  </div>
+                  <p>FAQ &amp; Script Fixes</p>
+                  <p className="text-[10px] font-normal text-stone-500">Optimize bot responses</p>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Custom Query Input */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -175,7 +252,7 @@ export function SingleAgentInquiryDrawer({
                 type="text"
                 value={customQuery}
                 onChange={(e) => setCustomQuery(e.target.value)}
-                placeholder={`Ask ${agent.name} a specific question (e.g. Which products have low margins?)...`}
+                placeholder={`Ask ${agent.name} a specific question...`}
                 className="flex-1 px-4 py-2.5 rounded-2xl bg-[#FAF8F5] border border-stone-200 text-xs text-stone-800 placeholder-stone-400 focus:outline-hidden focus:ring-2 focus:ring-stone-900/10"
               />
               <button
@@ -189,24 +266,24 @@ export function SingleAgentInquiryDrawer({
             </div>
           </div>
 
-          {/* Results Section */}
-          {inquiryResult && (
+          {/* Scout Results Section */}
+          {scoutResult && agent.key === "scout" && (
             <div className="space-y-4 pt-2 border-t border-stone-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider font-mono">
-                    Findings &amp; Opportunities ({inquiryResult.opportunities.length})
+                    Findings &amp; Opportunities ({scoutResult.opportunities.length})
                   </h4>
                   <span className="text-[10px] text-stone-400">
-                    • {inquiryResult.evidence.length} Evidence Citations
+                    • {scoutResult.evidence.length} Evidence Citations
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-stone-400">
-                  {new Date(inquiryResult.executedAt).toLocaleTimeString()}
+                  {new Date(scoutResult.executedAt).toLocaleTimeString()}
                 </span>
               </div>
 
-              {inquiryResult.opportunities.map((opp) => (
+              {scoutResult.opportunities.map((opp) => (
                 <div
                   key={opp.id}
                   className="p-5 rounded-2xl border border-stone-200/90 bg-[#FAF8F5] space-y-3"
@@ -245,7 +322,7 @@ export function SingleAgentInquiryDrawer({
                     </p>
                     <div className="space-y-1.5">
                       {opp.evidenceRefs.map((refId) => {
-                        const ev = inquiryResult.evidence.find((e) => e.id === refId);
+                        const ev = scoutResult.evidence.find((e) => e.id === refId);
                         if (!ev) return null;
                         const isExpanded = expandedEvidenceId === ev.id;
                         return (
@@ -296,11 +373,198 @@ export function SingleAgentInquiryDrawer({
               ))}
             </div>
           )}
+
+          {/* Echo Results Section */}
+          {echoResult && agent.key === "echo" && (
+            <div className="space-y-5 pt-2 border-t border-stone-100">
+              {/* Funnel Drop-off Overview Card */}
+              <div className="p-5 rounded-2xl border border-stone-200 bg-[#FAF8F5] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider font-mono">
+                    Telegram Checkout Funnel Health
+                  </h4>
+                  <span className="font-mono font-bold text-xs text-stone-700">
+                    Conversion Rate: {echoResult.funnelAnalysis.conversionRatePct}%
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 bg-white rounded-xl border border-stone-200">
+                    <p className="text-[10px] font-mono text-stone-500 uppercase">Total Sessions</p>
+                    <p className="text-lg font-black text-stone-900 mt-1">
+                      {echoResult.funnelAnalysis.totalSessions}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-stone-200">
+                    <p className="text-[10px] font-mono text-emerald-600 uppercase">Completed</p>
+                    <p className="text-lg font-black text-emerald-700 mt-1">
+                      {echoResult.funnelAnalysis.completedSessionsCount}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-stone-200">
+                    <p className="text-[10px] font-mono text-rose-600 uppercase">Abandoned</p>
+                    <p className="text-lg font-black text-rose-700 mt-1">
+                      {echoResult.funnelAnalysis.abandonedSessionsCount}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Drop-offs by Stage Pills */}
+                {Object.keys(echoResult.funnelAnalysis.dropOffByStep).length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[10px] font-mono text-stone-500 font-bold uppercase">
+                      Drop-off Stage Distribution:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(echoResult.funnelAnalysis.dropOffByStep).map(([step, count]) => (
+                        <span
+                          key={step}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-stone-200 text-stone-800"
+                        >
+                          {step}: {count} drops
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Classified Objections */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-stone-900 uppercase tracking-wider font-mono">
+                    Classified Customer Objections ({echoResult.objections.length})
+                  </h4>
+                  <span className="text-[10px] font-mono text-stone-400">
+                    {echoResult.evidence.length} Verifiable Citations
+                  </span>
+                </div>
+
+                {echoResult.objections.map((obj) => (
+                  <div
+                    key={obj.id}
+                    className="p-5 rounded-2xl border border-stone-200 bg-[#FAF8F5] space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border uppercase ${getUrgencyBadge(
+                            obj.severity
+                          )}`}
+                        >
+                          {obj.severity} severity
+                        </span>
+                        <span className="text-[10px] font-mono text-stone-500">
+                          {obj.count} occurrences ({obj.percentageOfDropOffs}% of drop-offs)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-stone-600">
+                        Stage: {obj.dropOffStage}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h5 className="text-sm font-bold text-stone-900">{obj.label}</h5>
+                      <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                        {obj.summary}
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-white border border-stone-200/80 rounded-xl text-xs space-y-1">
+                      <p className="font-bold text-stone-800 text-[11px] flex items-center gap-1.5">
+                        <Lightbulb size={12} className="text-amber-600" />
+                        <span>Echo's Prescriptive Recommendation:</span>
+                      </p>
+                      <p className="text-stone-600 text-[11px]">{obj.recommendation}</p>
+                    </div>
+
+                    {/* Verifiable Evidence Snapshots */}
+                    <div className="space-y-2 pt-2 border-t border-stone-200/60">
+                      <p className="text-[10px] font-mono text-stone-500 font-bold uppercase">
+                        Zero-PII Evidence Citations:
+                      </p>
+                      <div className="space-y-1.5">
+                        {obj.evidenceRefs.map((refId) => {
+                          const ev = echoResult.evidence.find((e) => e.id === refId);
+                          if (!ev) return null;
+                          const isExpanded = expandedEvidenceId === ev.id;
+                          return (
+                            <div
+                              key={ev.id}
+                              className="bg-white border border-stone-200/90 rounded-xl overflow-hidden text-[11px]"
+                            >
+                              <div
+                                onClick={() =>
+                                  setExpandedEvidenceId(isExpanded ? null : ev.id)
+                                }
+                                className="p-2.5 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                                    {ev.source_type.toUpperCase()}
+                                  </span>
+                                  <span className="font-bold text-stone-800">
+                                    {ev.metric_key}
+                                  </span>
+                                  <span className="text-stone-500 font-mono">
+                                    = {String(ev.value)} {ev.unit}
+                                  </span>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp size={13} className="text-stone-400" />
+                                ) : (
+                                  <ChevronDown size={13} className="text-stone-400" />
+                                )}
+                              </div>
+
+                              {isExpanded && ev.snapshot && (
+                                <div className="p-3 bg-stone-900 text-stone-200 font-mono text-[10px] border-t border-stone-200 space-y-1">
+                                  <p className="text-stone-400 font-bold">
+                                    Privacy-Preserving Snapshot (Source: {ev.source_id}):
+                                  </p>
+                                  <pre className="whitespace-pre-wrap overflow-x-auto text-amber-300">
+                                    {JSON.stringify(ev.snapshot, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Market Intelligence Persona Context */}
+              {echoResult.marketContext && (
+                <div className="p-4 bg-stone-50 border border-stone-200 rounded-2xl text-xs space-y-2">
+                  <p className="font-bold text-stone-800 uppercase tracking-wider font-mono text-[10px]">
+                    Myanmar Market Context (External Benchmarks)
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-stone-600">
+                    <div className="p-2.5 bg-white rounded-xl border border-stone-200/70">
+                      <p className="font-bold text-stone-800">Payment Psychology:</p>
+                      <p className="mt-0.5">
+                        Dominant: COD ~60%, KPay ~28%. Buyers hesitate without verified badges or phone confirmations.
+                      </p>
+                    </div>
+                    <div className="p-2.5 bg-white rounded-xl border border-stone-200/70">
+                      <p className="font-bold text-stone-800">Return to Origin (RTO):</p>
+                      <p className="mt-0.5">
+                        Benchmark RTO is 18.5%. Upfront address and payment transparency reduces delivery refusal.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 3. Footer */}
         <div className="p-4 border-t border-stone-100 bg-[#FAF8F5]/80 flex items-center justify-between text-xs text-stone-500 shrink-0">
-          <span>Evidence checked deterministically against store catalog</span>
+          <span>Zero-PII evidence checked deterministically against sessions</span>
           <button
             type="button"
             onClick={onClose}

@@ -308,6 +308,18 @@ export function createSimulationCustomer(name?: string): TelegramSession {
   return session;
 }
 
+export function addTelegramSession(session: TelegramSession): TelegramSession {
+  const state = load();
+  state.sessions[session.sessionId] = session;
+  save();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("sales_brain_session_updated", { detail: session })
+    );
+  }
+  return session;
+}
+
 export function botSimulateInput(body: {
   sessionId: string;
   content?: string;
