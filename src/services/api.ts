@@ -17,7 +17,21 @@ async function fallbackLocalAction<T>(
       const state = await getShopState(userId);
       const orderId = body.orderId as string;
       const status = body.status as any;
+      const targetOrder = state.orders.find((o) => o.id === orderId);
+      const prevStatus = targetOrder?.status;
       state.orders = state.orders.map((o) => (o.id === orderId ? { ...o, status } : o));
+
+      if (status === "confirmed" && prevStatus !== "confirmed" && targetOrder) {
+        (targetOrder.items || []).forEach((item) => {
+          const prod = state.products.find(
+            (p) => p.id === item.productId || (item.productName && p.name === item.productName)
+          );
+          if (prod) {
+            prod.stock = Math.max(0, (prod.stock || 0) - (item.quantity || 1));
+          }
+        });
+      }
+
       await saveShopState(userId, state);
       try {
         await supabase

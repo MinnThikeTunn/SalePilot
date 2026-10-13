@@ -36,7 +36,9 @@ function load(): SystemState {
 function save() {
   if (!memoryState) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState));
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState));
+    }
   } catch (e) {
     console.warn("Could not persist state to localStorage", e);
   }
@@ -154,7 +156,18 @@ export function updateOrderStatus(orderId: string, status: "confirmed" | "cancel
   const state = load();
   const order = state.orders.find((o) => o.id === orderId);
   if (order) {
+    const prevStatus = order.status;
     order.status = status;
+    if (status === "confirmed" && prevStatus !== "confirmed") {
+      (order.items || []).forEach((item) => {
+        const prod = state.products.find(
+          (p) => p.id === item.productId || (item.productName && p.name === item.productName)
+        );
+        if (prod) {
+          prod.stock = Math.max(0, (prod.stock || 0) - (item.quantity || 1));
+        }
+      });
+    }
     if (status === "confirmed" || status === "completed") {
       Object.values(state.sessions).forEach((s) => {
         if (s.activeOrderId === orderId || s.customerTelegramId === order.customerTelegramId) {
