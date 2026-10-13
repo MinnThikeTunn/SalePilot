@@ -32,7 +32,8 @@ import {
   User,
   Bot,
   Store,
-  RotateCcw
+  RotateCcw,
+  CreditCard
 } from "lucide-react";
 
 import { CustomChart } from "./components/CustomChart";
@@ -1831,7 +1832,7 @@ export default function App() {
                         </tr>
                       ) : (
                         storeState.orders.map((o) => {
-                          const isVerifying = o.status === "verifying";
+                          const isVerifying = o.status === "verifying" || (o.paymentMethod === "prepay" && o.status === "pending");
                           const isConfirmed = o.status === "confirmed";
                           const isCancelled = o.status === "cancelled";
                           
@@ -1866,16 +1867,37 @@ export default function App() {
                                 }`}>
                                   {o.paymentMethod.toUpperCase()}
                                 </span>
+                                {o.paymentDetails?.transactionId && o.paymentDetails.transactionId !== "CASH_ON_DELIVERY" && (
+                                  <div className="mt-1 flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveVerificationReceipt(o)}
+                                      className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded font-bold truncate max-w-[140px] cursor-pointer hover:bg-indigo-100 transition text-left"
+                                      title={`Click to verify Transaction ID: ${o.paymentDetails.transactionId}`}
+                                    >
+                                      TX: {o.paymentDetails.transactionId}
+                                    </button>
+                                  </div>
+                                )}
                               </td>
                               <td className="p-3 text-right font-semibold text-[#1C1917] text-xs">{o.totalAmount.toLocaleString()} MMK</td>
                               <td className="p-3 text-center">
                                 {isVerifying ? (
-                                  <button
-                                    onClick={() => setActiveVerificationReceipt(o)}
-                                    className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
-                                  >
-                                    {t("evaluateReceipt")}
-                                  </button>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      onClick={() => setActiveVerificationReceipt(o)}
+                                      className="bg-[#0069FF] hover:bg-[#0052CC] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
+                                    >
+                                      {o.paymentDetails?.screenshotUrl ? t("evaluateReceipt") : "Verify TX ID"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleUpdateOrderStatus(o.id, "confirmed")}
+                                      title="Confirm payment and order"
+                                      className="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-[0.98]"
+                                    >
+                                      Confirm
+                                    </button>
+                                  </div>
                                 ) : o.paymentMethod === "cod" && o.status === "pending" ? (
                                   <button
                                     onClick={() => handleUpdateOrderStatus(o.id, "confirmed")}
@@ -1910,7 +1932,9 @@ export default function App() {
                   
                   <div className="md:col-span-7 space-y-4">
                     <span className="text-xs font-semibold font-mono text-amber-900 select-none block bg-amber-50 p-2.5 rounded-xl border border-amber-200/70">
-                      {t("evaluateReceiptHeader")}
+                      {activeVerificationReceipt.paymentDetails?.screenshotUrl
+                        ? t("evaluateReceiptHeader")
+                        : "TRANSACTION ID AUDIT — Verify customer mobile remittance transaction ID before dispatch"}
                     </span>
 
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
@@ -1924,11 +1948,13 @@ export default function App() {
                       </div>
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
                         <span className="text-[10px] text-[#78716C] uppercase">{t("transactionId")}:</span>
-                        <strong className="text-indigo-700 mt-0.5 font-bold">{activeVerificationReceipt.paymentDetails?.transactionId}</strong>
+                        <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-sm break-all">
+                          {activeVerificationReceipt.paymentDetails?.transactionId || "—"}
+                        </strong>
                       </div>
                       <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
                         <span className="text-[10px] text-[#78716C] uppercase">{t("paymentChannel")}:</span>
-                        <strong className="text-[#57534E] mt-0.5">{activeVerificationReceipt.paymentDetails?.method}</strong>
+                        <strong className="text-[#57534E] mt-0.5">{activeVerificationReceipt.paymentDetails?.method || "Mobile Prepay"}</strong>
                       </div>
                     </div>
 
@@ -1957,16 +1983,23 @@ export default function App() {
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                       <button
-                        onClick={() => handleUpdateOrderStatus(activeVerificationReceipt.id, "confirmed")}
-                        className="w-full sm:flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-full text-xs transition-all cursor-pointer text-center active:scale-[0.98]"
+                        onClick={async () => {
+                          await handleUpdateOrderStatus(activeVerificationReceipt.id, "confirmed");
+                          setActiveVerificationReceipt(null);
+                        }}
+                        className="w-full sm:flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-full text-xs transition-all cursor-pointer text-center active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-2xs"
                       >
-                        {t("confirmGenerateInvoice")}
+                        <Check size={14} />
+                        <span>Confirm & Approve Order</span>
                       </button>
                       <button
-                        onClick={() => handleUpdateOrderStatus(activeVerificationReceipt.id, "cancelled")}
+                        onClick={async () => {
+                          await handleUpdateOrderStatus(activeVerificationReceipt.id, "cancelled");
+                          setActiveVerificationReceipt(null);
+                        }}
                         className="w-full sm:flex-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80 font-semibold py-2.5 rounded-full text-xs transition-all cursor-pointer text-center active:scale-[0.98]"
                       >
-                        {t("rejectScreenshot")}
+                        <span>Reject / Cancel Order</span>
                       </button>
                     </div>
 
@@ -1979,17 +2012,66 @@ export default function App() {
                   </div>
 
                   <div className="md:col-span-5 flex flex-col justify-center">
-                    <span className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider block mb-2 font-semibold">
-                      {t("submittedScreenshotEvidence")}
-                    </span>
-                    <div className="border border-[#E7E5E4] bg-[#FAF8F5] p-2.5 rounded-2xl text-center relative max-h-[290px] overflow-hidden">
-                      <img
-                        src={activeVerificationReceipt.paymentDetails?.screenshotUrl}
-                        alt="Submitted receipt attachment proof"
-                        className="w-auto h-auto max-h-[260px] object-contain mx-auto rounded-xl shadow-2xs"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
+                    {activeVerificationReceipt.paymentDetails?.screenshotUrl ? (
+                      <div>
+                        <span className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider block mb-2 font-semibold">
+                          {t("submittedScreenshotEvidence")}
+                        </span>
+                        <div className="border border-[#E7E5E4] bg-[#FAF8F5] p-2.5 rounded-2xl text-center relative max-h-[290px] overflow-hidden">
+                          <img
+                            src={activeVerificationReceipt.paymentDetails.screenshotUrl}
+                            alt="Submitted receipt attachment proof"
+                            className="w-auto h-auto max-h-[260px] object-contain mx-auto rounded-xl shadow-2xs"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border border-indigo-200 bg-indigo-50/50 p-4 sm:p-5 rounded-2xl space-y-3 text-center">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-800 flex items-center gap-1.5">
+                            <CreditCard size={13} className="text-indigo-600" />
+                            <span>Mobile Remittance</span>
+                          </span>
+                          <span className="text-[10px] font-mono font-semibold bg-white border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                            {activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 py-1">
+                          <span className="text-[10px] font-mono uppercase text-stone-500 tracking-wider block font-semibold">
+                            Customer Transaction ID
+                          </span>
+                          <div className="bg-white border-2 border-indigo-300/80 rounded-xl p-3 shadow-2xs">
+                            <strong className="text-base sm:text-lg font-mono font-bold text-indigo-900 tracking-wider select-all block break-all">
+                              {activeVerificationReceipt.paymentDetails?.transactionId || "No TX ID Submitted"}
+                            </strong>
+                          </div>
+                        </div>
+
+                        {activeVerificationReceipt.paymentDetails?.transactionId && (
+                          <div className="flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(activeVerificationReceipt.paymentDetails!.transactionId);
+                                showToast("Transaction ID copied to clipboard!", "success");
+                              }}
+                              className="px-3.5 py-1.5 rounded-full bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-[0.98]"
+                            >
+                              <Copy size={12} />
+                              <span>Copy Transaction ID</span>
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-indigo-200/60 text-left">
+                          <p className="text-[11px] text-stone-600 leading-relaxed font-sans">
+                            💡 Cross-reference this Transaction ID in your <strong>{activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}</strong> merchant account for the amount of <strong>{activeVerificationReceipt.totalAmount.toLocaleString()} MMK</strong> before approving.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                 </div>
