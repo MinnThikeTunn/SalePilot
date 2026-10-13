@@ -7,18 +7,6 @@ import { supabase } from "../utils/supabase";
 import { Product, DeliveryZone } from "../types";
 import { getState } from "../services/clientStore";
 
-
-const DEFAULT_DELIVERY_ZONES: DeliveryZone[] = [
-  { id: "dz-1", township_name: "Kamayut", rate: 2000, estimated_transit_timeline: "1-2 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-2", township_name: "Bahan", rate: 2000, estimated_transit_timeline: "1-2 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-3", township_name: "Sanchaung", rate: 2000, estimated_transit_timeline: "1-2 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-4", township_name: "Hlaing", rate: 2500, estimated_transit_timeline: "1-2 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-5", township_name: "Yankin", rate: 2500, estimated_transit_timeline: "1-2 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-6", township_name: "Dagon", rate: 2500, estimated_transit_timeline: "1-2 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-7", township_name: "Mayangone", rate: 3000, estimated_transit_timeline: "2-3 Days", region: "Yangon", division: "Yangon" },
-  { id: "dz-8", township_name: "Thanlyin", rate: 3500, estimated_transit_timeline: "2-3 Days", region: "Yangon", division: "Yangon" },
-];
-
 export function PublicShop({ shopId }: { shopId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +54,7 @@ export function PublicShop({ shopId }: { shopId: string }) {
             varies: Array.isArray(p.Varies) ? p.Varies : [],
           }));
 
-          // 3. Fetch delivery zones strictly for this shop
+          // 3. Fetch delivery zones strictly from user input (no hardcoding)
           let zoneQuery = supabase
             .from("delivery_zones")
             .select("id, township_name, rate, estimated_transit_timeline, region, division");
@@ -81,29 +69,74 @@ export function PublicShop({ shopId }: { shopId: string }) {
 
           let deliveryZones: DeliveryZone[] = (zoneRows || []).map((z: any) => ({
             id: z.id || `zone-${Math.random()}`,
-            township_name: z.township_name || z.township || "Yangon",
-            rate: Math.max(0, Number(z.rate) || 2000),
-            estimated_transit_timeline: z.estimated_transit_timeline || "1-2 Days",
-            region: z.region || "Yangon",
-            division: z.division || "Yangon",
+            township_name: z.township_name || z.township || "",
+            rate: Math.max(0, Number(z.rate) || 0),
+            estimated_transit_timeline: z.estimated_transit_timeline || "",
+            region: z.region || "",
+            division: z.division || "",
           }));
 
-          if (deliveryZones.length === 0) {
-            deliveryZones = DEFAULT_DELIVERY_ZONES;
+          if (deliveryZones.length === 0 && shopRow.owner_id) {
+            try {
+              const { data: stateBlob } = await supabase.storage
+                .from("shop-states")
+                .download(`${shopRow.owner_id}/state.json`);
+              if (stateBlob) {
+                const stateData = JSON.parse(await stateBlob.text());
+                if (Array.isArray(stateData.deliveryZones) && stateData.deliveryZones.length > 0) {
+                  deliveryZones = stateData.deliveryZones.map((z: any) => ({
+                    id: z.id || `zone-${Math.random()}`,
+                    township_name: z.township_name || z.township || "",
+                    rate: Math.max(0, Number(z.rate) || 0),
+                    estimated_transit_timeline: z.estimated_transit_timeline || "",
+                    region: z.region || "",
+                    division: z.division || "",
+                  }));
+                }
+              }
+            } catch (_) {}
           }
 
-          const profile = (shopRow.onboarding_profile as Record<string, string> | null) || {};
-          const businessName = shopRow.shop_name || "The Curated Atelier";
-          const phone = shopRow.phone?.trim() || profile.phone?.trim() || "09971234567";
-          const description = profile.business_goal || profile.business_category || "Curated artisanal goods and lifestyle creations.";
-          const paymentInfo = profile.payment_method || "KPay / WavePay (09971234567) or Cash on Delivery (COD) across Yangon.";
-          const deliveryInfo = profile.delivery_method || "Yangon Townships: 2,000 - 3,500 MMK (1-2 Days).";
+          if (deliveryZones.length === 0) {
+            const localState = getState();
+            if (Array.isArray(localState.deliveryZones) && localState.deliveryZones.length > 0) {
+              deliveryZones = localState.deliveryZones.map((z: any) => ({
+                id: z.id || `zone-${Math.random()}`,
+                township_name: z.township_name || z.township || "",
+                rate: Math.max(0, Number(z.rate) || 0),
+                estimated_transit_timeline: z.estimated_transit_timeline || "",
+                region: z.region || "",
+                division: z.division || "",
+              }));
+            }
+          }
+
+          let profile: any = shopRow.onboarding_profile;
+          if (typeof profile === "string") {
+            try { profile = JSON.parse(profile); } catch { profile = {}; }
+          }
+          if (!profile || typeof profile !== "object") profile = {};
+
+          const localState = getState();
+          const localProfile: any = (localState as any).onboardingProfile || {};
+
+          const businessName = shopRow.shop_name?.trim() || localState.config.shopName?.trim() || "Official Store";
+          const ownerName = shopRow.owner_name?.trim() || localState.config.ownerName?.trim() || "";
+          const phone = shopRow.phone?.trim() || profile.phone?.trim() || localState.config.phone?.trim() || localProfile.phone?.trim() || "";
+          const address = shopRow.address?.trim() || profile.business_address?.trim() || localProfile.business_address?.trim() || "";
+          const businessCategory = profile.business_category || profile.business_type || profile.mainly_sell || localProfile.business_category || localProfile.mainly_sell || "";
+          const description = profile.business_goal || businessCategory || localProfile.business_goal || "";
+          const paymentInfo = profile.payment_method || (shopRow as any).payment_method || localProfile.payment_method || "";
+          const deliveryInfo = profile.delivery_method || (shopRow as any).delivery_method || localProfile.delivery_method || "";
 
           if (isMounted) {
             setShop({
               shopId: actualShopId,
               businessName,
+              ownerName,
               phone,
+              address,
+              businessCategory,
               description,
               paymentInfo,
               deliveryInfo,
@@ -116,25 +149,30 @@ export function PublicShop({ shopId }: { shopId: string }) {
           return;
         }
 
-        // 4. Fallback to local store or curated boutique demo if Supabase didn't have row
+        // 4. Fallback to local store (user input only, no hardcoded zones)
         const localState = getState();
         const hasLocalProducts = Array.isArray(localState.products) && localState.products.length > 0;
         const localProducts = hasLocalProducts ? localState.products : [];
-        const localZones = (Array.isArray(localState.deliveryZones) && localState.deliveryZones.length > 0)
-          ? localState.deliveryZones
-          : DEFAULT_DELIVERY_ZONES;
+        const localZones = Array.isArray(localState.deliveryZones) ? localState.deliveryZones : [];
+        const localProfile: any = (localState as any).onboardingProfile || {};
 
-        const businessName = localState.config.shopName?.trim() || "The Curated Atelier";
-        const phone = localState.config.phone?.trim() || "09971234567";
-        const description = "Artisanal lifestyle goods, hand-crafted ceramics, and organic botanicals. Bilingual automated assistant Candy.";
-        const paymentInfo = "KPay / WavePay: 09971234567 (Account: Sales Brain Store) & Cash on Delivery (COD).";
-        const deliveryInfo = "Yangon Townships: 2,000 - 3,500 MMK (1-2 Days). Regional express courier available.";
+        const businessName = localState.config.shopName?.trim() || "Official Store";
+        const ownerName = localState.config.ownerName?.trim() || localProfile.owner_name?.trim() || "";
+        const phone = localState.config.phone?.trim() || localProfile.phone?.trim() || "";
+        const address = localProfile.business_address?.trim() || "";
+        const businessCategory = localProfile.business_category || localProfile.mainly_sell || "";
+        const description = localProfile.business_goal || businessCategory || "";
+        const paymentInfo = localProfile.payment_method || "";
+        const deliveryInfo = localProfile.delivery_method || "";
 
         if (isMounted) {
           setShop({
-            shopId: shopId || localState.config.shopId || "curated-shop",
+            shopId: shopId || localState.config.shopId || "store",
             businessName,
+            ownerName,
             phone,
+            address,
+            businessCategory,
             description,
             paymentInfo,
             deliveryInfo,
@@ -148,13 +186,13 @@ export function PublicShop({ shopId }: { shopId: string }) {
         if (isMounted) {
           setShop({
             shopId: shopId || "demo-shop",
-            businessName: "The Curated Atelier",
-            phone: "09971234567",
-            description: "Artisanal lifestyle goods and botanical creations.",
-            paymentInfo: "Cash on Delivery (COD) & KPay / WavePay mobile transfer.",
-            deliveryInfo: "Yangon Townships: 2,000 - 3,500 MMK (1-2 Days).",
+            businessName: "Official Store",
+            phone: "",
+            description: "",
+            paymentInfo: "",
+            deliveryInfo: "",
             products: [],
-            deliveryZones: DEFAULT_DELIVERY_ZONES,
+            deliveryZones: [],
           });
           setError(null);
         }
@@ -178,7 +216,7 @@ export function PublicShop({ shopId }: { shopId: string }) {
         <div className="text-center space-y-4">
           <div className="w-10 h-10 border-3 border-[#E7E5E4] border-t-[#0069FF] rounded-full animate-spin mx-auto" />
           <p className="text-xs font-serif tracking-[0.2em] text-[#78716C] uppercase">
-            Entering Merchant Sanctuary...
+            Connecting to Storefront...
           </p>
         </div>
       </div>

@@ -166,6 +166,7 @@ export function processCustomerMessage(
         `Prepayment total: ${totalBill.toLocaleString()} MMK${state.config.phone ? ` to ${state.config.phone}` : ""}. Send TxID and receipt screenshot.`,
         { paymentDetailsNeeded: true }
       );
+      session.cart = [];
     }
     return { success: true, session };
   }
@@ -196,12 +197,47 @@ export function processCustomerMessage(
     (p.category && lContent.includes(p.category.toLowerCase()))
   );
 
-  if (matchedProd) {
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost/.test(lContent)) {
+    if (state.deliveryZones && state.deliveryZones.length > 0) {
+      const matched = state.deliveryZones.find((z) => {
+        const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
+        return name && name.length >= 3 && lContent.includes(name);
+      });
+      if (matched) {
+        const name = matched.township_name || (matched as any).township;
+        responseText = `Delivery to ${name} is ${(Number(matched.rate) || 0).toLocaleString()} MMK (${matched.estimated_transit_timeline || "1-2 Days"}).`;
+      } else {
+        const zoneList = state.deliveryZones
+          .map((z) => `${z.township_name || (z as any).township}: ${(Number(z.rate) || 0).toLocaleString()} MMK`)
+          .join(" • ");
+        responseText = `Delivery schedule & rates for ${state.config.shopName || "our store"}:\n${zoneList}`;
+      }
+    } else {
+      responseText = `Delivery arrangements for ${state.config.shopName || "our store"} will be confirmed upon order. Please inquire directly with the store.`;
+    }
+  } else if (/pay|payment|kpay|kbzpay|wave|wavepay|cod|prepay|cash|transfer/.test(lContent)) {
+    const phone = state.config.phone;
+    const phoneNote = phone ? ` For KBZPay or WavePay remittances, our shop account number is: ${phone}.` : "";
+    responseText = `Payment options for ${state.config.shopName || "our store"}: Cash on Delivery (COD) and Mobile Prepayment (KPay / WavePay).${phoneNote} You can choose your payment method when checking out!`;
+  } else if (/phone|contact|call|number|reach|support/.test(lContent)) {
+    responseText = state.config.phone
+      ? `You can reach ${state.config.shopName || "our store"} directly at ${state.config.phone}.`
+      : `You can message us directly here in the chat and Candy will assist you!`;
+  } else if (/address|location|where|located|shop address|store address/.test(lContent)) {
+    const address = (state as any).onboardingProfile?.business_address;
+    responseText = address
+      ? `${state.config.shopName || "Our store"} is located at: ${address}. We also offer direct courier delivery across our serviced townships!`
+      : `${state.config.shopName || "Our store"} provides direct courier delivery across all serviced townships!`;
+  } else if (/order (is )?confirmed|confirm order|order status|track order|my order|receipt/.test(lContent)) {
+    responseText = "Your order has been recorded! Our merchant team is handling it now. Your shopping cart has been cleared.";
+  } else if (/(add to (cart|bag|basket)|add .* to|buy |want to order|want to buy)/.test(lContent) && matchedProd) {
     const existing = session.cart.find((c) => c.productId === matchedProd.id);
     if (existing) existing.quantity += 1;
     else session.cart.push({ productId: matchedProd.id, quantity: 1 });
     responseText = `Added ${matchedProd.name} to your basket! Choose COD or Prepay when you are ready to checkout.`;
-  } else if (lContent.includes("checkout") || lContent.includes("buy") || lContent.includes("order")) {
+  } else if (matchedProd) {
+    responseText = `${matchedProd.name} is ${matchedProd.price.toLocaleString()} MMK (${matchedProd.stock} in stock). Reply "Add ${matchedProd.name}" if you wish to purchase!`;
+  } else if (lContent.includes("checkout") || lContent.includes("cart") || lContent.includes("basket")) {
     responseText = session.cart.length > 0
       ? "Ready to checkout! Tap Cash on Delivery or Mobile Prepay buttons below."
       : "Your cart is empty. Please add a product first before checking out.";
@@ -209,14 +245,6 @@ export function processCustomerMessage(
     session.liveTakeoverActive = false;
     responseText = "Candy is still here! For live owner chat, use the SME Hub takeover button.";
   }
-
-  state.products.forEach((p) => {
-    if (lContent.includes(p.name.toLowerCase().split(" ")[0])) {
-      const existing = session.cart.find((c) => c.productId === p.id);
-      if (existing) existing.quantity += 1;
-      else session.cart.push({ productId: p.id, quantity: 1 });
-    }
-  });
 
   pushBotMessage(session, responseText);
   return { success: true, session };

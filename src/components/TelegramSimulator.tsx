@@ -3,7 +3,7 @@ import { Send, Sparkles, User, ShieldAlert, Image, Check, ShoppingBag, MapPin, C
 import { TelegramSession, Product, DeliveryZone, Order } from "../types";
 import { botSimulateInput } from "../services/clientStore";
 import { supabase } from "../utils/supabase";
-import { useLanguage } from "../contexts/LanguageContext";
+import { cleanNormalText } from "../utils/textUtils";
 
 interface TelegramSimulatorProps {
   session: TelegramSession | undefined;
@@ -28,8 +28,6 @@ export function TelegramSimulator({
   isPublic = false,
   shopId
 }: TelegramSimulatorProps) {
-  const { lang } = useLanguage();
-  const isMy = lang === "my";
 
   const [session, setSession] = useState<TelegramSession | undefined>(initialSession);
   const [inputText, setInputText] = useState("");
@@ -45,11 +43,7 @@ export function TelegramSimulator({
     { name: "WavePay Success", url: "https://placehold.co/400x600/f7931e/white?text=WavePay+Receipt+Last+6:654321" }
   ];
 
-  const suggestions = isMy ? [
-    { label: "ပစ္စည်းစာရင်း ကြည့်မည်", text: "ဆိုင်မှာ ဘာပစ္စည်းတွေ ရနိုင်လဲရှင့်?" },
-    { label: "ငွေပေးချေပုံ မေးမည်", text: "ငွေဘယ်လို ပေးချေရမလဲရှင့်?" },
-    { label: "ပို့ဆောင်ခ မေးမည်", text: "ရန်ကင်းမြို့နယ် ပို့ဆောင်ခ ဘယ်လောက်ကျပါသလဲရှင့်?" }
-  ] : [
+  const suggestions = [
     { label: "Check Menu", text: "Show me the product menu" },
     { label: "How to Pay?", text: "How can I pay for my order?" },
     { label: "Delivery info", text: "What are the delivery charges for Yankin?" }
@@ -230,19 +224,17 @@ export function TelegramSimulator({
   };
 
   return (
-    <div className={`w-full max-w-sm mx-auto flex flex-col h-[670px] bg-slate-950 border-4 border-slate-800 rounded-[38px] shadow-2xl relative overflow-hidden ring-4 ring-slate-900/40 ${isMy ? "lang-my" : ""}`}>
+    <div className={`w-full max-w-sm mx-auto flex flex-col h-[670px] bg-slate-950 border-4 border-slate-800 rounded-[38px] shadow-2xl relative overflow-hidden ring-4 ring-slate-900/40 `}>
       
       {!session ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-2xl">💤</div>
           <div className="space-y-2">
             <h3 className="text-sm font-bold text-slate-200">
-              {isMy ? "စကားပြောဆိုမှု မရှိသေးပါ" : "No Active Sessions"}
+              "No Active Sessions"
             </h3>
             <p className="text-[10px] text-slate-500 leading-relaxed">
-              {isMy
-                ? "ဝယ်သူတစ်ဦးဦးမှ Telegram တွင် စာပို့ပါက ၎င်းတို့၏ စကားပြောဆိုမှုသည် ဤနေရာတွင် ပေါ်လာပါမည်။"
-                : "When a customer messages your bot on Telegram, their chat will appear here for you to simulate and monitor."}
+              "When a customer messages your bot on Telegram, their chat will appear here for you to simulate and monitor."
             </p>
           </div>
         </div>
@@ -278,7 +270,7 @@ export function TelegramSimulator({
           <div>
             <div className="flex items-center gap-1">
               <span className="text-xs font-semibold text-white">
-                {isMy ? "Candy AI လက်ထောက်" : "Candy AI Assistant"}
+                "Candy AI Assistant"
               </span>
               <span className="text-[9px] font-bold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full border border-indigo-500/30">
                 BOT
@@ -289,13 +281,13 @@ export function TelegramSimulator({
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                   <span className="text-amber-400 font-medium">
-                    {isMy ? "ဆိုင်ရှင် ကိုယ်တိုင် ဖြေကြားနေသည်" : "Owner Takeover Active"}
+                    "Owner Takeover Active"
                   </span>
                 </>
               ) : (
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>{isMy ? "၂၄ နာရီ အလိုအလျောက် ဖြေကြားပါသည်" : "responds instantly 24/7"}</span>
+                  <span>"responds instantly 24/7"</span>
                 </>
               )}
             </div>
@@ -309,14 +301,14 @@ export function TelegramSimulator({
               onClick={onTriggerRelease}
               className="text-[10px] font-bold text-emerald-400 bg-emerald-950 border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-900 transition-all cursor-pointer"
             >
-              {isMy ? "AI ဖွင့်မည်" : "Start AI"}
+              "Start AI"
             </button>
           ) : (
             <button
               onClick={onTriggerTakeover}
               className="text-[10px] font-bold text-amber-400 bg-amber-950 border border-amber-500/30 px-2 py-1 rounded hover:bg-amber-900 transition-all cursor-pointer flex items-center gap-1"
             >
-              {isMy ? "ကိုယ်တိုင် ဖြေမည်" : "Takeover"}
+              "Takeover"
             </button>
           )}
         </div>
@@ -393,7 +385,7 @@ export function TelegramSimulator({
                   )}
 
                   {/* Body text with quick bullet structures */}
-                  <p className="whitespace-pre-line">{msg.content}</p>
+                  <p className="whitespace-pre-line">{cleanNormalText(msg.content)}</p>
 
                   {/* Render simulated screenshot thumbnails inside messages */}
                   {msg.imageUrl && (
@@ -476,14 +468,14 @@ export function TelegramSimulator({
               className="bg-indigo-900 hover:bg-indigo-800 text-indigo-100 text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap font-medium cursor-pointer border border-indigo-700/50 flex items-center gap-1"
             >
               <CreditCard size={10} />
-              <span>{isMy ? "မိုဘိုင်းငွေလွှဲဖြင့် ပေးချေမည်" : "Choose Prepay Payment Option"}</span>
+              <span>Choose Prepay Payment Option</span>
             </button>
             <button
               onClick={() => handleCheckoutPath("cod")}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap font-medium cursor-pointer border border-slate-700 flex items-center gap-1"
             >
               <ShoppingBag size={10} />
-              <span>{isMy ? "အိမ်ရောက်ငွေချေ ရွေးချယ်မည်" : "Choose Cash on Delivery"}</span>
+              <span>Choose Cash on Delivery</span>
             </button>
           </div>
         )}
@@ -492,7 +484,7 @@ export function TelegramSimulator({
         {session.currentStep === "selecting_township" && (
           <div className="space-y-1">
             <div className="text-[9px] font-mono text-slate-500 font-bold mb-1">
-              {isMy ? "ပို့ဆောင်မည့် မြို့နယ် ရွေးပါ:" : "Select Delivery Township:"}
+              "Select Delivery Township:"
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
               {deliveryZones.map((zone) => (
@@ -512,9 +504,9 @@ export function TelegramSimulator({
         {session.currentStep === "prepayment_pending" && (
           <div className="p-1.5 bg-slate-950 rounded-xl border border-dashed border-indigo-500/30 space-y-2 text-[10px]">
             <div className="text-[10px] font-bold text-slate-300 flex items-center justify-between">
-              <span>{isMy ? "ငွေလွှဲပြေစာ ပေးပို့ရန်:" : "Submit Payment Proof:"}</span>
+              <span>Submit Payment Proof:</span>
               <span className="text-[9px] text-indigo-400 font-mono">
-                {isMy ? "အဆင့် ၂/၃" : "STEP 2 OF 3"}
+                "STEP 2 OF 3"
               </span>
             </div>
 
@@ -533,7 +525,7 @@ export function TelegramSimulator({
               <input
                 type="text"
                 maxLength={6}
-                placeholder={isMy ? "နောက်ဆုံး ၆ လုံး" : "Last 6 Digits"}
+                placeholder="Last 6 Digits"
                 value={txIdInput}
                 onChange={(e) => setTxIdInput(e.target.value.replace(/\D/g, ''))}
                 className="bg-slate-900 border border-slate-800 text-white rounded p-1 text-[10px] text-center font-mono"
@@ -543,16 +535,14 @@ export function TelegramSimulator({
             {/* Simulated Screenshot selectors */}
             <div className="space-y-1.5">
               <span className="text-[9px] text-slate-400 block font-semibold">
-                {isMy ? "ငွေလွှဲပြေစာ ပုံရိပ် ရွေးချယ်မှု:" : "Prepayment Receipt Action:"}
+                "Prepayment Receipt Action:"
               </span>
               
               {/* Computer file upload trigger */}
               <label className="flex items-center justify-center gap-1.5 border border-dashed border-slate-700 hover:border-indigo-500 bg-slate-900 hover:bg-slate-800 p-1.5 rounded-lg cursor-pointer transition-all relative">
                 <Image size={11} className={mockScreenshotBase64 && !mockScreenshotBase64.startsWith("http") ? "text-emerald-400" : "text-slate-400"} />
                 <span className="text-[9px] font-medium text-slate-300">
-                  {mockScreenshotBase64 && !mockScreenshotBase64.startsWith("http") 
-                    ? (isMy ? "စလစ်ဖိုင် တင်ပြီးပါပြီ ✓" : "Custom Receipt Uploaded ✓") 
-                    : (isMy ? "စလစ်ဖိုင် တင်မည်" : "Upload Receipt File")}
+                  {mockScreenshotBase64 && !mockScreenshotBase64.startsWith("http") ? "Custom Receipt Uploaded ✓" : "Upload Receipt File"}
                 </span>
                 <input
                   type="file"
@@ -573,7 +563,7 @@ export function TelegramSimulator({
 
               <div className="flex items-center gap-1.5 pt-0.5">
                 <span className="text-[8px] text-slate-500 font-mono tracking-wider uppercase shrink-0">
-                  {isMy ? "နမူနာများ:" : "Presets:"}
+                  "Presets:"
                 </span>
                 <div className="grid grid-cols-2 gap-1 flex-1">
                   {mockReceipts.map((rec) => (
@@ -595,11 +585,11 @@ export function TelegramSimulator({
             </div>
 
             <button
-              onClick={() => handleSendMessage(isMy ? "ငွေလွှဲပြေစာ စစ်ဆေးပေးရန် ပေးပို့လိုက်ပါသည်" : "Submitted Pay Receipt Verification Request")}
+              onClick={() => handleSendMessage("Submitted Pay Receipt Verification Request")}
               disabled={!txIdInput || !mockScreenshotBase64}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-1 rounded text-[10px] font-bold tracking-wider cursor-pointer transition-all"
             >
-              {isMy ? "ငွေလွှဲပြေစာ တင်ပြီး စစ်ဆေးမည် ✅" : "Upload and Verify Receipt ✅"}
+              "Upload and Verify Receipt ✅"
             </button>
           </div>
         )}
@@ -667,11 +657,7 @@ export function TelegramSimulator({
 
         <input
           type="text"
-          placeholder={
-            session?.liveTakeoverActive
-              ? (isMy ? "ဝယ်သူထံသို့ တိုက်ရိုက် စာပို့ပါ..." : "Direct message as Customer...")
-              : (isMy ? "မြန်မာ သို့မဟုတ် အင်္ဂလိပ်လို စာရိုက်ထည့်ပါ..." : "Type custom inquiries in Burmese/English...")
-          }
+          placeholder={session?.liveTakeoverActive ? "Direct message as Customer..." : "Type custom inquiries in English..."}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => {

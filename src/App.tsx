@@ -25,7 +25,6 @@ import {
   ChevronRight,
   ExternalLink,
   Smartphone,
-  Languages,
   Send,
   Copy,
   Menu,
@@ -55,6 +54,7 @@ import { Product, DeliveryZone, Order, ShopConfig, TelegramSession, SystemState 
 import * as store from "./services/clientStore";
 import { supabase } from "./utils/supabase";
 import { fetchDeliveryMatrix, addDeliveryZone, deleteDeliveryZone } from "./services/deliveryMatrixApi";
+import { getOrdersForOwner, updateDbOrderStatus } from "./services/ordersApi";
 import { buildShopPublicUrl } from "./utils/shopId";
 import { loadTownships } from "./data/townships";
 import QRCode from "qrcode";
@@ -264,7 +264,6 @@ export default function App() {
   // Main Store State
   const [storeState, setStoreState] = useState<SystemState | null>(null);
   const [activeTab, setActiveTab] = useState<"orders" | "products" | "delivery" | "insights" | "bot_config" | "live_support" | "smart_marketing">("orders");
-  const [botConnectionTab, setBotConnectionTab] = useState<"messenger" | "telegram">("messenger");
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
@@ -272,16 +271,6 @@ export default function App() {
   const [shopRecord, setShopRecord] = useState<ShopRecord | null>(null);
   const [editingOnboarding, setEditingOnboarding] = useState(false);
   const [configDraft, setConfigDraft] = useState<ShopConfig | null>(null);
-  const [messengerStatus, setMessengerStatus] = useState<{
-    connected: boolean;
-    oauth_completed?: boolean;
-    pending_page_selection?: boolean;
-    pages: { id: string; name: string }[];
-    active_page_id?: string | null;
-    error?: string;
-  } | null>(null);
-  const [loadingMessengerStatus, setLoadingMessengerStatus] = useState<boolean>(false);
-  const [pendingPageId, setPendingPageId] = useState<string>("");
 
   // Loaders
   const [loading, setLoading] = useState<boolean>(true);
@@ -405,6 +394,31 @@ export default function App() {
       const products = await getProducts(user.id);
       data.products = products;
 
+      // 4.5. Fetch orders from Supabase Postgres table (source of truth) and merge
+      try {
+        const dbOrders = await getOrdersForOwner(user.id, data.config.shopId);
+        const orderMap = new Map<string, Order>();
+        (data.orders || []).forEach((o) => {
+          const key = o.invoiceId || o.id;
+          if (key) orderMap.set(key, o);
+        });
+        dbOrders.forEach((o) => {
+          const key = o.invoiceId || o.id;
+          if (key) orderMap.set(key, o);
+        });
+        const localState = store.getState();
+        (localState.orders || []).forEach((o) => {
+          const key = o.invoiceId || o.id;
+          if (key && !orderMap.has(key)) orderMap.set(key, o);
+        });
+
+        data.orders = Array.from(orderMap.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      } catch (orderErr) {
+        console.warn("[App] Error syncing orders from DB:", orderErr);
+      }
+
       // 5. Update states ONLY after all sync logic is done
       setStoreState(data);
 
@@ -433,102 +447,6 @@ export default function App() {
     setStoreState(next);
   };
 
-  const fetchMessengerStatus = async () => {
-    setLoadingMessengerStatus(true);
-    try {
-      const data = await invokeApi<{
-        connected: boolean;
-        oauth_completed?: boolean;
-        pending_page_selection?: boolean;
-        pages: { id: string; name: string }[];
-        active_page_id?: string | null;
-        error?: string;
-      }>("messenger/status");
-      const pages = Array.isArray(data.pages) ? data.pages : [];
-      setMessengerStatus({
-        connected: Boolean(data.connected),
-        oauth_completed: Boolean(data.oauth_completed),
-        pending_page_selection: Boolean(data.pending_page_selection),
-        pages,
-        active_page_id: data.active_page_id,
-        error: data.error,
-      });
-      if (data.active_page_id) {
-        setPendingPageId(String(data.active_page_id));
-      } else if (pages.length === 1) {
-        setPendingPageId(pages[0].id);
-      }
-    } catch {
-      setMessengerStatus({
-        connected: false,
-        pages: [],
-        error: "Could not reach API. Check Omnichannel backend on port 8000.",
-      });
-    } finally {
-      setLoadingMessengerStatus(false);
-    }
-  };
-
-  const startFacebookConnect = async () => {
-    try {
-      const redirectUri =
-        (import.meta.env.VITE_FB_REDIRECT_URI as string | undefined)?.replace(/\/$/, "") ||
-        `${window.location.origin}/facebook/callback`;
-
-      const data = await invokeApi<{ url?: string; state?: string; error?: string }>(
-        "messenger/auth-url",
-        { redirect_uri: redirectUri }
-      );
-      if (data.error || !data.url) {
-        showToast(
-          data.error || "Unable to start Facebook login.",
-          "info"
-        );
-        return;
-      }
-
-      if (data.state) {
-        sessionStorage.setItem("fb_oauth_state", data.state);
-      }
-
-      const popup = window.open(data.url, "fb_oauth", "width=620,height=720");
-      if (!popup) {
-        showToast(
-          "Please allow popups for this site.",
-          "info"
-        );
-        return;
-      }
-
-      const onMessage = (ev: MessageEvent) => {
-        if (ev.data?.type === "messenger_oauth_done") {
-          window.removeEventListener("message", onMessage);
-          fetchMessengerStatus();
-          fetchState(true);
-        }
-      };
-      window.addEventListener("message", onMessage);
-
-      const poll = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(poll);
-          window.removeEventListener("message", onMessage);
-          fetchMessengerStatus();
-          fetchState(true);
-        }
-      }, 2000);
-      setTimeout(() => {
-        clearInterval(poll);
-        window.removeEventListener("message", onMessage);
-      }, 180000);
-    } catch {
-      showToast(
-        "Start Omnichannel backend: uvicorn app.main:app --reload --port 8000",
-        "info"
-      );
-    }
-  };
-
   const fetchDeliveryZonesFromApi = async () => {
     setDeliveryZonesLoading(true);
     const shopAddress =
@@ -544,6 +462,7 @@ export default function App() {
       );
       setDeliveryZones(result.data);
       setDeliveryZonesPagination(result.pagination);
+      setStoreState((prev) => (prev ? { ...prev, deliveryZones: result.data } : prev));
     } catch (err) {
       console.error("Failed to fetch delivery zones:", err);
       showToast(
@@ -574,17 +493,96 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [user?.id, authLoading, storeState?.config.onboardingCompleted, editingOnboarding]);
-
-  // Load Messenger status when opening the Messenger tab (not on every state poll)
+  // Instant real-time listener for orders created in the same browser session
   useEffect(() => {
-    if (activeTab !== "bot_config" || botConnectionTab !== "messenger") return;
+    const handleOrderCreated = (event: Event) => {
+      const customEvent = event as CustomEvent<Order>;
+      if (customEvent.detail) {
+        const newOrder = customEvent.detail;
+        setStoreState((prev) => {
+          if (!prev) return prev;
+          const exists = (prev.orders || []).some(
+            (o) => o.invoiceId === newOrder.invoiceId || o.id === newOrder.id
+          );
+          const nextSessions = { ...prev.sessions };
+          Object.keys(nextSessions).forEach((sKey) => {
+            if (
+              nextSessions[sKey].customerTelegramId === newOrder.customerTelegramId ||
+              nextSessions[sKey].sessionId === newOrder.customerTelegramId ||
+              !newOrder.customerTelegramId ||
+              newOrder.customerTelegramId === "public_chat_customer"
+            ) {
+              nextSessions[sKey] = {
+                ...nextSessions[sKey],
+                cart: [],
+              };
+            }
+          });
+          return {
+            ...prev,
+            orders: exists ? prev.orders : [newOrder, ...(prev.orders || [])],
+            sessions: nextSessions,
+          };
+        });
+        showToast(`🎉 New order received! (${newOrder.invoiceId})`, "info");
+      }
+    };
+
+    const handleCartCleared = () => {
+      setStoreState((prev) => {
+        if (!prev) return prev;
+        const nextSessions = { ...prev.sessions };
+        Object.keys(nextSessions).forEach((sKey) => {
+          nextSessions[sKey] = {
+            ...nextSessions[sKey],
+            cart: [],
+          };
+        });
+        return {
+          ...prev,
+          sessions: nextSessions,
+        };
+      });
+    };
+
+    window.addEventListener("sales_brain_order_created", handleOrderCreated);
+    window.addEventListener("sales_brain_cart_cleared", handleCartCleared);
+    return () => {
+      window.removeEventListener("sales_brain_order_created", handleOrderCreated);
+      window.removeEventListener("sales_brain_cart_cleared", handleCartCleared);
+    };
+  }, []);
+
+  // Supabase Realtime listener on "orders" table
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("public-orders-sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          fetchState(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab !== "bot_config") return;
     if (storeState) {
       setConfigDraft((prev) => prev ?? storeState.config);
-      if (botConnectionTab === "messenger") {
-        fetchMessengerStatus();
-      }
     }
-  }, [activeTab, storeState, botConnectionTab]);
+  }, [activeTab, storeState]);
 
   // Fetch delivery zones when tab, page, search, or shop address changes
   useEffect(() => {
@@ -781,6 +779,8 @@ export default function App() {
   const handleUpdateOrderStatus = async (orderId: string, status: 'confirmed' | 'cancelled' | 'completed') => {
     try {
       await invokeApi("orders/update", { orderId, status });
+      await updateDbOrderStatus(orderId, status);
+      store.updateOrderStatus(orderId, status);
       {
         showToast(
           `Order status marked as [${status.toUpperCase()}]! Invoice sent.`,
@@ -916,7 +916,7 @@ export default function App() {
         </div>
         <div className="text-center font-sans">
           <h2 className="font-serif text-lg tracking-tight text-stone-900">Sales Brain AI</h2>
-          <p className="text-xs text-stone-500 mt-1">Preparing your merchant sanctuary...</p>
+          <p className="text-xs text-stone-500 mt-1">Preparing your store...</p>
         </div>
       </div>
     );
@@ -1113,30 +1113,7 @@ export default function App() {
             </div>
 
             <div className="pt-4 border-t border-slate-100 space-y-3">
-              {/* Mobile Language Switcher */}
-              <div className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-200/60">
-                <span className="text-xs font-semibold text-slate-600">{t("chooseLanguage")}</span>
-                <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 shadow-xs">
-                  <button
-                    type="button"
-                    onClick={() => setLang("en")}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors ${
-                      lang === "en" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    EN
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLang("my")}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors ${
-                      lang === "my" ? "bg-[#0069FF] text-white" : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    မြန်မာ
-                  </button>
-                </div>
-              </div>
+              
 
               <button
                 type="button"
@@ -1385,30 +1362,7 @@ export default function App() {
 
         {/* BOTTOM: User Profile Footer */}
         <div className="p-3 border-t border-[#E7E5E4] bg-[#FAF8F5] space-y-2.5">
-          {/* Desktop Sidebar Language Switcher */}
-          <div className="flex items-center justify-between px-2.5 py-1.5 bg-white rounded-xl border border-[#E7E5E4] shadow-2xs">
-            <span className="text-[11px] font-semibold text-[#57534E]">{t("chooseLanguage")}</span>
-            <div className="flex items-center bg-[#FAF8F5] p-0.5 rounded-lg border border-[#E7E5E4]">
-              <button
-                type="button"
-                onClick={() => setLang("en")}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
-                  lang === "en" ? "bg-[#1C1917] text-white shadow-xs" : "text-[#78716C] hover:text-[#1C1917]"
-                }`}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang("my")}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
-                  lang === "my" ? "bg-[#0069FF] text-white shadow-xs" : "text-[#78716C] hover:text-[#1C1917]"
-                }`}
-              >
-                မြန်မာ
-              </button>
-            </div>
-          </div>
+          
 
           <div className="flex items-center justify-between px-2 py-1">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1462,33 +1416,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 max-w-full overflow-x-auto no-scrollbar py-1">
-            {/* Header Language Switcher */}
-            <div className="flex items-center bg-white/90 p-0.5 rounded-full border border-[#E7E5E4] shadow-2xs shrink-0">
-              <button
-                type="button"
-                onClick={() => setLang("en")}
-                className={`px-2 sm:px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  lang === "en"
-                    ? "bg-[#0A1B2A] text-white shadow-xs"
-                    : "text-stone-500 hover:text-stone-900"
-                }`}
-                title="Switch to English"
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang("my")}
-                className={`px-2 sm:px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  lang === "my"
-                    ? "bg-[#0069FF] text-white shadow-xs"
-                    : "text-stone-500 hover:text-stone-900"
-                }`}
-                title="မြန်မာဘာသာသို့ ပြောင်းမည်"
-              >
-                မြန်မာ
-              </button>
-            </div>
+            
 
             {/* Landing Page */}
             <button
@@ -1553,7 +1481,7 @@ export default function App() {
                 {showSimulator ? t("closeSimulatorButton") : t("viewSimulatorButton")}
               </span>
               <span className="sm:hidden">
-                {showSimulator ? (lang === "my" ? "ပိတ်မည်" : "Close") : (lang === "my" ? "စမ်းသပ်မည်" : "Simulate")}
+                {showSimulator ? "Close" : "Simulate"}
               </span>
             </button>
           </div>
@@ -2395,32 +2323,7 @@ export default function App() {
           {/* TAB 5: BOT ACTIVATION SETUP */}
           {activeTab === "bot_config" && (
             <div className="space-y-4">
-              {/* Bot Type Sub-tabs */}
-              <div className="flex bg-[#FAF8F5] p-1 rounded-full border border-[#E7E5E4] w-fit shadow-2xs">
-                <button
-                  onClick={() => setBotConnectionTab("messenger")}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    botConnectionTab === "messenger"
-                      ? "bg-[#1C1917] text-white shadow-xs"
-                      : "text-[#78716C] hover:text-[#1C1917]"
-                  }`}
-                >
-                  Messenger
-                </button>
-                <button
-                  onClick={() => setBotConnectionTab("telegram")}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    botConnectionTab === "telegram"
-                      ? "bg-[#1C1917] text-white shadow-xs"
-                      : "text-[#78716C] hover:text-[#1C1917]"
-                  }`}
-                >
-                  Telegram
-                </button>
-              </div>
-
-              {botConnectionTab === "telegram" ? (
-                <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] animate-fadeIn">
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] animate-fadeIn">
                   <h3 className="font-serif text-lg font-medium text-[#1C1917] flex items-center gap-2 mb-1 tracking-tight">
                     {t("telegramBotActivationWorkspace")}
                   </h3>
@@ -2545,156 +2448,8 @@ export default function App() {
                   </button>
                 </form>
               </div>
-            ) : (
-              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs text-[#1C1917] animate-fadeIn">
-                <h3 className="font-serif text-lg font-medium text-[#1C1917] flex items-center gap-2 mb-1 tracking-tight">
-                  {t("messengerBotActivationWorkspace")}
-                </h3>
-                
-                {loadingMessengerStatus && (
-                  <div className="text-xs text-[#78716C] font-mono mb-3 flex items-center gap-2">
-                    <div className="w-3.5 h-3.5 border-2 border-indigo-500/20 border-t-indigo-600 rounded-full animate-spin"></div>
-                    Checking Messenger connection…
-                  </div>
-                )}
-
-                {messengerStatus?.error && !messengerStatus.connected && (
-                  <div className="mb-4 p-3.5 rounded-xl border border-amber-300 bg-amber-50 text-xs text-amber-900">
-                    {messengerStatus.error}
-                  </div>
-                )}
-
-                {messengerStatus?.connected ? (
-                  <div className="space-y-4 mt-5">
-                    <div className="p-4 bg-[#FAF8F5] border border-indigo-200/70 rounded-2xl flex items-center justify-between gap-3 text-[#1C1917]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#1877F2] text-white flex items-center justify-center font-bold text-sm shrink-0">
-                          f
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-semibold text-[#1C1917]">
-                            Active: {storeState.config.messengerBotName || "Facebook Page"}
-                          </h4>
-                          <p className="text-[11px] text-[#78716C] font-mono">
-                            ID: {storeState.config.messengerBotId}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-semibold text-indigo-700 bg-white px-2.5 py-1 rounded-full border border-indigo-200 shadow-2xs uppercase tracking-wider font-mono">
-                        Live
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setSavingAction(true);
-                        try {
-                          await invokeApi("messenger/disconnect");
-                          if (storeState && user) {
-                            await persistState({
-                              ...storeState,
-                              config: {
-                                ...storeState.config,
-                                messengerBotId: "",
-                                messengerBotName: "",
-                              },
-                            });
-                          }
-                          setPendingPageId("");
-                          showToast(
-                            "Messenger bot disconnected",
-                            "info"
-                          );
-                          fetchMessengerStatus();
-                        } finally {
-                          setSavingAction(false);
-                        }
-                      }}
-                      className="w-full px-4 py-2.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 hover:bg-rose-100 transition-all cursor-pointer active:scale-[0.98]"
-                    >
-                      {t("disconnectFacebook")}
-                    </button>
-                  </div>
-                ) : messengerStatus?.pending_page_selection ? (
-                  <div className="space-y-4 mt-5">
-                    <p className="text-xs text-[#57534E] leading-relaxed bg-[#FAF8F5] border border-[#E7E5E4] rounded-2xl p-4">
-                      {t("oauthCompleteChoosePage")}
-                    </p>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono font-semibold text-[#78716C] uppercase block">
-                        {t("selectPageLabel")}
-                      </label>
-                      <select
-                        className="w-full bg-[#FAF8F5] border border-[#E7E5E4] rounded-xl p-2.5 text-[#1C1917] font-mono text-xs focus:outline-none focus:border-[#0069FF]"
-                        value={pendingPageId}
-                        onChange={(e) => setPendingPageId(e.target.value)}
-                      >
-                        <option value="">-- Select Page --</option>
-                        {messengerStatus.pages.map((page) => (
-                          <option key={page.id} value={page.id}>{page.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={!pendingPageId || savingAction}
-                      onClick={async () => {
-                        const page = messengerStatus.pages.find((p) => p.id === pendingPageId);
-                        if (!page) return;
-                        setSavingAction(true);
-                        try {
-                          const result = await invokeApi<{
-                            page_id?: string;
-                            page_name?: string;
-                          }>("messenger/connect-page", { pageId: page.id });
-                          if (storeState && user && result.page_id) {
-                            await persistState({
-                              ...storeState,
-                              config: {
-                                ...storeState.config,
-                                messengerBotId: result.page_id,
-                                messengerBotName: result.page_name || page.name,
-                              },
-                            });
-                          }
-                          showToast(
-                            "Messenger bot is now active on your Page!",
-                            "success"
-                          );
-                          fetchMessengerStatus();
-                        } finally {
-                          setSavingAction(false);
-                        }
-                      }}
-                      className="w-full px-6 py-3 bg-[#1877F2] hover:bg-[#166fe5] disabled:opacity-50 text-white rounded-full font-semibold text-xs shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                    >
-                      <MessageSquare size={16} />
-                      {t("activateMessengerBot")}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="py-12 flex flex-col items-center justify-center space-y-4 mt-2">
-                    <div className="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-700 mb-2 border border-indigo-100">
-                      <MessageSquare size={26} />
-                    </div>
-                    <p className="text-xs text-[#78716C] max-w-sm text-center leading-relaxed font-sans">
-                      {t("signInFacebookFirst")}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={startFacebookConnect}
-                      className="px-6 py-2.5 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-full font-semibold text-xs shadow-2xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
-                    >
-                      <MessageSquare size={16} />
-                      {t("connectMessengerBot")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          {/* TAB 5 END */}
-          </div>
-        )}
+            </div>
+          )}
 
           {/* CRM DIRECT SUPPORT LIVE WORKSPACE & CHAT TAKE-OVER CRM */}
           {activeTab === "live_support" && (

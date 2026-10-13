@@ -39,7 +39,7 @@ interface CampaignRecommendation {
 
 interface CopywritingDetail {
   en: string;
-  my: string;
+  my?: string;
 }
 
 interface MarketingInsights {
@@ -63,7 +63,6 @@ interface MarketingInsights {
 }
 
 const SM_STRINGS = {
-  en: {
     stepTitle1: "Diagnostics & Campaign Selection",
     stepTitle2: "AI Campaign Strategy & Copywriting",
     stepTitle3: "Custom Poster Studio & Graphic Builder",
@@ -110,62 +109,10 @@ const SM_STRINGS = {
     styleNewYear: "Midnight Glow (New Year)",
     styleValentine: "Maroon Love (Valentine)",
     styleGeneral: "Classic Midnight (General)"
-  },
-  my: {
-    stepTitle1: "ကမ်ပိန်း ခေါင်းစဉ် ရွေးချယ်ခြင်း",
-    stepTitle2: "AI မဟာဗျူဟာနှင့် ကြော်ငြာစာ ရေးသားခြင်း",
-    stepTitle3: "ပိုစတာ ဒီဇိုင်းနှင့် ဓာတ်ပုံများ",
-    stepBtn1: "၁။ ကမ်ပိန်း ခေါင်းစဉ်",
-    stepBtn2: "၂။ မဟာဗျူဟာနှင့် ကြော်ငြာစာ",
-    stepBtn3: "၃။ ပိုစတာ ဒီဇိုင်း",
-    chooseProdTitle: "အဆင့် ၁.၁ - အရောင်းမြှင့်တင်မည့် ပစ္စည်းများ ရွေးပါ",
-    chooseProdDesc: "ဤကမ်ပိန်းတွင် ပါဝင်မည့် ပစ္စည်းများကို ရွေးချယ်ပါ။ Gemini AI မှ သင့်တော်သော လျှော့စျေးနှင့် ကြော်ငြာစာများကို ဖန်တီးပေးပါမည်။",
-    chooseThemeTitle: "အဆင့် ၁.၂ - ပွဲတော် သို့မဟုတ် အခမ်းအနား ရွေးပါ",
-    chooseThemeDesc: "လာမည့် ပွဲတော် သို့မဟုတ် ရာသီအလိုက် အစီအစဉ်ကို ရွေးချယ်ပါ။ AI မှ မြန်မာနိုင်ငံအတွက် အံဝင်ခွင်ကျ အရောင်းအစီအစဉ် ရေးဆွဲပေးပါမည်။",
-    recommendedPkgTitle: "အကြံပြုထားသော ကမ်ပိန်း မဟာဗျူဟာ",
-    targetAudience: "ပစ်မှတ် ဝယ်ယူသူများ",
-    expectedImpact: "မျှော်မှန်းထားသော အရောင်းရလဒ်",
-    promoDiscount: "ပရိုမိုးရှင်း လျှော့စျေး",
-    campaignDuration: "ကမ်ပိန်း ကာလ",
-    socialCopyTitle: "AI လူမှုကွန်ရက် ကြော်ငြာစာ",
-    hashtagCluster: "ပစ်မှတ် ဟက်ရှ်တဂ်များ:",
-    copy: "ကူးယူမည်",
-    copied: "ကူးယူပြီးပါပြီ!",
-    backToTheme: "⇠ အဆင့် ၁ သို့ ပြန်သွားမည်",
-    configPosters: "ပိုစတာ စတူဒီယို ဖွင့်မည် (အဆင့် ၃) ➔",
-    backToStrategy: "⇠ မဟာဗျူဟာ သို့ ပြန်သွားမည် (အဆင့် ၂)",
-    startNewCampaign: "↩ ကမ်ပိန်း အသစ် စတင်မည်",
-    posterStudioTitle: "ပရိုမိုးရှင်း ပိုစတာ စတူဒီယို",
-    posterLivePreview: "ပိုစတာ နမူနာ ကြည့်ရှုမှု (၃:၄ ဒေါင်လိုက်)",
-    posterTitleLabel: "ပိုစတာ ခေါင်းစဉ်ကြီး",
-    promoDiscountLabel: "လျှော့စျေး တံဆိပ် စာသား",
-    subheadingLabel: "ခေါင်းစဉ်ငယ် / နှိုးဆော်ချက်",
-    catalogProductLabel: "ရွေးချယ်ထားသော ပစ္စည်း",
-    themeTemplateLabel: "အရောင်နှင့် ဒီဇိုင်း ပုံစံ",
-    downloadFlyer: "၃:၄ ပိုစတာ ဒေါင်းလုဒ်ဆွဲမည်",
-    synthesizing: "ကမ်ပိန်း မဟာဗျူဟာကို စုစည်းဆန်းစစ်နေပါသည်...",
-    generatingFromGemini: "Gemini AI မှ သင့်ပစ္စည်းများအတွက် မဟာဗျူဟာနှင့် ကြော်ငြာစာများကို ရေးသားပေးနေပါသည်...",
-    updatingCreative: "ပိုစတာ ပုံရိပ်များကို ပြင်ဆင်နေပါသည်...",
-    noActiveTheme: "ကမ်ပိန်း ခေါင်းစဉ် မရွေးရသေးပါ",
-    noThemeSelected: "ကမ်ပိန်း မရွေးရသေးပါ",
-    chooseThemeFirst: "ကျေးဇူးပြု၍ အဆင့် ၁ တွင် ကမ်ပိန်း ခေါင်းစဉ်ကို အရင်ရွေးချယ်ပေးပါ",
-    goToStep1: "အဆင့် ၁ သို့ သွားမည်",
-    styleStudents: "Ocean Wave (ကျောင်းသားပွဲတော်)",
-    styleCozy: "Cozy Mist (မိုးရာသီ)",
-    styleFlash: "Flash Amber (အထူးလျှော့စျေး)",
-    styleThingyan: "Golden Water (သင်္ကြန်ပွဲတော်)",
-    styleChristmas: "Classic Red (ခရစ္စမတ်)",
-    styleNewYear: "Midnight Glow (နှစ်သစ်ကူး)",
-    styleValentine: "Maroon Love (ချစ်သူများနေ့)",
-    styleGeneral: "Classic Midnight (အထွေထွေ)"
-  }
-};
+  };
 
 export function SmartMarketing({ state, lang = "en" }: SmartMarketingProps) {
-  const currentLang = lang || "en";
-  const tSM = (key: keyof typeof SM_STRINGS["en"]) => {
-    return SM_STRINGS[currentLang][key] || SM_STRINGS["en"][key];
-  };
+  const tSM = (key: keyof typeof SM_STRINGS) => SM_STRINGS[key];
 
   const PRESET_CAMPAIGNS = [
     { 
@@ -222,13 +169,9 @@ export function SmartMarketing({ state, lang = "en" }: SmartMarketingProps) {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [insights, setInsights] = useState<MarketingInsights | null>(null);
-  const [copyLang, setCopyLang] = useState<"en" | "my">(() => (lang === "my" ? "my" : "en"));
+  const copyLang = "en";
 
-  useEffect(() => {
-    if (lang === "my" || lang === "en") {
-      setCopyLang(lang);
-    }
-  }, [lang]);
+  
   const [activeTabCopy, setActiveTabCopy] = useState<"facebook" | "instagram" | "ad" | "email">("facebook");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [checklist, setChecklist] = useState<boolean[]>([]);

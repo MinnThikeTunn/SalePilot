@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", "Noto Sans Myanmar", "Pyidaungsu", "Myanmar Text", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", Georgia, Cambria, "Noto Sans Myanmar", "Pyidaungsu", "Myanmar Text", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, Cambria, serif;
 }
 
 html, body {
@@ -13,39 +13,6 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* ─── Myanmar (Burmese) Typesetting System ─────────────────────────────────── */
-:lang(my),
-[lang="my"],
-[data-lang="my"],
-.lang-my {
-  font-family: "Noto Sans Myanmar", "Pyidaungsu", "Myanmar Text", var(--font-sans);
-  line-height: 1.65;
-}
-
-/* Headings in Burmese: relaxed leading to prevent Kinzi & diacritic clipping */
-:lang(my) h1, :lang(my) h2, :lang(my) h3, :lang(my) h4,
-[lang="my"] h1, [lang="my"] h2, [lang="my"] h3, [lang="my"] h4,
-.lang-my h1, .lang-my h2, .lang-my h3, .lang-my h4 {
-  line-height: 1.38 !important;
-  letter-spacing: normal !important;
-}
-
-/* Reset tracking on Burmese: tracking breaks syllable clusters & diacritic stacking */
-:lang(my) [class*="tracking-"],
-[lang="my"] [class*="tracking-"],
-.lang-my [class*="tracking-"] {
-  letter-spacing: normal !important;
-}
-
-/* Reset uppercase transform on Burmese script */
-:lang(my) .uppercase,
-[lang="my"] .uppercase,
-.lang-my .uppercase {
-  text-transform: none !important;
-}
-
-
-
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -53,4 +20,3 @@ html, body {
     display: none;
   }
 }
-

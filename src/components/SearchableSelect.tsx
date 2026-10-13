@@ -7,7 +7,7 @@ interface SearchableSelectProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  lang?: "en" | "my";
+  lang?: string;
   required?: boolean;
 }
 
