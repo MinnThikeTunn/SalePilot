@@ -54,6 +54,7 @@ import { getProducts, migrateProductsFromJson, upsertProduct, deleteProduct, ded
 import type { OnboardingFormState, ShopRecord } from "./types";
 import { Product, DeliveryZone, Order, ShopConfig, TelegramSession, SystemState } from "./types";
 import * as store from "./services/clientStore";
+import { getDefaultSessions } from "./services/defaults";
 import { supabase } from "./utils/supabase";
 import { fetchDeliveryMatrix, addDeliveryZone, deleteDeliveryZone } from "./services/deliveryMatrixApi";
 import { getOrdersForOwner, updateDbOrderStatus } from "./services/ordersApi";
@@ -350,6 +351,7 @@ export default function App() {
   // Owner custom live reply states
   const [ownerReplyText, setOwnerReplyText] = useState<string>("");
   const [activeVerificationReceipt, setActiveVerificationReceipt] = useState<Order | null>(null);
+  const chatScrollRef = React.useRef<HTMLDivElement>(null);
 
   const onboardingInitialForm: OnboardingFormState = React.useMemo(() => {
     return shopRecord
@@ -461,6 +463,16 @@ export default function App() {
         console.warn("[App] Error syncing orders from DB:", orderErr);
       }
 
+      // 4.6 Sync and ensure active sessions exist
+      const localSessions = store.getState().sessions || {};
+      const baseDefaults = getDefaultSessions();
+      const combinedSessions = {
+        ...baseDefaults,
+        ...localSessions,
+        ...(data.sessions || {}),
+      };
+      data.sessions = combinedSessions;
+
       // 5. Update states ONLY after all sync logic is done
       setStoreState(data);
       store.setStoreState(data);
@@ -469,11 +481,9 @@ export default function App() {
         if (activeTab === "bot_config" && prev) return prev;
         return data.config;
       });
-      if (data.sessions && Object.keys(data.sessions).length > 0) {
-        const keys = Object.keys(data.sessions);
-        if (!keys.includes(activeSessionId)) {
-          setActiveSessionId(keys[0]);
-        }
+      const sessionKeys = Object.keys(combinedSessions);
+      if (sessionKeys.length > 0 && !combinedSessions[activeSessionId]) {
+        setActiveSessionId(sessionKeys[0]);
       }
     } catch (err) {
       console.debug("State load err:", err);
@@ -593,9 +603,28 @@ export default function App() {
       });
     };
 
+    const handleSessionUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<TelegramSession>;
+      if (customEvent.detail) {
+        const updated = customEvent.detail;
+        setStoreState((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            sessions: {
+              ...(prev.sessions || {}),
+              [updated.sessionId]: updated,
+            },
+          };
+        });
+      }
+    };
+
+    window.addEventListener("sales_brain_session_updated", handleSessionUpdated);
     window.addEventListener("sales_brain_order_created", handleOrderCreated);
     window.addEventListener("sales_brain_cart_cleared", handleCartCleared);
     return () => {
+      window.removeEventListener("sales_brain_session_updated", handleSessionUpdated);
       window.removeEventListener("sales_brain_order_created", handleOrderCreated);
       window.removeEventListener("sales_brain_cart_cleared", handleCartCleared);
     };
@@ -624,6 +653,12 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [storeState?.sessions, activeSessionId, activeTab]);
 
   useEffect(() => {
     if (activeTab !== "bot_config") return;
@@ -851,43 +886,121 @@ export default function App() {
     }
   };
 
-  const handleTakeover = async (sessId: string) => {
+  const handleTakeover = async (sessId?: string) => {
+    const targetId = sessId || activeSessionId;
+    if (!targetId) return;
+
+    // 1. Optimistic UI state update
+    setStoreState((prev) => {
+      if (!prev || !prev.sessions[targetId]) return prev;
+      const sess = prev.sessions[targetId];
+      return {
+        ...prev,
+        sessions: {
+          ...prev.sessions,
+          [targetId]: {
+            ...sess,
+            liveTakeoverActive: true,
+            messages: [
+              ...sess.messages,
+              {
+                id: `sys-${Date.now()}`,
+                sender: "system",
+                content: "Shop Owner has taken over the chat. Candy AI is paused.",
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+        },
+      };
+    });
+
+    showToast(
+      "🔴 Bot deactivated. Owner intervention launched! Live chat active.",
+      "info"
+    );
+
     try {
-      await invokeApi("bot/takeover", { sessionId: sessId });
-      {
-        showToast(
-          "🔴 Bot deactivated. Owner intervention launched! Live chat active.",
-          "info"
-        );
-        fetchState();
-      }
+      await invokeApi("bot/takeover", { sessionId: targetId });
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleReleaseToAi = async (sessId: string) => {
+  const handleReleaseToAi = async (sessId?: string) => {
+    const targetId = sessId || activeSessionId;
+    if (!targetId) return;
+
+    // 1. Optimistic UI state update
+    setStoreState((prev) => {
+      if (!prev || !prev.sessions[targetId]) return prev;
+      const sess = prev.sessions[targetId];
+      return {
+        ...prev,
+        sessions: {
+          ...prev.sessions,
+          [targetId]: {
+            ...sess,
+            liveTakeoverActive: false,
+            messages: [
+              ...sess.messages,
+              {
+                id: `sys-${Date.now()}`,
+                sender: "system",
+                content: "AI assistant Candy is active again.",
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+        },
+      };
+    });
+
+    showToast(
+      "🟢 Bot reactivated. Candy taking over.",
+      "success"
+    );
+
     try {
-      await invokeApi("bot/release", { sessionId: sessId });
-      {
-        showToast(
-          "🟢 Bot reactivated. Candy taking over.",
-          "success"
-        );
-        fetchState();
-      }
+      await invokeApi("bot/release", { sessionId: targetId });
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleSendOwnerMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ownerReplyText.trim()) return;
+  const handleSendOwnerMessage = async (e?: React.FormEvent, customContent?: string) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const contentToSend = (customContent || ownerReplyText).trim();
+    if (!contentToSend || !activeSessionId) return;
+
+    const newMsg = {
+      id: `mo-${Date.now()}`,
+      sender: "owner" as const,
+      content: contentToSend,
+      timestamp: new Date().toISOString(),
+    };
+
+    // 1. Optimistic UI update
+    setStoreState((prev) => {
+      if (!prev || !prev.sessions[activeSessionId]) return prev;
+      const sess = prev.sessions[activeSessionId];
+      return {
+        ...prev,
+        sessions: {
+          ...prev.sessions,
+          [activeSessionId]: {
+            ...sess,
+            lastActive: new Date().toISOString(),
+            messages: [...sess.messages, newMsg],
+          },
+        },
+      };
+    });
+
+    setOwnerReplyText("");
+
     try {
-      await invokeApi("bot/owner-reply", { sessionId: activeSessionId, content: ownerReplyText });
-      setOwnerReplyText("");
-      fetchState();
+      await invokeApi("bot/owner-reply", { sessionId: activeSessionId, content: contentToSend });
     } catch (err) {
       console.error(err);
     }
@@ -1072,7 +1185,10 @@ export default function App() {
     return days.map(label => ({ label, value: dayTotals[label] || 0 }));
   })();
 
-  const activeSession: TelegramSession | undefined = storeState.sessions[activeSessionId] || Object.values(storeState.sessions)[0];
+  const activeSession: TelegramSession =
+    (storeState.sessions && storeState.sessions[activeSessionId]) ||
+    (storeState.sessions && Object.values(storeState.sessions)[0]) ||
+    getDefaultSessions().default_customer;
 
   const tabTitles: Record<string, string> = {
     orders: t("tabOrders"),
@@ -2559,36 +2675,77 @@ export default function App() {
           )}
 
           {/* CRM DIRECT SUPPORT LIVE WORKSPACE & CHAT TAKE-OVER CRM */}
+          {/* CRM DIRECT SUPPORT LIVE WORKSPACE & CHAT TAKE-OVER CRM */}
           {activeTab === "live_support" && (
-            <section className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-2xs">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#E7E5E4] pb-4">
-                <div>
-                  <h3 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
-                    {t("liveSupportRoomHeader")}
-                  </h3>
+            <section className="bg-white border border-stone-200/70 rounded-[32px] p-6 sm:p-8 shadow-xs">
+              {/* Header & Session Action Bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-stone-100">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-serif text-xl font-normal text-[#0A1B2A] tracking-tight">
+                      {t("liveSupportRoomHeader")}
+                    </h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-600">
+                      <span className={`w-1.5 h-1.5 rounded-full ${activeSession?.liveTakeoverActive ? "bg-amber-500" : "bg-emerald-500"}`} />
+                      {activeSession?.liveTakeoverActive ? "Personal" : "AI Agent"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 leading-relaxed max-w-xl">
+                    {t("chatTakeoverDesc")}
+                  </p>
                 </div>
 
-                {/* Selector for active customer chat session */}
-                <select
-                  value={activeSessionId}
-                  onChange={(e) => setActiveSessionId(e.target.value)}
-                  className="bg-[#FAF8F5] border border-[#E7E5E4] text-[#1C1917] text-xs rounded-xl p-2.5 focus:outline-none focus:border-[#0069FF]"
-                >
-                  {(Object.values(storeState.sessions) as TelegramSession[]).map((sess) => (
-                    <option key={sess.sessionId} value={sess.sessionId}>
-                      {sess.customerName || "Web Simulator"} ({sess.liveTakeoverActive ? "Owner Active" : "AI Powered"})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSess = store.createSimulationCustomer();
+                      setActiveSessionId(newSess.sessionId);
+                      showToast(`✨ Added new test customer (${newSess.customerName})`, "info");
+                    }}
+                    className="flex-1 sm:flex-initial px-3.5 py-2 rounded-full text-xs font-medium bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-stone-700 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Plus size={13} className="text-stone-500" />
+                    <span>New Test Buyer</span>
+                  </button>
+
+                  {/* Selector for active customer chat session */}
+                  <div className="relative flex-1 sm:flex-initial">
+                    <select
+                      value={activeSessionId}
+                      onChange={(e) => setActiveSessionId(e.target.value)}
+                      className="w-full bg-stone-50 hover:bg-stone-100/80 border border-stone-200/70 text-stone-800 text-xs rounded-full px-3.5 py-2 pr-8 appearance-none focus:outline-none focus:border-stone-400 cursor-pointer transition-colors"
+                    >
+                      {(Object.values(storeState?.sessions || {}) as TelegramSession[]).map((sess) => (
+                        <option key={sess.sessionId} value={sess.sessionId}>
+                          {sess.customerName || "Customer"} · {sess.liveTakeoverActive ? "Personal" : "AI"}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-stone-400">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Chat list visual layout */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5 text-[#1C1917]">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 text-[#0A1B2A]">
                 
                 {/* Session list items sidebar */}
-                <div className="md:col-span-1 space-y-2.5 border-r border-[#E7E5E4] pr-4">
-                  <span className="text-[11px] font-mono font-semibold text-[#78716C] block tracking-wider uppercase">{t("activeUserSessionsLabel")}</span>
-                  {(Object.values(storeState.sessions) as TelegramSession[]).map((sess) => {
+                <div className="md:col-span-1 space-y-2 border-r border-stone-100 pr-5 max-h-[500px] overflow-y-auto">
+                  <div className="flex items-center justify-between px-1 pb-1">
+                    <span className="text-[11px] font-medium text-stone-400 tracking-wide uppercase">
+                      {t("activeUserSessionsLabel")}
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      {Object.keys(storeState?.sessions || {}).length}
+                    </span>
+                  </div>
+
+                  {(Object.values(storeState?.sessions || {}) as TelegramSession[]).map((sess) => {
                     const isSessActive = sess.sessionId === activeSessionId;
                     const latestMsg = sess.messages[sess.messages.length - 1];
 
@@ -2596,25 +2753,29 @@ export default function App() {
                       <div
                         key={sess.sessionId}
                         onClick={() => setActiveSessionId(sess.sessionId)}
-                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                        className={`p-3.5 rounded-2xl cursor-pointer transition-all ${
                           isSessActive
-                            ? "bg-[#FAF8F5] border-[#1C1917] text-[#1C1917] shadow-2xs"
-                            : "bg-white border-[#E7E5E4] text-[#57534E] hover:bg-[#FAF8F5]/60"
+                            ? "bg-stone-100/70 text-stone-900 border border-stone-200/80"
+                            : "bg-white hover:bg-stone-50/70 border border-transparent text-stone-600"
                         }`}
                       >
-                        <div className="font-semibold text-xs flex items-center justify-between">
-                          <span>{sess.customerName || "Customer Client"}</span>
-                          <span className={`w-2 h-2 rounded-full ${sess.liveTakeoverActive ? "bg-amber-500" : "bg-[#1C1917]"}`}></span>
+                        <div className="text-xs font-medium flex items-center justify-between text-stone-900">
+                          <span className="truncate pr-2">{sess.customerName || "Customer"}</span>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              sess.liveTakeoverActive ? "bg-amber-500" : "bg-emerald-500"
+                            }`}
+                          />
                         </div>
-                        <p className="text-[11px] text-[#78716C] mt-1 truncate">
+                        <p className="text-[11px] text-stone-500 mt-1 line-clamp-1 leading-normal">
                           {latestMsg ? latestMsg.content : "No messages recorded"}
                         </p>
                         
-                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-[#E7E5E4]/70 text-[11px] font-mono leading-none">
-                          <span className={sess.liveTakeoverActive ? "text-amber-700 font-semibold" : "text-[#1C1917] font-semibold"}>
+                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-stone-100 text-[10px] text-stone-400">
+                          <span className={`font-medium ${sess.liveTakeoverActive ? "text-amber-700" : "text-emerald-700"}`}>
                             {sess.liveTakeoverActive ? t("supportLabel") : t("aiAutoLabel")}
                           </span>
-                          <span className="text-[#78716C]">
+                          <span>
                             {new Date(sess.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
@@ -2624,51 +2785,112 @@ export default function App() {
                 </div>
 
                 {/* CRM Live Dialogue monitor screen */}
-                <div className="md:col-span-2 space-y-4 flex flex-col justify-between min-h-[260px]">
+                <div className="md:col-span-2 space-y-4 flex flex-col justify-between min-h-[460px]">
                   
-                  <div className="p-4 bg-[#FAF8F5] border border-[#E7E5E4] rounded-2xl space-y-3 max-h-[220px] overflow-y-auto">
-                    
-                    {activeSession ? (
+                  {/* Messages stream */}
+                  <div
+                    ref={chatScrollRef}
+                    className="p-5 bg-stone-50/50 border border-stone-200/60 rounded-2xl space-y-3.5 max-h-[340px] overflow-y-auto"
+                  >
+                    {activeSession && activeSession.messages && activeSession.messages.length > 0 ? (
                       activeSession.messages.map((m, idx) => (
-                        <div key={idx} className="text-xs leading-relaxed">
-                          <span className={`font-semibold font-mono text-[11px] uppercase tracking-wide ${
-                            m.sender === "customer" ? "text-indigo-700" : m.sender === "owner" ? "text-amber-800" : "text-[#78716C]"
-                          }`}>
-                            {m.sender === "customer" ? "CLIENT" : m.sender === "owner" ? "SALES HUB" : "SYSTEM CANDY"}:
-                          </span>
-                          <span className="text-[#1C1917] ml-1.5 whitespace-pre-line">{m.content}</span>
+                        <div key={idx} className="text-xs">
+                          {m.sender === "system" ? (
+                            <div className="flex justify-center my-2">
+                              <span className="bg-stone-200/60 text-stone-600 text-[10px] px-3 py-1 rounded-full font-medium">
+                                {m.content}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className={`flex flex-col gap-1 ${m.sender === "owner" ? "items-end" : "items-start"}`}>
+                              <span className="text-[10px] text-stone-400 font-medium px-1">
+                                {m.sender === "customer"
+                                  ? activeSession.customerName || "Customer"
+                                  : m.sender === "owner"
+                                  ? "You (Store Owner)"
+                                  : "Candy AI"}
+                              </span>
+                              <div
+                                className={`rounded-2xl px-3.5 py-2.5 max-w-[85%] text-xs leading-relaxed ${
+                                  m.sender === "owner"
+                                    ? "bg-stone-900 text-stone-50 rounded-tr-xs"
+                                    : m.sender === "customer"
+                                    ? "bg-white border border-stone-200/70 text-stone-800 rounded-tl-xs shadow-2xs"
+                                    : "bg-stone-100/90 text-stone-700 rounded-tl-xs"
+                                }`}
+                              >
+                                <span className="whitespace-pre-line">{m.content}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     ) : (
-                      <div className="text-[#78716C] italic p-4 text-center text-xs font-sans">{t("noMessagesChosen")}</div>
+                      <div className="text-stone-400 italic py-12 text-center text-xs">
+                        {t("noMessagesChosen")}
+                      </div>
                     )}
                   </div>
 
-                  {/* Direct Owner Intervention replies */}
-                  <form onSubmit={handleSendOwnerMessage} className="space-y-3">
-                    <div className="flex items-center justify-between text-[11px] text-[#78716C] font-mono">
-                      <span>
-                        {t("activeModeLabel")} {activeSession?.liveTakeoverActive ? `${t("manualSupportOverrideLabel")}` : `${t("automatedBotActiveLabel")}`}
-                      </span>
-                      {activeSession?.liveTakeoverActive ? (
-                        <button
-                          type="button"
-                          onClick={() => handleReleaseToAi(activeSession.sessionId)}
-                          className="text-emerald-700 hover:text-emerald-800 font-semibold underline cursor-pointer"
-                        >
-                          {t("turnOnAiBotLabel")}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleTakeover(activeSession.sessionId)}
-                          className="text-amber-700 hover:text-amber-800 font-semibold underline cursor-pointer"
-                        >
-                          {t("switchToManualLabel")}
-                        </button>
-                      )}
+                  {/* Mode Banner & Switcher (Subdued, calm pill bar) */}
+                  {!activeSession?.liveTakeoverActive ? (
+                    <div className="px-4 py-2.5 bg-stone-50 border border-stone-200/60 rounded-2xl flex items-center justify-between text-xs text-stone-600 gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Candy AI is currently responding to this customer automatically.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleTakeover(activeSession.sessionId)}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-stone-900 hover:bg-stone-800 text-white cursor-pointer transition-colors shrink-0"
+                      >
+                        {t("switchToManualLabel")}
+                      </button>
                     </div>
+                  ) : (
+                    <div className="px-4 py-2.5 bg-amber-50/60 border border-amber-200/70 rounded-2xl flex items-center justify-between text-xs text-amber-900 gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <span>Personal VIP mode active. Candy AI is paused while you converse directly.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleReleaseToAi(activeSession.sessionId)}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-white hover:bg-amber-100/60 border border-amber-300/80 text-amber-900 cursor-pointer transition-colors shrink-0"
+                      >
+                        {t("turnOnAiBotLabel")}
+                      </button>
+                    </div>
+                  )}
 
+                  {/* Quick Canned Suggestions when Takeover is Active */}
+                  {activeSession?.liveTakeoverActive && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-stone-400 font-medium tracking-wide uppercase px-0.5">
+                        Suggested replies
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "မင်္ဂလာပါရှင့်! ၂ မျိုးလုံး stock ရှိပါတယ်ရှင် (Both in stock)",
+                          "ဟုတ်ကဲ့ ၂ မျိုးလုံးယူရင် 5% discount ပေးပါမယ်ရှင် (5% discount)",
+                          "KPay / WavePay လက်ခံပါတယ်ရှင် (KPay/WavePay accepted)",
+                          "အော်ဒါ confirm လုပ်ပေးရမလားရှင်? (Confirm order?)"
+                        ].map((chip, cIdx) => (
+                          <button
+                            key={cIdx}
+                            type="button"
+                            onClick={() => setOwnerReplyText(chip)}
+                            className="text-[11px] bg-white border border-stone-200/70 hover:border-stone-400 hover:bg-stone-50 text-stone-600 hover:text-stone-900 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Direct Owner Intervention replies */}
+                  <form onSubmit={handleSendOwnerMessage} className="pt-1">
                     <div className="flex gap-2 items-center">
                       <input
                         type="text"
@@ -2676,12 +2898,12 @@ export default function App() {
                         value={ownerReplyText}
                         onChange={(e) => setOwnerReplyText(e.target.value)}
                         placeholder={activeSession?.liveTakeoverActive ? t("ownerChatInputPlaceholder") : t("takeoverPlaceholder")}
-                        className="flex-1 bg-white border border-[#E7E5E4] rounded-full px-4 py-2.5 text-xs text-[#1C1917] disabled:opacity-50 focus:outline-none focus:border-[#0069FF]"
+                        className="flex-1 bg-stone-50 hover:bg-stone-100/60 border border-stone-200/70 rounded-full px-4 py-2.5 text-xs text-[#0A1B2A] placeholder:text-stone-400 disabled:opacity-40 disabled:hover:bg-stone-50 focus:outline-none focus:border-stone-400 focus:bg-white transition-colors"
                       />
                       <button
                         type="submit"
                         disabled={!activeSession?.liveTakeoverActive || !ownerReplyText.trim()}
-                        className="bg-[#1C1917] hover:bg-stone-850 disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-full text-xs cursor-pointer transition-all shrink-0 uppercase active:scale-[0.98] shadow-2xs"
+                        className="bg-stone-900 hover:bg-stone-800 disabled:opacity-30 text-white font-medium px-5 py-2.5 rounded-full text-xs cursor-pointer transition-colors shrink-0"
                       >
                         {t("sendMessageBtn")}
                       </button>

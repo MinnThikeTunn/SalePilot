@@ -56,6 +56,22 @@ export function TelegramSimulator({
     }
   }, [initialSession, isPublic]);
 
+  // Listen for realtime session updates (e.g. owner intervention from Merchant Hub)
+  useEffect(() => {
+    const handleSessionUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<TelegramSession>;
+      if (customEvent.detail) {
+        if (!session || session.sessionId === customEvent.detail.sessionId) {
+          setSession(customEvent.detail);
+        }
+      }
+    };
+    window.addEventListener("sales_brain_session_updated", handleSessionUpdated);
+    return () => {
+      window.removeEventListener("sales_brain_session_updated", handleSessionUpdated);
+    };
+  }, [session]);
+
   // Polling for public session updates
   useEffect(() => {
     if (!isPublic || !shopId) return;

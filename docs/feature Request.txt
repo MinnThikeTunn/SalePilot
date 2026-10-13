@@ -1,0 +1,1397 @@
+
+We should build this on your existing Sale Brain project rather than starting a separate system. Your existing product management, order tracking, Telegram sales bot, Smart Marketing, and Supabase database become the foundation.
+
+## 1. Product vision and system design
+
+[Bland AI Pricing 2026: Real Cost vs RevSquared](https://images.openai.com/static-rsc-4/cbEAVSwscLRJ6sZVMvc2n6kPdk0FyYhrlkZtzufnCqdHbFElisvxBMiXtDZWqncUyw9BVfQmMhiXvlHPfnD_89xXyaXIRGv8RmLSBWGuY8_QLhwAZzWKj6dbG-iPlOgG8VCHmx7XY172ljiFj3sAz6PLq1xuegY744x-aS_v7tk?purpose=inline)
+
+Owner — Business decision-maker
+
+Sets goals, defines restrictions, reviews proposals, approves external actions, and evaluates results.
+
+Sale Brain Team — AI orchestration
+
+Scout · Muse · Guardian · Echo · Commander
+
+Verified evidence
+
+Orders, products, inventory, inquiries, costs
+
+Business rules
+
+Margins, delivery, discounts, constraints
+
+Approval and execution layer
+
+Validate → preview → approve → execute once → record outcomes.
+
+### The complete business loop
+
+1
+
+Investigate
+
+Discover opportunities using real data.
+
+2
+
+Debate
+
+Compare proposals and challenge assumptions.
+
+3
+
+Simulate
+
+Evaluate profit, risk, and uncertainty.
+
+4
+
+Approve
+
+Let the owner select or edit a plan.
+
+5
+
+Execute
+
+Use existing Telegram and marketing services.
+
+6
+
+Learn
+
+Measure results against a baseline.
+
+Non-negotiable design decision: use one underlying LLM initially, with different agent roles, tools, and permissions. Use deterministic SQL and TypeScript for calculations and authorization. Add extra model calls only where they improve measured quality.
+
+## 2. The five agents and their responsibilities
+
+These are five distinct responsibilities, not five independent autonomous bots. Every agent produces structured output that the orchestrator can validate.
+
+[Magnifying glass icon in flat style. Search loupe on color background. Business analytic illustration. Vector design object for you project](https://images.openai.com/static-rsc-4/Aael0RKKBFGIBsaejWVXJB8RclfnfesR8KTVPv9jIxgWpVWWDUuN7tnUMDoz8bgu_mCcdkpJ-Gyjm8eJt-NFiwONnmsN0ic9c3PhtYh2pzUxPuWo4A1uaReXXGnxO4m0_84yPXGIjfZM8M9TAhrVafILuWpx58DrSJ1LKYROVRpMsUWGTQQn-RBvyVLee_Fd?purpose=inline)
+
+1\. Scout — Opportunity Hunter
+
+Finds potential opportunities and problems.
+
+- Detects unresolved inquiries and abandoned sales conversations.
+- Identifies best-selling and slow-moving products.
+- Flags stockout risks, sales declines, and changes in order patterns.
+- Identifies repeat customers and potential cross-selling opportunities.
+- Attaches evidence references, date ranges, and confidence limitations.
+
+Output: ranked opportunities, supporting evidence, missing data, and suggested investigations.
+
+[Idea Outline Filled Style Icon](https://images.openai.com/static-rsc-4/nD94-l7XcPBYH-PYHuh58qR6vYJXyfhM9RvP5dB9KHffTzuLhDrkJfBosqkpJXuEdqK0cda3gTaN0qrv0Ahm8ZpFDvSirINd9XFPbZ-0wGHPHOjO5E5KFOBXEEGgmMunScmdsuSKWpnLllHP_s3MjOzQK06SIRRTOQlGZPEgk02JcXWKzWzLV4fufKuktXsU?purpose=inline)
+
+2\. Muse — Campaign Creator
+
+Turns validated opportunities into actionable marketing proposals.
+
+- Creates campaign concepts, captions, offers, and creative briefs.
+- Suggests bundles and cross-sells using available products.
+- Reuses existing Smart Marketing and poster-generation functionality.
+- Creates campaign variants for controlled experiments.
+- Must use verified product names, prices, stock availability, and offer rules.
+
+Output: campaign proposal, target segment, creative assets or briefs, budget assumptions, and success metric.
+
+[Secure calculation pixel perfect line color icon](https://images.openai.com/static-rsc-4/BFq5iXgtmTmcksBfVk_fQJSTBo6R6Of4anns5zeBMjm5KwGZilWiEA_HD_h0d0BH2t2IkHmpnMS6zC7j39iSTIC1yUige5kDLW49pEwXIhM5XY-BeBF5jwDRVlZbFSJK4YeuAq_uB2gF-APi0QeYGhnaZkMLxMCiab1Zi8qTLn6Q17G_fU64ZcakxsysuByG?purpose=inline)
+
+3\. Guardian — Profit Protector
+
+Protects the business from financially unsafe recommendations.
+
+- Calculates unit economics and contribution margins.
+- Evaluates discounts, bundles, delivery costs, and campaign spending.
+- Enforces minimum-margin and discount policies.
+- Flags missing costs, uncertain attribution, and misleading forecasts.
+- Can veto or require revision of proposals that violate policy.
+
+Output: calculations, assumptions, policy violations, allowed offer limits, and warnings.
+
+[Unsupported client – Canva](https://images.openai.com/static-rsc-4/UZXC-kDYeMP8nE7cHhg-dxjE94xjq0G8jdpeJOYf0kxhtEw_xf4KXZxW5nnqLzT9DUkKNBRMLJ_U2x2qfeaNxJml9vYkZyygGU7JKxQWwxbGUy6ogCKr8hehZgwVm7Nd-mnmQ0VyuC6klTxqiebw4NLVjrkh9OcXGMQ-mIl-_oo?purpose=inline)
+
+4\. Echo — Customer Advocate
+
+Investigates customer friction using actual interactions.
+
+- Classifies explicit objections such as price, delivery, availability, and payment.
+- Detects unanswered inquiries and where conversations stop.
+- Compares conversation outcomes with completed orders.
+- Suggests improvements to sales scripts and FAQ content.
+- Distinguishes observed behavior from inferred reasons.
+
+Output: objection categories, counts, examples, evidence references, and suggested improvements.
+
+[Magic compass icon - Icoon.co](https://images.openai.com/static-rsc-4/zd18ruShlF-67OZMXYtS5jh9fjnWLW-8CSw1-SncYq8PYHT0SUyPETKmm6zv1KY2Dcj77bjvhrLFqkzX2BxYzyV8EOz-FWjX0b46zXHL40297-ntZwLISAUgF7I9E6t-lw0u00iW_JR2R6XBpFSGn-qHlUF4vQAxP4qdww-ZNPk?purpose=inline)
+
+5\. Commander — Strategy Lead
+
+Combines the findings into one coherent decision.
+
+- Prioritizes opportunities by impact, confidence, effort, and risk.
+- Compares conflicting proposals.
+- Rejects unsupported numerical claims.
+- Selects the best-supported plan—or explicitly recommends collecting more data.
+- Produces a decision card with actions, expected outcomes, limitations, and approval requirements.
+
+Output: a prioritized strategy, alternatives, trade-offs, and an owner approval request.
+
+### Agent interaction rules
+
+1. Scout and Echo investigate independently where useful.
+2. Guardian calculates financial constraints from trusted business data.
+3. Muse proposes campaigns using the opportunity and constraints.
+4. Guardian reviews each proposal; Muse revises proposals that violate constraints.
+5. Commander compares the surviving proposals and creates the final decision.
+6. A validation service checks every evidence reference and required field.
+7. Only the owner-approved, validated action can enter the execution system.
+
+Keep this as a bounded workflow, not an endless conversation. Set maximum agent iterations, model-call budgets, timeouts, and retry rules.
+
+## 3. Architecture and technology choices
+
+Keep the existing technology stack unless repository inspection reveals a concrete blocker.
+
+| Layer                 | Implementation                        | Responsibility                                     |
+| --------------------- | ------------------------------------- | -------------------------------------------------- |
+| Frontend              | React + TypeScript                    | Team Room, Sales Council, approvals, history       |
+| Database              | Supabase PostgreSQL                   | Business data, workflow state, evidence, decisions |
+| Authorization         | Supabase Auth + RLS                   | Shop isolation and role permissions                |
+| Backend               | Supabase Edge Functions              | Orchestration, validation, approvals, execution    |
+| Analytics             | SQL views/functions + TypeScript      | Accurate metrics, scoring, margin calculations     |
+| AI                    | Gemini through server-side calls      | Analysis, structured proposals, explanations       |
+| Existing integrations | Telegram and Smart Marketing services | Approved sales and campaign actions                |
+| Testing               | Unit, integration, RLS, end-to-end    | Correctness, safety, and business impact           |
+
+Please use suibale agent cration framework like langchain or something that will be competable with typescript.
+### Recommended service boundaries
+
+Do not put the entire feature into one giant Edge Function.
+
+```
+src/
+  features/
+    sales-team/
+      components/
+        TeamRoom.tsx
+        AgentRoster.tsx
+        OpportunityList.tsx
+        SalesCouncil.tsx
+        ProposalCard.tsx
+        ScenarioComparison.tsx
+        ApprovalPanel.tsx
+        DecisionHistory.tsx
+      hooks/
+        useTeamSessions.ts
+        useOpportunities.ts
+        usePendingApprovals.ts
+      types/
+        sales-team.ts
+      services/
+        sales-team-api.ts
+
+supabase/
+  functions/
+    team-start-session/
+    team-run-investigation/
+    team-build-proposals/
+    team-finalize-decision/
+    team-approve-action/
+    team-execute-action/
+    team-track-outcomes/
+    _shared/
+      agents/
+      analytics/
+      evidence/
+      validation/
+      policies/
+      execution/
+      schemas/
+
+  migrations/
+    <timestamp>_sales_team_core.sql
+    <timestamp>_sales_team_analytics.sql
+    <timestamp>_sales_team_rls.sql
+```
+
+Treat these names as a target structure, not instructions to recreate existing services blindly. Reuse the project's current Gemini client, shop authorization helpers, Telegram integration, and marketing functions.
+
+Important: browser code must never contain Gemini secrets, service-role keys, or other privileged credentials. The backend must establish the authenticated user and shop scope independently of client-supplied IDs.
+
+## 4. Data model and database implementation
+
+The database should maintain an auditable chain from source data to recommendation to outcome.
+
+Core relationships
+
+\#chatgpt-mermaid-\_r_17q\_{font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";font-size:16px;fill:rgb(237, 237, 237);}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#chatgpt-mermaid-\_r_17q\_ .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#chatgpt-mermaid-\_r_17q\_ .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#chatgpt-mermaid-\_r_17q\_ .error-icon{fill:rgb(48, 48, 48);}#chatgpt-mermaid-\_r_17q\_ .error-text{fill:rgb(237, 237, 237);stroke:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_17q\_ .edge-thickness-normal{stroke-width:1px;}#chatgpt-mermaid-\_r_17q\_ .edge-thickness-thick{stroke-width:3.5px;}#chatgpt-mermaid-\_r_17q\_ .edge-pattern-solid{stroke-dasharray:0;}#chatgpt-mermaid-\_r_17q\_ .edge-thickness-invisible{stroke-width:0;fill:none;}#chatgpt-mermaid-\_r_17q\_ .edge-pattern-dashed{stroke-dasharray:3;}#chatgpt-mermaid-\_r_17q\_ .edge-pattern-dotted{stroke-dasharray:2;}#chatgpt-mermaid-\_r_17q\_ .marker{fill:rgb(175, 175, 175);stroke:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_17q\_ .marker.cross{stroke:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_17q\_ svg{font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";font-size:16px;}#chatgpt-mermaid-\_r_17q\_ p{margin:0;}#chatgpt-mermaid-\_r_17q\_ .entityBox{fill:rgb(9, 23, 44);stroke:rgb(31, 78, 148);}#chatgpt-mermaid-\_r_17q\_ .relationshipLabelBox{fill:rgb(48, 48, 48);opacity:0.7;background-color:rgb(48, 48, 48);}#chatgpt-mermaid-\_r_17q\_ .relationshipLabelBox rect{opacity:0.5;}#chatgpt-mermaid-\_r_17q\_ .labelBkg{background-color:rgba(48, 48, 48, 0.5);}#chatgpt-mermaid-\_r_17q\_ .edgeLabel{background-color:rgb(0, 0, 0);}#chatgpt-mermaid-\_r_17q\_ .edgeLabel .label rect{fill:rgb(0, 0, 0);}#chatgpt-mermaid-\_r_17q\_ .edgeLabel .label text{fill:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_17q\_ .edgeLabel .label{fill:rgb(31, 78, 148);font-size:14px;}#chatgpt-mermaid-\_r_17q\_ .label{font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";color:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_17q\_ .edge-pattern-dashed{stroke-dasharray:8,8;}#chatgpt-mermaid-\_r_17q\_ .node rect,#chatgpt-mermaid-\_r_17q\_ .node circle,#chatgpt-mermaid-\_r_17q\_ .node ellipse,#chatgpt-mermaid-\_r_17q\_ .node polygon{fill:rgb(9, 23, 44);stroke:rgb(31, 78, 148);stroke-width:1px;}#chatgpt-mermaid-\_r_17q\_ .relationshipLine{stroke:rgb(175, 175, 175);stroke-width:1px;fill:none;}#chatgpt-mermaid-\_r_17q\_ .marker{fill:none!important;stroke:rgb(175, 175, 175)!important;stroke-width:1;}#chatgpt-mermaid-\_r_17q\_ [data-look=neo].labelBkg{background-color:rgba(48, 48, 48, 0.5);}#chatgpt-mermaid-\_r_17q\_ .node .neo-node{stroke:rgb(31, 78, 148);}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node rect,#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].cluster rect,#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node polygon{stroke:url(#chatgpt-mermaid-\_r_17q\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].swimlane.cluster rect{filter:none;}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node path{stroke:url(#chatgpt-mermaid-\_r_17q\_-gradient);stroke-width:1px;}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node .neo-line path{stroke:rgb(31, 78, 148);filter:none;}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node circle{stroke:url(#chatgpt-mermaid-\_r_17q\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].node circle .state-start{fill:#000000;}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].icon-shape .icon{fill:url(#chatgpt-mermaid-\_r_17q\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_17q\_ [data-look="neo"].icon-shape .icon-neo path{stroke:url(#chatgpt-mermaid-\_r_17q\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_17q\_ :root{--mermaid-font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";}SHOPSTEAM_SESSIONSTEAM_AGENT_RUNSTEAM_EVIDENCETEAM_PROPOSALSTEAM_DEBATESTEAM_DECISIONSTEAM_APPROVALSTEAM_EXPERIMENTSTEAM_OUTCOMESBUSINESS_MEMORYownscontainscitesproduceschallenged_bycreatesrequiresmay_launchmeasuresremembers
+
+All records must be scoped to the correct shop. Reuse your existing shop table and its actual key rather than creating a duplicate shops table.
+
+### 4.1 Tables to create
+
+| Table              | Purpose                                   | Important fields                                                                      |
+| ------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------- |
+| `team_sessions`    | A single Sales Council investigation      | `shop_id`, `status`, `goal`, `date_range`, `created_by`                               |
+| `team_agent_runs`  | Each agent's execution record             | `session_id`, `agent_key`, `status`, `input_hash`, `model`, `token_usage`             |
+| `team_evidence`    | Traceable findings                        | `session_id`, `source_type`, `source_id`, `metric_key`, `snapshot`, `observed_at`     |
+| `team_proposals`   | Individual strategy proposals             | `agent_run_id`, `title`, `assumptions`, `estimated_impact`, `risks`, `status`         |
+| `team_debates`     | Structured objections and revisions       | `proposal_id`, `challenger`, `objection_code`, `evidence_refs`, `resolution`          |
+| `team_decisions`   | Final strategy and approved action drafts | `session_id`, `summary`, `ranked_proposals`, `decision_payload`, `status`             |
+| `team_approvals`   | Owner approval history                    | `decision_id`, `approved_by`, `approved_payload_hash`, `status`, `approved_at`        |
+| `team_experiments` | Controlled marketing or sales tests       | `decision_id`, `hypothesis`, `cohort_rules`, `start_at`, `end_at`, `success_metric`   |
+| `team_outcomes`    | Actual results                            | `experiment_id`, `metric_key`, `baseline_value`, `actual_value`, `measurement_window` |
+| `business_memory`  | Verified lessons and preferences          | `shop_id`, `memory_type`, `content`, `source_refs`, `confidence`, `expires_at`        |
+
+Additional operational tables are useful as the product matures:
+
+- `team_action_jobs`: execution status, idempotency key, retry count, next attempt, and error classification.
+- `campaign_attributions`: campaign recipient or attribution token, linked inquiry/order, attribution method, and confidence.
+- `shop_business_policies`: owner-configurable minimum margin, discount ceilings, approved channels, and other constraints.
+- `shop_product_costs`: verified cost history, effective dates, and source of each cost value, if the current product schema cannot safely hold it.
+
+Do not store complete customer chat histories in the evidence table. Reference authorized source records and retain only the minimum snapshot needed to explain a decision. Apply retention and deletion rules to personal data.
+
+### 4.2 Database conventions
+
+Use UUID primary keys, foreign keys, `created_at`/`updated_at`, indexes on common lookup fields, and database constraints for status values. For tables containing tenant-owned records, include `shop_id` and use composite foreign keys where practical to prevent cross-shop references.
+
+An illustrative migration for the workflow core:
+
+```
+create extension if not exists pgcrypto;
+
+create table public.team_sessions (
+  id uuid primary key default gen_random_uuid(),
+  shop_id uuid not null references public.shops(id),
+  created_by uuid not null references auth.users(id),
+  goal text not null,
+  status text not null default 'queued'
+    check (status in (
+      'queued', 'investigating', 'debating',
+      'awaiting_approval', 'executing',
+      'completed', 'failed', 'cancelled'
+    )),
+  date_range_start timestamptz,
+  date_range_end timestamptz,
+  context_snapshot jsonb not null default '{}'::jsonb,
+  error_code text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint valid_session_range check (
+    date_range_end is null
+    or date_range_start is null
+    or date_range_end >= date_range_start
+  ),
+  unique (id, shop_id)
+);
+
+create index team_sessions_shop_created_idx
+  on public.team_sessions (shop_id, created_at desc);
+
+create table public.team_agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  shop_id uuid not null references public.shops(id),
+  session_id uuid not null,
+  agent_key text not null
+    check (agent_key in (
+      'scout', 'muse', 'guardian', 'echo', 'commander'
+    )),
+  status text not null default 'queued'
+    check (status in (
+      'queued', 'running', 'completed', 'failed', 'skipped'
+    )),
+  input_hash text,
+  output_json jsonb,
+  model_name text,
+  token_usage jsonb not null default '{}'::jsonb,
+  error_code text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  foreign key (session_id, shop_id)
+    references public.team_sessions(id, shop_id),
+  unique (id, shop_id)
+);
+
+create index team_agent_runs_session_idx
+  on public.team_agent_runs (session_id, created_at);
+```
+
+Schema adaptation required: this example assumes `public.shops(id)` and the existing Supabase Auth setup use UUIDs. Inspect the actual repository migrations before applying it. Match the real shop primary key, existing ownership model, and database conventions.
+
+Apply the same `shop_id` discipline to the remaining tables. Add the full foreign-key structure, constraints, and RLS policies in migrations rather than relying on application filters.
+
+### 4.3 Evidence storage
+
+Each evidence record should answer: What claim is being made, what data supports it, and when was that data observed?
+
+Recommended fields:
+
+```
+type EvidenceRecord = {
+  id: string;
+  shopId: string;
+  sessionId: string;
+  sourceType:
+    | "order"
+    | "product"
+    | "inventory"
+    | "inquiry"
+    | "campaign"
+    | "analytics";
+  sourceId?: string;
+  metricKey: string;
+  value?: number | string | boolean | null;
+  unit?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  observedAt: string;
+  sourceUpdatedAt?: string;
+  snapshot?: Record<string, unknown>;
+  quality: {
+    coverage: number | null;
+    missingFields: string[];
+    limitations: string[];
+  };
+};
+```
+
+Keep raw evidence separate from AI interpretations. A model should not be able to turn a guessed fact into a verified metric merely by repeating it.
+
+## 5. Analytics and business rules
+
+This is one of the most important parts of the product. If the analytics are wrong, a more advanced model will only produce more convincing mistakes.
+
+### 5.1 Build a deterministic analytics layer first
+
+Create reusable SQL functions or views for:
+
+- Daily and weekly gross sales.
+- Completed, cancelled, and refunded orders.
+- Average order value.
+- Product sales and stock movement.
+- Inquiry-to-order conversion.
+- Unresolved inquiries by age.
+- Repeat-customer rate, where customer identity is reliable.
+- Campaign-attributed orders and revenue.
+- Estimated contribution margin.
+- Stockout and low-stock risk.
+- Data freshness and coverage.
+
+Use the existing source tables. Define which order statuses count as revenue and how refunds, cancellations, delivery charges, and discounts are treated. Do not silently equate order value with collected cash or profit.
+
+### 5.2 Essential formulas
+
+Average order value
+
+\\[ AOV = \frac{\text{Net sales value}}{\text{Number of eligible completed orders}} \\]
+
+Contribution per order
+
+\\[ \text{Contribution} = \text{Net revenue} -\text{Product costs} -\text{Variable delivery costs} -\text{Other variable costs} \\]
+
+Contribution margin percentage
+
+\\[ \text{Margin \\%} = \frac{\text{Contribution}}{\text{Net revenue}}\times100 \\]
+
+If product costs or other required costs are missing, return `unknown` for the affected calculation. Never substitute zero and claim the business is profitable.
+
+Inquiry conversion rate
+
+\\[ \text{Conversion rate} = \frac{\text{Eligible inquiries linked to completed orders}} {\text{Eligible inquiries}}\times100 \\]
+
+Use a defined attribution window and avoid counting one customer or order multiple times. Report unmatched orders and attribution uncertainty separately.
+
+### 5.3 Opportunity scoring
+
+Use a transparent score to help rank opportunities, not to pretend that future outcomes are certain.
+
+For a first version, normalize four dimensions to a 0–100 scale:
+
+- Impact: likely business importance.
+- Confidence: strength and completeness of evidence.
+- Urgency: how soon action is required.
+- Feasibility: ability to act with available resources.
+
+A starting score:
+
+\\[ S = 0.40I + 0.30C + 0.15U + 0.15F \\]
+
+Here, \\(I,C,U,F\\) are normalized scores for impact, confidence, urgency, and feasibility. The weights are initial product assumptions; calibrate them against owner feedback and measured outcomes.
+
+Add hard gates:
+
+- Missing critical evidence → label as needs investigation.
+- Violates business policy → block the proposed action.
+- Insufficient data → lower confidence and explain why.
+- Duplicate active opportunity → merge or suppress.
+- Low-impact, high-effort recommendation → deprioritize.
+
+Store the component scores and explanations. The model can describe the opportunity, but deterministic code should calculate the final score.
+
+### 5.4 Stockout risk
+
+Estimate stockout risk only if the available inventory and sales history support it.
+
+A simple first model:
+
+\\[ \text{Estimated days of stock} = \frac{\text{Current available stock}} {\text{Average daily units sold}} \\]
+
+Compare estimated days of stock against supplier lead time and a safety-stock policy. If the sales history is too short, intermittent, or missing, show insufficient evidence instead of a precise risk probability.
+
+### 5.5 Analytics API contract
+
+Every metric should return both a value and the context needed to interpret it.
+
+```
+type MetricResult = {
+  metricKey: string;
+  value: number | null;
+  unit: string;
+  periodStart: string;
+  periodEnd: string;
+  calculatedAt: string;
+  coverage: number | null;
+  sourceCount: number;
+  limitations: string[];
+  formulaVersion: string;
+};
+```
+
+Store formula versions so that later changes in business definitions do not silently rewrite the meaning of old decisions.
+
+## 6. AI contracts and evidence validation
+
+Never allow each agent to return arbitrary prose that downstream code must guess how to interpret.
+
+Use structured outputs and validate them at runtime with a schema library such as Zod.
+
+### 6.1 Proposal contract
+
+```
+type AgentProposal = {
+  agent: "scout" | "muse" | "guardian" | "echo";
+  title: string;
+  hypothesis: string;
+  evidenceRefs: string[];
+  assumptions: string[];
+  estimatedImpact: {
+    metric: string;
+    low?: number;
+    high?: number;
+    unit: string;
+    basis: "observed" | "scenario" | "forecast";
+  };
+  risks: string[];
+  missingData: string[];
+  recommendedAction: string;
+  requiresOwnerApproval: true;
+};
+```
+
+Validation rules:
+
+1. Every `evidenceRef` must resolve to an authorized record from the current shop and session.
+2. Numeric claims must match stored analytics or be explicitly labeled as assumptions or forecasts.
+3. Forecasts must state the assumptions and measurement period.
+4. No profitability claims when required cost inputs are unknown.
+5. A recommendation must identify risks and missing data.
+6. Model-generated action descriptions must never be treated as executable instructions.
+
+### 6.2 Final decision contract
+
+```
+type StrategyDecision = {
+  title: string;
+  executiveSummary: string;
+  primaryProposalId: string | null;
+  alternatives: Array<{
+    proposalId: string;
+    reason: string;
+    tradeoffs: string[];
+  }>;
+  opportunityScore: number | null;
+  scoreBreakdown: {
+    impact: number;
+    confidence: number;
+    urgency: number;
+    feasibility: number;
+  } | null;
+  evidenceRefs: string[];
+  assumptions: string[];
+  risks: string[];
+  missingData: string[];
+  nextActions: Array<{
+    type:
+      | "draft_follow_up"
+      | "draft_campaign"
+      | "create_bundle"
+      | "inventory_review"
+      | "collect_more_data";
+    description: string;
+    requiresApproval: true;
+  }>;
+  status: "ready_for_review" | "needs_more_data";
+};
+```
+
+In production, validate enum values, numeric ranges, field lengths, and references. The `nextActions` structure describes permitted action types; the executor must still construct a trusted action payload from server-validated records.
+
+### 6.3 Prevent fabricated evidence
+
+Use a separate validation service between the model and the user interface.
+
+- Check that evidence IDs exist and belong to the current shop.
+- Verify metrics against database results.
+- Detect stale product prices, inventory, and delivery rates.
+- Reject malformed outputs and retry once with schema errors.
+- If validation fails again, return a transparent failure or partial result.
+- Record model, prompt version, schema version, and validation outcome.
+
+The UI should distinguish observed fact, AI interpretation, scenario estimate, and forecast visually and in text.
+
+## 7. The Sales Council orchestration workflow
+
+The orchestrator is the core of Sale Brain Team. It decides which agent runs, what data each agent may access, how proposals are reviewed, and when the session can move forward.
+
+### 7.1 Workflow state machine
+
+\#chatgpt-mermaid-\_r_196\_{font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";font-size:16px;fill:rgb(237, 237, 237);}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#chatgpt-mermaid-\_r_196\_ .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#chatgpt-mermaid-\_r_196\_ .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#chatgpt-mermaid-\_r_196\_ .error-icon{fill:rgb(48, 48, 48);}#chatgpt-mermaid-\_r_196\_ .error-text{fill:rgb(237, 237, 237);stroke:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ .edge-thickness-normal{stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .edge-thickness-thick{stroke-width:3.5px;}#chatgpt-mermaid-\_r_196\_ .edge-pattern-solid{stroke-dasharray:0;}#chatgpt-mermaid-\_r_196\_ .edge-thickness-invisible{stroke-width:0;fill:none;}#chatgpt-mermaid-\_r_196\_ .edge-pattern-dashed{stroke-dasharray:3;}#chatgpt-mermaid-\_r_196\_ .edge-pattern-dotted{stroke-dasharray:2;}#chatgpt-mermaid-\_r_196\_ .marker{fill:rgb(175, 175, 175);stroke:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_196\_ .marker.cross{stroke:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_196\_ svg{font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";font-size:16px;}#chatgpt-mermaid-\_r_196\_ p{margin:0;}#chatgpt-mermaid-\_r_196\_ .label{font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";color:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ .cluster-label text{fill:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ .cluster-label span{color:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ .cluster-label span p{background-color:transparent;}#chatgpt-mermaid-\_r_196\_ .label text,#chatgpt-mermaid-\_r_196\_ span{fill:rgb(237, 237, 237);color:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ .node rect,#chatgpt-mermaid-\_r_196\_ .node circle,#chatgpt-mermaid-\_r_196\_ .node ellipse,#chatgpt-mermaid-\_r_196\_ .node polygon,#chatgpt-mermaid-\_r_196\_ .node path{fill:rgb(9, 23, 44);stroke:rgb(31, 78, 148);stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .rough-node .label text,#chatgpt-mermaid-\_r_196\_ .node .label text,#chatgpt-mermaid-\_r_196\_ .image-shape .label,#chatgpt-mermaid-\_r_196\_ .icon-shape .label{text-anchor:middle;}#chatgpt-mermaid-\_r_196\_ .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .rough-node .label,#chatgpt-mermaid-\_r_196\_ .node .label,#chatgpt-mermaid-\_r_196\_ .image-shape .label,#chatgpt-mermaid-\_r_196\_ .icon-shape .label{text-align:center;}#chatgpt-mermaid-\_r_196\_ .node.clickable{cursor:pointer;}#chatgpt-mermaid-\_r_196\_ .root .anchor path{fill:rgb(175, 175, 175)!important;stroke-width:0;stroke:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_196\_ .arrowheadPath{fill:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_196\_ .edgePath .path{stroke:rgb(175, 175, 175);stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .flowchart-link{stroke:rgb(175, 175, 175);fill:none;}#chatgpt-mermaid-\_r_196\_ .edgeLabel{background-color:rgb(0, 0, 0);text-align:center;}#chatgpt-mermaid-\_r_196\_ .edgeLabel p{background-color:rgb(0, 0, 0);}#chatgpt-mermaid-\_r_196\_ .edgeLabel rect{opacity:0.5;background-color:rgb(0, 0, 0);fill:rgb(0, 0, 0);}#chatgpt-mermaid-\_r_196\_ .labelBkg{background-color:rgba(0, 0, 0, 0.5);}#chatgpt-mermaid-\_r_196\_ .cluster rect{fill:rgb(48, 48, 48);stroke:rgba(255, 255, 255, 0.15);stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .cluster text{fill:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ .cluster span{color:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";font-size:12px;background:rgb(48, 48, 48);border:1px solid rgba(255, 255, 255, 0.15);border-radius:2px;pointer-events:none;z-index:100;}#chatgpt-mermaid-\_r_196\_ .flowchartTitleText{text-anchor:middle;font-size:18px;fill:rgb(237, 237, 237);}#chatgpt-mermaid-\_r_196\_ rect.text{fill:none;stroke-width:0;}#chatgpt-mermaid-\_r_196\_ .icon-shape,#chatgpt-mermaid-\_r_196\_ .image-shape{background-color:rgb(0, 0, 0);text-align:center;}#chatgpt-mermaid-\_r_196\_ .icon-shape p,#chatgpt-mermaid-\_r_196\_ .image-shape p{background-color:rgb(0, 0, 0);padding:2px;}#chatgpt-mermaid-\_r_196\_ .icon-shape .label rect,#chatgpt-mermaid-\_r_196\_ .image-shape .label rect{opacity:0.5;background-color:rgb(0, 0, 0);fill:rgb(0, 0, 0);}#chatgpt-mermaid-\_r_196\_ .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#chatgpt-mermaid-\_r_196\_ .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#chatgpt-mermaid-\_r_196\_ .node .neo-node{stroke:rgb(31, 78, 148);}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node rect,#chatgpt-mermaid-\_r_196\_ [data-look="neo"].cluster rect,#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node polygon{stroke:url(#chatgpt-mermaid-\_r_196\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].swimlane.cluster rect{filter:none;}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node path{stroke:url(#chatgpt-mermaid-\_r_196\_-gradient);stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node .neo-line path{stroke:rgb(31, 78, 148);filter:none;}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node circle{stroke:url(#chatgpt-mermaid-\_r_196\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].node circle .state-start{fill:#000000;}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].icon-shape .icon{fill:url(#chatgpt-mermaid-\_r_196\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_196\_ [data-look="neo"].icon-shape .icon-neo path{stroke:url(#chatgpt-mermaid-\_r_196\_-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#chatgpt-mermaid-\_r_196\_ .node text{font-size:14px;font-weight:600;letter-spacing:normal;fill:rgb(153, 206, 255);}#chatgpt-mermaid-\_r_196\_ .edgeLabels text{font-size:13px;font-weight:600;letter-spacing:-0.08px;fill:rgb(153, 206, 255);}#chatgpt-mermaid-\_r_196\_ .node tspan[font-weight="normal"],#chatgpt-mermaid-\_r_196\_ .edgeLabels tspan[font-weight="normal"]{font-weight:600;}#chatgpt-mermaid-\_r_196\_ .edgeLabel .label rect{opacity:1;rx:13px;ry:13px;fill:rgb(0, 14, 26);stroke:rgb(26, 62, 95);stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .node rect,#chatgpt-mermaid-\_r_196\_ .node circle,#chatgpt-mermaid-\_r_196\_ .node ellipse,#chatgpt-mermaid-\_r_196\_ .node polygon,#chatgpt-mermaid-\_r_196\_ .node path{fill:rgb(0, 40, 77);stroke:rgba(255, 255, 255, 0.1);stroke-width:1px;}#chatgpt-mermaid-\_r_196\_ .node rect{rx:16px;ry:16px;}#chatgpt-mermaid-\_r_196\_ .node.mermaid-decision .label-container{fill:rgb(0, 14, 26);stroke:rgb(26, 62, 95);stroke-dasharray:2,2;}#chatgpt-mermaid-\_r_196\_ .edgePaths .flowchart-link{stroke:rgb(175, 175, 175);stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;}#chatgpt-mermaid-\_r_196\_ .marker{fill:rgb(175, 175, 175);stroke:rgb(175, 175, 175);}#chatgpt-mermaid-\_r_196\_ :root{--mermaid-font-family:-apple-system-body,ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";}Owner starts investigationCreate persistent sessionLoad shop policies andanalyticsScout investigatesopportunitiesEcho investigates customerfrictionValidate evidenceGuardian calculates constraintsMuse drafts proposalsGuardian reviews proposalsPolicy compliant?Revise or reject proposalCommander comparesproposalsValidate final decisionSufficient evidence?Request more dataAwait owner approvalOwner decisionRecord rejectionValidate edited actionCreate immutable approvedactionExecute idempotentlyTrack outcomesUpdate verified businessmemoryNoYesNoYesRejectEditApprove
+
+Set maximum revision rounds—two is a sensible starting point. If agents cannot agree or evidence remains insufficient, Commander should explain the disagreement and ask the owner for a decision.
+
+### 7.2 Session creation
+
+The frontend submits a goal such as:
+
+> Find ways to recover lost sales and improve profit over the last 30 days.
+
+The backend should:
+
+1. Authenticate the user.
+2. Resolve the shop from trusted membership records.
+3. Validate the goal and requested date range.
+4. Load current shop policies and available analytics.
+5. Create a persistent `team_sessions` record.
+6. Queue or start the workflow.
+7. Return the session ID and current status.
+
+Do not let a frontend user supply an arbitrary `shop_id` and rely on that value for authorization.
+
+### 7.3 Agent runner interface
+
+Use one shared agent runner with different configurations.
+
+```
+type AgentContext = {
+  sessionId: string;
+  shopId: string;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  evidenceRefs: string[];
+  policySnapshot: Record<string, unknown>;
+};
+
+interface SalesAgent<TOutput> {
+  readonly key:
+    | "scout"
+    | "muse"
+    | "guardian"
+    | "echo"
+    | "commander";
+
+  run(context: AgentContext): Promise<TOutput>;
+}
+```
+
+Implement the shared runner with these responsibilities:
+
+- Load only permitted evidence.
+- Build the role-specific prompt.
+- Call Gemini server-side.
+- Parse structured output.
+- Validate the output.
+- Persist the run and usage.
+- Return a typed result or a typed failure.
+
+Guardian should use deterministic calculations for financial checks. The LLM may explain the calculations, but it must not override them.
+
+### 7.4 Reliable background processing
+
+Edge Functions can time out or be retried, so do not assume a single request will complete an entire council session.
+
+- Persist every stage and its result.
+- Make agent runs resumable.
+- Use a queue or database-backed job runner with a lease/claim mechanism.
+- Use unique stage keys to prevent duplicate work.
+- Store retry count, last error, and next-attempt time.
+- Make each transition atomic where practical.
+- Distinguish transient errors from permanent validation failures.
+- Resume interrupted sessions without repeating completed work.
+
+For a first implementation, a Postgres-backed job table and a worker function are sufficient if concurrency and claiming are handled correctly. Introduce a more elaborate queue only if actual workload requires it.
+
+## 8. The Sales War Room UI
+
+Build the user interface around business decisions rather than around AI chat messages.
+
+### 8.1 Team Room
+
+The home page should answer five questions immediately:
+
+- What is happening in my business?
+- Which opportunities deserve attention?
+- What has the team discovered?
+- What needs my approval?
+- What happened after my previous decisions?
+
+Recommended layout:
+
+Sale Brain Team
+
+Illustrative layout — values below are not live shop data.
+
+Example
+
+Opportunities
+
+# 08
+
+Decisions
+
+# 03
+
+Data quality
+
+# Review
+
+Priority opportunities
+
+Unresolved customer inquiries
+
+Investigate eligible Telegram inquiries and determine whether follow-up is appropriate.
+
+Profit and inventory review
+
+Check available cost and stock data before suggesting promotions.
+
+Pending owner decisions
+
+Review proposals, edit action details, or reject them.
+
+### 8.2 Sales Council page
+
+Each decision card should contain:
+
+1. The business problem.
+2. The opportunity score and component breakdown.
+3. Evidence and date ranges.
+4. What each agent recommends.
+5. What the agents disagree about.
+6. Financial and operational risks.
+7. Alternative strategies.
+8. A clear next action.
+
+Show the structured debate as expandable evidence-backed objections—not a long transcript of models talking to one another.
+
+### 8.3 Action Center
+
+Create a dedicated action review screen. For each proposed action, show:
+
+- Action type and destination channel.
+- Exact message, offer, or campaign content.
+- Product, price, and stock validation.
+- Recipient or audience selection criteria.
+- Estimated cost and expected metric, where supported.
+- Risks and required approvals.
+- Edit, approve, reject, and cancel controls.
+- Execution status and actual outcome.
+
+Owner approval is required for every external action. This includes sending a customer follow-up, launching a campaign, publishing content, or changing a live offer.
+
+### 8.4 Business Memory page
+
+Allow owners to view, correct, and delete stored lessons.
+
+Examples:
+
+- Minimum acceptable contribution margin.
+- Preferred language and tone.
+- Which offers were approved.
+- Previous campaign outcomes.
+- Corrected customer-objection classifications.
+- Strategies that the owner rejected and the stated reason.
+
+Separate permanent business policies from temporary observations. A previous campaign failure should not automatically become a permanent rule.
+
+### 8.5 Data quality page
+
+Display missing costs, stale prices, incomplete order histories, unmatched inquiries, and other gaps that limit the quality of recommendations.
+
+This is important because a business owner needs to understand not only what Sale Brain recommends, but also how much confidence the available data deserves.
+
+## 9. Approval, execution, and safety
+
+This layer must be built before automated execution is enabled.
+
+### 9.1 Separate proposals from executable actions
+
+An AI proposal is untrusted input. It is not an instruction for the backend to execute.
+
+The safe flow is:
+
+1. The model proposes an action.
+2. The backend validates its type and fields.
+3. The owner sees a preview.
+4. The owner approves a specific version of the action.
+5. The backend records the approval and a hash of the approved payload.
+6. The executor reloads current data and validates the action again.
+7. The action is executed once, with retry protection.
+8. The result is written to an audit log.
+
+If a product price, stock level, recipient list, or campaign changes after approval, invalidate the approval or request confirmation again for the changed payload.
+
+### 9.2 Idempotent execution
+
+Each executable action needs a unique idempotency key. Retrying a job must not send the same campaign or follow-up twice.
+
+```
+type ApprovedAction = {
+  id: string;
+  shopId: string;
+  decisionId: string;
+  actionType:
+    | "telegram_follow_up"
+    | "marketing_campaign";
+  payload: Record<string, unknown>;
+  payloadHash: string;
+  approvedBy: string;
+  approvedAt: string;
+  idempotencyKey: string;
+};
+```
+
+The server must derive `approvedBy` from the authenticated approval record, not trust it from the frontend. Restrict action types to an allowlist and validate each payload with a separate schema.
+
+### 9.3 Telegram-specific safeguards
+
+For inquiry recovery:
+
+- Use actual inquiry timestamps and conversation state.
+- Exclude customers who already ordered, are actively chatting, or have opted out, where those states are available.
+- Apply shop-configured follow-up limits and a cooldown.
+- Generate a draft before sending.
+- Let the owner inspect the recipient and exact message.
+- Use a unique action key to prevent duplicate delivery attempts.
+- Record send success, delivery status if available, replies, and attributed orders.
+- Never claim a message was delivered merely because the API accepted the request.
+
+For marketing:
+
+- Validate the offer against Guardian's financial constraints.
+- Recheck product availability and price.
+- Require approval of the exact audience, copy, and offer.
+- Track the resulting campaign through existing marketing services.
+
+### 9.4 Security checklist
+
+- RLS on every tenant-owned table.
+- Verify shop membership in every privileged Edge Function.
+- No service-role key or Gemini key in frontend bundles.
+- Restrict agent data access by role.
+- Prevent cross-shop evidence references.
+- Treat customer messages and product descriptions as untrusted content, not instructions.
+- Keep prompts separate from retrieved user data.
+- Apply rate limits, token budgets, and maximum session costs.
+- Audit approvals, rejections, edits, and execution results.
+- Avoid storing unnecessary personally identifiable information in prompts or AI logs.
+
+## 10. Campaign attribution and outcome tracking
+
+This is what turns Sale Brain from a recommendation generator into a system that can learn which decisions actually work.
+
+### 10.1 Add campaign-to-sale tracking
+
+Extend the existing campaign model rather than creating a parallel marketing system.
+
+Capture, where supported:
+
+- Campaign ID and version.
+- Target audience or eligible recipient set.
+- Send attempts and successful sends.
+- Clicks or tracked visits.
+- Resulting inquiries.
+- Orders linked to the campaign.
+- Revenue, refunds, discounts, and contribution.
+- Attribution method and uncertainty.
+- Start and end times.
+
+For Telegram, campaign-specific links or codes may help connect a campaign to later inquiries and orders. For customers who order without a tracked link or code, classify the relationship as unmatched or uncertain rather than claiming attribution.
+
+### 10.2 Measure outcomes correctly
+
+Distinguish these measures:
+
+| Measure            | What it tells you                                                  |
+| ------------------ | ------------------------------------------------------------------ |
+| Sent messages      | Execution volume                                                   |
+| Reply rate         | Customer engagement                                                |
+| Inquiry conversion | Sales funnel effectiveness                                         |
+| Attributed revenue | Revenue linked under a stated attribution rule                     |
+| Contribution       | Financial return after defined variable costs                      |
+| Incremental lift   | Estimated improvement compared with a suitable baseline or control |
+
+Attributed revenue is not automatically incremental revenue. Some customers would have purchased anyway.
+
+### 10.3 Controlled experiments
+
+When feasible, use a randomized holdout group to compare a new strategy with business-as-usual. Randomization must respect consent, shop policy, and customer communication limits.
+
+For smaller shops without enough data, use simpler before/after comparisons, clearly label their limitations, and avoid strong causal claims.
+
+Record the hypothesis, selected metric, measurement window, audience rules, and analysis method before launching the experiment. This reduces the temptation to choose a favorable metric after seeing the results.
+
+## 11. Business Memory and learning
+
+Do not train a new model on every interaction. Initially, learning should mean reusing verified business knowledge and measured outcomes.
+
+### Memory categories
+
+Policies and preferences
+
+Owner-confirmed rules such as discount limits, preferred tone, and approval requirements.
+
+Verified facts
+
+Confirmed product details, business context, and validated operating constraints.
+
+Experiment results
+
+Which tested campaign or recovery strategy performed well under stated conditions.
+
+Corrections
+
+Owner corrections to classifications or recommendations, stored with their source and scope.
+
+For every memory item, store its source, verification status, timestamp, scope, and expiry if applicable. A campaign result should not be generalized to every product, season, or customer segment.
+
+At the start of a council session, retrieve only relevant memory. Do not send the entire history of every decision to Gemini.
+
+## 12. API and backend implementation plan
+
+Create a small, explicit API surface. Reuse the project's existing function naming and routing conventions where possible.
+
+| Operation         | Input                                | Result                                 |
+| ----------------- | ------------------------------------ | -------------------------------------- |
+| Start council     | Goal, date range                     | Session ID and status                  |
+| Get session       | Session ID                           | Status, progress, summary              |
+| Get evidence      | Session ID, filters                  | Authorized evidence and limitations    |
+| Get proposals     | Session ID                           | Structured proposals and challenges    |
+| Finalize decision | Session ID                           | Validated decision draft               |
+| Approve decision  | Decision ID, approved action version | Approval record                        |
+| Reject decision   | Decision ID, reason                  | Rejection record                       |
+| Execute action    | Approved action ID                   | Execution status                       |
+| Cancel action     | Action ID                            | Cancellation result, if still possible |
+| Get outcomes      | Decision or experiment ID            | Observed results and attribution       |
+| Manage memory     | Memory ID and requested change       | Updated memory or deletion result      |
+
+The frontend should call these operations through your existing Supabase client or established service layer. Keep privileged operations on the server.
+
+### Suggested backend modules
+
+`analytics/`
+
+- `sales-metrics.ts`
+- `inventory-metrics.ts`
+- `inquiry-metrics.ts`
+- `campaign-metrics.ts`
+- `profit-calculator.ts`
+- `opportunity-scoring.ts`
+- `data-quality.ts`
+
+`agents/`
+
+- `scout.ts`
+- `muse.ts`
+- `guardian.ts`
+- `echo.ts`
+- `commander.ts`
+- `agent-runner.ts`
+
+`evidence/`
+
+- `evidence-resolver.ts`
+- `evidence-validator.ts`
+- `snapshot-builder.ts`
+
+`policies/`
+
+- `shop-policy-loader.ts`
+- `approval-validator.ts`
+- `financial-guardrails.ts`
+- `action-policy.ts`
+
+`execution/`
+
+- `action-registry.ts`
+- `action-queue.ts`
+- `telegram-executor.ts`
+- `campaign-executor.ts`
+- `idempotency.ts`
+- `outcome-tracker.ts`
+
+`validation/`
+
+- `proposal-schema.ts`
+- `decision-schema.ts`
+- `action-schema.ts`
+- `analytics-schema.ts`
+
+This division makes the system easier to test and gives coding agents clear boundaries.
+
+## 13. Detailed implementation phases
+
+I recommend building in eight phases. Each phase must have working acceptance criteria before the next phase begins.
+
+### Phase 0 — Repository audit and domain mapping
+
+Foundation · Do this first
+
+Tasks
+
+- Inspect all migrations and existing product, order, inventory, shop, customer, and campaign schemas.
+- Trace how shop membership and authorization work.
+- Trace the current Gemini client, Smart Marketing service, Telegram message flow, and order lifecycle.
+- Identify which analytics are already available.
+- Document missing cost fields, conversation identifiers, campaign identifiers, and outcome tracking.
+- Map every planned integration to an existing function or a new module.
+
+Acceptance criteria
+
+- A domain map identifies the existing source of truth for each business entity.
+- A schema-gap report lists exactly what needs to change.
+- No duplicate product, order, or campaign system is introduced.
+
+### Phase 1 — Data foundation and analytics
+
+Build the trustworthy evidence layer
+
+Tasks
+
+- Add core workflow and audit tables.
+- Add RLS and shop-scoped foreign keys.
+- Build sales, product, inventory, and inquiry metrics.
+- Define financial formulas and order eligibility rules.
+- Implement data freshness and coverage checks.
+- Implement opportunity scoring with transparent component scores.
+
+Acceptance criteria
+
+- Metric results match independently calculated test fixtures.
+- Missing data produces explicit unknowns, not fabricated zeros.
+- Cross-shop reads and writes are rejected.
+- Every metric includes its period and calculation time.
+
+### Phase 2 — Agent framework and Sales Council
+
+First complete AI workflow
+
+Tasks
+
+- Define typed agent interfaces and JSON schemas.
+- Implement Scout and Echo using authorized evidence.
+- Implement Guardian with deterministic financial calculations.
+- Implement Muse using existing marketing capabilities.
+- Implement Commander to compare structured proposals.
+- Add evidence validation, bounded revisions, and persistent session states.
+
+Acceptance criteria
+
+- A session can complete from investigation to a validated decision.
+- Every material numerical claim is verifiable or explicitly labeled as an estimate.
+- Failed model calls can be retried without losing completed stages.
+- A session can finish with “insufficient evidence” rather than inventing a strategy.
+
+### Phase 3 — Team Room and Sales War Room
+
+Make the system understandable to nontechnical owners
+
+Tasks
+
+- Build Team Room, opportunity list, council view, evidence panel, proposal comparison, and decision history.
+- Display observed data separately from interpretation and forecasts.
+- Show agent progress and recoverable errors.
+- Add loading, empty, insufficient-data, and failed-session states.
+- Connect the UI to persisted backend sessions.
+
+Acceptance criteria
+
+- Owners can understand a recommendation without reading a raw AI transcript.
+- Every decision can be traced to its supporting evidence.
+- Refreshing the page preserves session progress and history.
+
+### Phase 4 — Approvals and safe execution
+
+Connect recommendations to real actions
+
+Tasks
+
+- Implement approval and rejection records.
+- Snapshot and hash the approved action payload.
+- Implement the action registry and idempotency.
+- Add stale-data checks before execution.
+- Connect approved Telegram follow-ups and marketing campaigns.
+- Add action cancellation, retries, audit history, and failure recovery.
+
+Acceptance criteria
+
+- No external action runs without a valid owner approval.
+- Repeated job attempts do not duplicate an action.
+- Changed payloads require renewed approval.
+- Every execution has a traceable result.
+
+### Phase 5 — Attribution and experiments
+
+Measure actual business results
+
+Tasks
+
+- Add campaign IDs and versions to execution records.
+- Connect attributable inquiries and orders to campaigns.
+- Define revenue, contribution, conversion, and incremental-lift metrics.
+- Add baseline snapshots and measurement windows.
+- Build experiment outcome records and reporting.
+
+Acceptance criteria
+
+- Attributed and unattributed orders are distinguished.
+- Outcomes can be traced to the campaign and approved decision.
+- The reporting never treats attribution as proof of incremental sales.
+
+### Phase 6 — Business Memory
+
+Build the shop-specific knowledge advantage
+
+Tasks
+
+- Store owner-confirmed policies and preferences.
+- Store verified decision and experiment outcomes.
+- Add source references, expiry, corrections, and deletion.
+- Retrieve only relevant memory for each session.
+- Prevent unverified AI conclusions from becoming permanent facts.
+
+Acceptance criteria
+
+- The council uses relevant past decisions.
+- Owners can inspect and correct memory.
+- Expired or deleted memory is not silently reused.
+
+### Phase 7 — Evaluation and production hardening
+
+Prove reliability and value
+
+Tasks
+
+- Build a fixed test set of representative shop scenarios.
+- Compare council results with the current single-agent baseline.
+- Test authorization, prompt injection, stale data, duplicate execution, and failure recovery.
+- Add usage limits, cost monitoring, structured logs, and alerting.
+- Pilot with a small group of consenting shops before broad rollout.
+
+Acceptance criteria
+
+- No unresolved critical authorization or duplicate-action defects.
+- Financial calculations pass deterministic tests.
+- Evidence accuracy and execution reliability meet agreed release thresholds.
+- The product provides useful results without requiring owners to trust unsupported claims.
+
+## 14. Testing strategy
+
+Treat testing as a core feature, not a final cleanup task.
+
+### Unit tests
+
+Test:
+
+- Revenue and contribution calculations.
+- Order status eligibility.
+- Opportunity scoring.
+- Financial policy constraints.
+- Proposal and decision schemas.
+- Evidence-reference resolution.
+- Idempotency-key generation.
+- Attribution rules and outcome calculations.
+
+### Integration tests
+
+Use a test shop with seeded products, orders, inventory, conversations, and campaigns.
+
+Verify:
+
+- The council uses the correct shop's records.
+- Scout and Echo produce evidence-linked findings.
+- Guardian blocks an offer below the configured margin threshold.
+- Commander can choose “collect more data.”
+- The owner can approve, edit, reject, and cancel proposals.
+- An approved action is executed once.
+- A failed worker resumes without repeating successful work.
+- A completed order is linked to the appropriate experiment only under the defined attribution rule.
+
+### Adversarial tests
+
+Include:
+
+- A customer message that tells the AI to reveal secrets or ignore its role.
+- A product description containing malicious instructions.
+- A forged evidence ID from another shop.
+- An expired product price or unavailable item.
+- Missing product costs.
+- Contradictory metrics from incomplete source data.
+- A stale approval payload.
+- Repeated execution requests and simultaneous approval attempts.
+
+### Evaluation dataset
+
+Build a versioned set of representative cases: healthy shop, declining sales, insufficient history, stockout risk, missing costs, unanswered inquiries, failed campaign, and misleading AI-generated claims.
+
+Evaluate agent outputs against known evidence and expected behavior. Track regressions when changing prompts, model versions, or schemas.
+
+## 15. Performance, cost, and observability
+
+A coordinated AI system can become expensive if every agent reads every record and debates every other agent. Control this from the beginning.
+
+### Cost-control rules
+
+- Aggregate data in SQL before sending it to Gemini.
+- Fetch only the evidence relevant to the investigation.
+- Run Scout and Echo in parallel when their inputs permit it.
+- Run Guardian's calculations in deterministic code, not through repeated LLM calls.
+- Limit proposal revisions and total model calls per session.
+- Cache reusable analytics with explicit freshness rules.
+- Reuse completed workflow stages when the inputs have not changed.
+- Keep prompts and outputs compact; do not send entire chat histories by default.
+
+Track these values for every session:
+
+- Total model calls and token usage.
+- Estimated AI cost.
+- Session duration.
+- Number of evidence records inspected.
+- Validation and retry failures.
+- Execution success and failure.
+- Owner approval and rejection rates.
+- Recommendations that resulted in measurable outcomes.
+
+Set actual limits after benchmarking with your Gemini model and Edge Function runtime. Avoid assuming a fixed cost or latency before measuring it.
+
+## 16. What makes Sale Brain defensible?
+
+The differentiator is not simply having five AI agents. Another developer can reproduce that architecture.
+
+The durable advantage is the combination of five things:
+
+1\. Verified shop knowledge
+
+Structured orders, products, stock, customer inquiries, delivery rules, and financial constraints.
+
+2\. Decision history
+
+What the owner approved, rejected, edited, and learned over time.
+
+3\. An execution network
+
+Direct connections to Telegram conversations, campaigns, orders, and outcomes.
+
+4\. Financial and operational guardrails
+
+Recommendations must respect verified costs, stock, policies, and owner approvals.
+
+5\. Outcome evidence
+
+Over time, Sale Brain can measure which recommendations work for which types of shops and under what conditions.
+
+For Myanmar-focused commerce, make Burmese and English communication, township delivery pricing, local shop workflows, and reliable payment-status handling first-class capabilities. Payment claims must remain distinct from verified payments.
+
+The long-term advantage comes from better evidence, better execution, and verified learning—not from claiming the AI has become smarter merely because it has more agents.
+
+## 17. Product success metrics
+
+Track the following from the first pilot.
+
+| Metric                        | What it measures                                                    |
+| ----------------------------- | ------------------------------------------------------------------- |
+| Evidence accuracy             | Whether material claims are supported by the correct source records |
+| Financial correctness         | Whether calculations match independently computed results           |
+| Recommendation acceptance     | Whether owners approve, edit, or reject proposals                   |
+| Execution reliability         | Whether approved actions complete correctly without duplication     |
+| Time saved                    | Reduction in owner effort compared with their existing workflow     |
+| Conversion                    | Change in eligible inquiry-to-order conversion                      |
+| Contribution                  | Change in contribution after relevant variable costs                |
+| Incremental lift              | Improvement against a suitable control or baseline                  |
+| AI cost per completed council | Financial sustainability of the feature                             |
+
+Do not optimize only for recommendation acceptance. A model that tells owners what they want to hear may receive approvals without creating business value.
+
+Likewise, don't claim that Sale Brain increases revenue by a particular percentage until controlled or otherwise credible measurement supports the claim.
+
+## 18. Recommended MVP scope
+
+The entire architecture above is the long-term target. Do not implement every feature before showing a useful product to a real shop owner.
+
+Here is the order I recommend:
+
+Release 1 — Evidence-Based Sales Council
+
+Start here
+
+- Five visible agent roles.
+- Real shop analytics and evidence references.
+- Structured proposals and bounded challenges.
+- Commander decision cards.
+- Persistent sessions and decision history.
+- No autonomous external actions.
+
+Release 2 — Profit Guardian
+
+- Product cost completeness.
+- Contribution calculations.
+- Discount and offer guardrails.
+- Risk-aware bundle recommendations.
+- Missing-data warnings.
+
+Release 3 — Inquiry Recovery
+
+- Detect unresolved inquiries.
+- Match conversations to orders.
+- Draft personalized follow-ups.
+- Owner approval before sending.
+- Track replies and attributable orders.
+
+Release 4 — Business Memory and Experiments
+
+- Persist owner preferences and verified lessons.
+- Track campaign performance.
+- Compare strategies against a baseline.
+- Improve future recommendations using actual outcomes.
+
+## 19. Your first implementation sprint
+
+Start with repository inspection, not agent prompts. You already have a working sales product, so the first objective is to establish exactly where the new feature connects to the existing system.
+
+Use this checklist:
+
+## Implementation tracker
+
+0 of 15 complete
+
+Map existing shop, product, order, inventory, customer, and campaign tables.
+
+Trace existing Gemini, Telegram, Smart Marketing, and shop authorization code.
+
+Document missing analytics and data-quality requirements.
+
+Design the core workflow tables and tenant-scoped RLS policies.
+
+Implement and test deterministic sales and profit metrics.
+
+Define Zod schemas for evidence, proposals, and decisions.
+
+Build persistent session creation and status transitions.
+
+Implement Scout with evidence-backed findings.
+
+Implement Echo with inquiry and customer-friction analysis.
+
+Implement Guardian's deterministic financial checks.
+
+Implement Muse and Commander with structured outputs.
+
+Build the Sales Council UI and evidence panel.
+
+Add owner approval and idempotent action execution.
+
+Connect campaign attribution and outcome tracking.
+
+Add editable business memory, evaluation, and production monitoring.
+
+Copy checklistCopy status report
+
+## 20. Give your coding agent a clear development contract
+
+Use the following as the persistent instruction for your coding agent before implementing the feature.
+
+# Sale Brain Team — Engineering Contract
+
+## Objective
+
+Implement Sale Brain Team, an evidence-based virtual sales department, inside the existing Sale Brain repository. The feature must investigate real shop data, develop and compare strategies, protect profitability, obtain owner approval, execute approved actions safely, and measure outcomes.
+
+## Before changing code
+
+1. Inspect the repository, existing migrations, database schema, authentication, shop ownership model, AI services, Telegram integrations, Smart Marketing, and order lifecycle.
+2. Produce a short architecture and schema-gap report.
+3. Identify existing components and services to reuse.
+4. Propose the first small implementation increment and its tests.
+5. Do not recreate existing domain entities or replace working integrations without justification.
+
+## Architecture
+
+- Preserve the existing stack and project conventions.
+- Keep business calculations deterministic and separate from LLM reasoning.
+- Implement five bounded agent roles: Scout, Muse, Guardian, Echo, and Commander.
+- Use structured, runtime-validated AI outputs.
+- Persist sessions, agent runs, evidence, proposals, decisions, approvals, actions, and outcomes.
+- Enforce tenant isolation and server-side authorization.
+- Keep secrets out of frontend code.
+- Make long-running work resumable and safe to retry.
+
+## Evidence and financial integrity
+
+- Every material factual claim must reference verifiable evidence or be explicitly labeled as an assumption or forecast.
+- Include time ranges, data freshness, and data-quality limitations.
+- Never invent metrics, historical trends, customer intent, or financial results.
+- Never claim profitability when required cost data is missing.
+- Calculate margins, opportunity scores, and policy limits in deterministic code.
+- Preserve formula versions and the assumptions used in each decision.
+
+## Approval and execution
+
+- All external actions require explicit owner approval.
+- An AI proposal is never directly executable.
+- Validate the exact action payload before approval and again before execution.
+- Bind approval to the approved payload version or hash.
+- Reject stale, unauthorized, or policy-violating actions.
+- Use idempotency keys and persistent execution records to prevent duplicates.
+- Record execution results, failures, and audit history.
+- Reuse the existing Telegram and marketing services.
+
+## Business memory
+
+- Store source references, verification status, timestamps, scope, and expiry.
+- Separate owner policies from temporary observations.
+- Let owners inspect, correct, and delete memory.
+- Never convert unverified model-generated claims into verified facts.
+
+## Development rules
+
+- Work in small, reviewable increments.
+- Write migrations that match the actual existing schema.
+- Add unit tests for calculations and schemas.
+- Add integration tests for authorization, session recovery, approvals, and execution.
+- Test cross-shop access, prompt injection, missing data, stale prices, and duplicate requests.
+- Do not hardcode sample metrics into production UI.
+- Do not claim a feature is complete without running the relevant tests.
+- Document unresolved assumptions and limitations.
+- Prefer a smaller reliable implementation over an elaborate but unverified agent workflow.
+
+## First deliverable
+
+Complete the repository audit, map the existing data model and integrations, identify required schema changes, and implement the evidence/analytics foundation. Do not start by building all five agents at once.
+
+My strongest recommendation: make Release 1 exceptionally reliable before adding autonomous execution. If Sale Brain can explain why a strategy is recommended, demonstrate that its numbers are correct, and show owners what happened after their decisions, you will have a much stronger product than a collection of agents that simply chat about sales.

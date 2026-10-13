@@ -1,6 +1,6 @@
 import { cloneDefaultState, DEFAULT_STATE } from "../data/defaultState";
-import { createEmptyShopState } from "./defaults";
-import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order } from "../types";
+import { createEmptyShopState, getDefaultSessions } from "./defaults";
+import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order, TelegramSession } from "../types";
 import { processCustomerMessage } from "./botSimulator";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 import { invokeApi } from "./api";
@@ -52,6 +52,9 @@ function load(): SystemState {
           (o) => o.owner_id === activeUserId || (memoryState!.config.shopId && (o as any).shop_id === memoryState!.config.shopId)
         );
       }
+      if (!memoryState.sessions || Object.keys(memoryState.sessions).length === 0) {
+        memoryState.sessions = getDefaultSessions();
+      }
       return memoryState;
     }
   } catch {
@@ -62,6 +65,9 @@ function load(): SystemState {
   memoryState = activeUserId ? createEmptyShopState() : cloneDefaultState();
   if (!Array.isArray(memoryState.deliveryZones)) {
     memoryState.deliveryZones = [];
+  }
+  if (!memoryState.sessions || Object.keys(memoryState.sessions).length === 0) {
+    memoryState.sessions = getDefaultSessions();
   }
   save();
   return memoryState;
@@ -232,9 +238,14 @@ export function botTakeover(sessionId: string) {
     state.sessions[sessionId].messages.push({
       id: `sys-${Date.now()}`,
       sender: "system",
-      content: "Owner has taken over this chat.",
+      content: "Owner has taken over this chat. Candy AI paused.",
       timestamp: new Date().toISOString(),
     });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sales_brain_session_updated", { detail: state.sessions[sessionId] })
+      );
+    }
   }
   save();
   return { success: true };
@@ -250,6 +261,11 @@ export function botRelease(sessionId: string) {
       content: "AI assistant Candy is active again.",
       timestamp: new Date().toISOString(),
     });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sales_brain_session_updated", { detail: state.sessions[sessionId] })
+      );
+    }
   }
   save();
   return { success: true };
@@ -265,9 +281,52 @@ export function botOwnerReply(sessionId: string, content: string) {
       content,
       timestamp: new Date().toISOString(),
     });
+    session.lastActive = new Date().toISOString();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sales_brain_session_updated", { detail: session })
+      );
+    }
   }
   save();
   return { success: true };
+}
+
+export function createSimulationCustomer(name?: string): TelegramSession {
+  const state = load();
+  const id = `sess_sim_${Date.now()}`;
+  const session: TelegramSession = {
+    sessionId: id,
+    customerName: name || `Customer #${Math.floor(1000 + Math.random() * 9000)}`,
+    customerPhone: `09${Math.floor(100000000 + Math.random() * 900000000)}`,
+    customerTelegramId: `@user_${id.slice(-6)}`,
+    messages: [
+      {
+        id: `msg-${Date.now()}`,
+        sender: "customer",
+        content: "မင်္ဂလာပါ! ပစ္စည်းအသစ်တွေ စုံစမ်းချင်လို့ပါ (Hi! I'd like to ask about new products).",
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: `msg-${Date.now() + 1}`,
+        sender: "bot",
+        content: "မင်္ဂလာပါရှင်! Candy မှ ကူညီပေးပါရစေရှင့်။ ဘာပစ္စည်းများ စိတ်ဝင်စားပါသလဲရှင် (Welcome! Candy is happy to help you. Which items are you interested in)?",
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    lastActive: new Date().toISOString(),
+    currentStep: "browsing",
+    cart: [],
+    liveTakeoverActive: false,
+  };
+  state.sessions[id] = session;
+  save();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("sales_brain_session_updated", { detail: session })
+    );
+  }
+  return session;
 }
 
 export function botSimulateInput(body: {
@@ -282,6 +341,11 @@ export function botSimulateInput(body: {
   const state = load();
   const result = processCustomerMessage(state, body.sessionId, body);
   save();
+  if (typeof window !== "undefined" && result.session) {
+    window.dispatchEvent(
+      new CustomEvent("sales_brain_session_updated", { detail: result.session })
+    );
+  }
   return result;
 }
 

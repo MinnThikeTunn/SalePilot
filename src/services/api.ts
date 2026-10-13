@@ -1,11 +1,9 @@
 import { supabase } from "../utils/supabase";
 import { getShopState, saveShopState } from "./shopState";
-import { getState } from "./clientStore";
+import { getState, botTakeover, botRelease, botOwnerReply } from "./clientStore";
 import { cloneDefaultState } from "../data/defaultState";
 import { createEmptyShopState } from "./defaults";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
-
-
 
 /** Client-side fallback handler when Edge Functions are not deployed */
 async function fallbackLocalAction<T>(
@@ -47,41 +45,58 @@ async function fallbackLocalAction<T>(
   }
 
   if (action === "bot/takeover") {
+    const sessId = String(body.sessionId || "default_customer");
+    botTakeover(sessId);
     if (userId) {
-      const state = await getShopState(userId);
-      const sessId = String(body.sessionId || "default_customer");
-      if (state.sessions[sessId]) {
-        state.sessions[sessId].liveTakeoverActive = true;
-        await saveShopState(userId, state);
+      try {
+        const state = await getShopState(userId);
+        if (state.sessions[sessId]) {
+          state.sessions[sessId].liveTakeoverActive = true;
+          await saveShopState(userId, state);
+        }
+      } catch (err) {
+        console.warn("Could not save takeover to storage:", err);
       }
     }
     return { success: true } as T;
   }
 
   if (action === "bot/release") {
+    const sessId = String(body.sessionId || "default_customer");
+    botRelease(sessId);
     if (userId) {
-      const state = await getShopState(userId);
-      const sessId = String(body.sessionId || "default_customer");
-      if (state.sessions[sessId]) {
-        state.sessions[sessId].liveTakeoverActive = false;
-        await saveShopState(userId, state);
+      try {
+        const state = await getShopState(userId);
+        if (state.sessions[sessId]) {
+          state.sessions[sessId].liveTakeoverActive = false;
+          await saveShopState(userId, state);
+        }
+      } catch (err) {
+        console.warn("Could not save release to storage:", err);
       }
     }
     return { success: true } as T;
   }
 
   if (action === "bot/owner-reply") {
+    const sessId = String(body.sessionId || "default_customer");
+    const content = String(body.content || "");
+    botOwnerReply(sessId, content);
     if (userId) {
-      const state = await getShopState(userId);
-      const sessId = String(body.sessionId || "default_customer");
-      if (state.sessions[sessId]) {
-        state.sessions[sessId].messages.push({
-          id: `msg-${Date.now()}`,
-          sender: "bot",
-          content: String(body.content || ""),
-          timestamp: new Date().toISOString(),
-        });
-        await saveShopState(userId, state);
+      try {
+        const state = await getShopState(userId);
+        if (state.sessions[sessId]) {
+          state.sessions[sessId].messages.push({
+            id: `msg-${Date.now()}`,
+            sender: "owner",
+            content,
+            timestamp: new Date().toISOString(),
+          });
+          state.sessions[sessId].lastActive = new Date().toISOString();
+          await saveShopState(userId, state);
+        }
+      } catch (err) {
+        console.warn("Could not save owner-reply to storage:", err);
       }
     }
     return { success: true } as T;
