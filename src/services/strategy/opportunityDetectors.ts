@@ -137,7 +137,9 @@ function detectStockRisks(
 
   products.forEach((p) => {
     // Only check active products with positive or zero stock
-    const velocity = metrics.current.productVelocities[p.id]?.unitsSold || 0;
+    const velocity =
+      (metrics.current.productVelocities[p.id]?.unitsSold ||
+        metrics.current.productVelocities[p.name]?.unitsSold) || 0;
     const dailyVelocity = velocity / 7; // Units per day
     const leadTime = p.lead_time_days || 3;
     const safetyStock = p.safety_stock_threshold || 5;
@@ -299,7 +301,9 @@ function detectMarginOpportunities(
   eligibleProducts.forEach((p) => {
     const cost = p.cost_price || 0;
     const margin = (p.price - cost) / p.price; // Gross margin percentage
-    const volume = metrics.current.productVelocities[p.id]?.unitsSold || 0;
+    const volume =
+      (metrics.current.productVelocities[p.id]?.unitsSold ||
+        metrics.current.productVelocities[p.name]?.unitsSold) || 0;
 
     // Trigger if margin is thin (< 25%) and product has sales volume
     if (margin < 0.25 && volume >= 2) {
