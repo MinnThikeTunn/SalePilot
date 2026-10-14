@@ -105,7 +105,8 @@ export function processCustomerMessage(
     const matchedZone = state.deliveryZones.find((z) =>
       z.township_name.toLowerCase().includes(townName.toLowerCase())
     );
-    const finalTownship = matchedZone?.township_name ?? "General Yangon";
+    const defaultOrigin = (state as any).onboardingProfile?.business_address || (state.config as any).businessAddress || "Standard Delivery";
+    const finalTownship = matchedZone?.township_name ?? (townName || defaultOrigin);
     const deliveryCost = matchedZone?.rate ?? 3000;
 
     let cartTotal = 0;
@@ -197,7 +198,8 @@ export function processCustomerMessage(
     (p.category && lContent.includes(p.category.toLowerCase()))
   );
 
-  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost/.test(lContent)) {
+  if (/deliver|shipping|township|courier|transit|rate|fee|send|cost|bus gate|gate/i.test(lContent)) {
+    const origin = (state as any).onboardingProfile?.business_address || (state.config as any).businessAddress || "our store hub";
     if (state.deliveryZones && state.deliveryZones.length > 0) {
       const matched = state.deliveryZones.find((z) => {
         const name = (z.township_name || (z as any).township || "").toLowerCase().trim();
@@ -205,15 +207,21 @@ export function processCustomerMessage(
       });
       if (matched) {
         const name = matched.township_name || (matched as any).township;
-        responseText = `Delivery to ${name} is ${(Number(matched.rate) || 0).toLocaleString()} MMK (${matched.estimated_transit_timeline || "1-2 Days"}).`;
+        responseText = `Yes, we deliver to ${name}! Delivery fee is ${(Number(matched.rate) || 0).toLocaleString()} MMK (${matched.estimated_transit_timeline || "1-2 Days"}) dispatched from ${origin}.`;
       } else {
-        const zoneList = state.deliveryZones
-          .map((z) => `${z.township_name || (z as any).township}: ${(Number(z.rate) || 0).toLocaleString()} MMK`)
-          .join(" • ");
-        responseText = `Delivery schedule & rates for ${state.config.shopName || "our store"}:\n${zoneList}`;
+        const busGate = state.deliveryZones.find((z) => /bus gate|other|regional|nationwide|gate/i.test(z.township_name || ""));
+        const localZones = state.deliveryZones.filter((z) => !/bus gate|other|regional|nationwide|gate/i.test(z.township_name || ""));
+        let breakdown = `\n• Local Delivery: 2,000 – 3,000 MMK (1–2 days)`;
+        if (localZones.length > 0) {
+          const rates = localZones.map(z => Number(z.rate) || 0).filter(r => r > 0);
+          if (rates.length > 0) breakdown = `\n• Local Delivery: ${Math.min(...rates).toLocaleString()} – ${Math.max(...rates).toLocaleString()} MMK (1–2 days)`;
+        }
+        const busGateRate = busGate ? `${(Number(busGate.rate) || 4000).toLocaleString()} MMK` : "3,500 – 5,000 MMK";
+        breakdown += `\n• Other Myanmar States & Regions: ${busGateRate} (2–4 days via Highway Bus Gate / Courier)`;
+        responseText = `Delivery Information for ${state.config.shopName || "our store"}:\nDispatched from: ${origin}${breakdown}\nNo need to specify your address now — you can choose your township when checking out!`;
       }
     } else {
-      responseText = `Delivery arrangements for ${state.config.shopName || "our store"} will be confirmed upon order. Please inquire directly with the store.`;
+      responseText = `Delivery from our base in ${origin} is available nationwide across Myanmar (Local city: ~2,500 MMK, Other regions: ~4,000 MMK via Highway Bus Gate). You can select your township at checkout!`;
     }
   } else if (/pay|payment|kpay|kbzpay|wave|wavepay|cod|prepay|cash|transfer/.test(lContent)) {
     const phone = state.config.phone;

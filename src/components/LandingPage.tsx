@@ -8,7 +8,9 @@ import {
   Headphones,
   Check,
   ChevronRight,
-  X
+  X,
+  Store,
+  LogOut
 } from "lucide-react";
 
 type LandingPageProps = {
@@ -16,6 +18,7 @@ type LandingPageProps = {
   onLogin?: () => void;
   isLoggedIn?: boolean;
   onDashboard?: () => void;
+  onLogout?: () => void;
   lang?: string;
   onLangChange?: (l: string) => void;
 };
@@ -25,6 +28,7 @@ export function LandingPage({
   onLogin,
   isLoggedIn = false,
   onDashboard,
+  onLogout,
 }: LandingPageProps) {
   const [emailInput, setEmailInput] = useState("");
   const [subscribed, setSubscribed] = useState(false);
@@ -81,12 +85,12 @@ export function LandingPage({
           <button
             type="button"
             onClick={onGetStarted}
-            className="font-serif text-2xl sm:text-[26px] tracking-tight text-stone-900 font-medium hover:opacity-80 transition text-left cursor-pointer flex items-center gap-2"
+            className="font-serif text-2xl sm:text-[26px] tracking-tight text-stone-900 font-medium hover:opacity-80 transition text-left cursor-pointer flex items-center gap-2.5"
           >
+            <div className="w-8 h-8 rounded-xl bg-stone-900 text-stone-100 flex items-center justify-center shadow-xs">
+              <Store className="w-4 h-4 text-stone-200" strokeWidth={1.8} />
+            </div>
             <span>Sales Brain</span>
-            <span className="text-[10px] font-sans font-bold bg-[#0069FF]/10 text-[#0069FF] px-2 py-0.5 rounded-full uppercase tracking-wider">
-              AI
-            </span>
           </button>
 
           {/* Center Navigation Links */}
@@ -106,16 +110,29 @@ export function LandingPage({
           </nav>
 
           {/* Right Action Icons & Buttons */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={onDashboard || onGetStarted}
-                className="bg-black hover:bg-stone-900 text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98] flex items-center gap-2"
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>Dashboard →</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onDashboard || onGetStarted}
+                  className="bg-black hover:bg-stone-900 text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98] flex items-center gap-2"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Dashboard →</span>
+                </button>
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-100 text-stone-700 hover:text-stone-900 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
+                )}
+              </>
             ) : (
               <>
                 <button

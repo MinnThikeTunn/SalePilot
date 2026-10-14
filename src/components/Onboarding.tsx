@@ -24,7 +24,7 @@ import {
 import { SearchableSelect } from "./SearchableSelect";
 import { useAuth } from "../contexts/AuthContext";
 import { saveShopOnboarding } from "../services/shopRecord";
-import { loadTownships } from "../data/townships";
+import { loadTownships, MYANMAR_REGIONS } from "../data/townships";
 import type { OnboardingFormState } from "../types";
 import { generateShopId, buildShopPublicUrl } from "../utils/shopId";
 import { supabase } from "../utils/supabase";
@@ -112,6 +112,24 @@ export function Onboarding({
     ...initialFormData,
   }));
 
+  const parseLocation = (addr: string = "") => {
+    const matchedRegion = MYANMAR_REGIONS.find((r) =>
+      addr.toLowerCase().includes(r.toLowerCase())
+    );
+    let town = addr;
+    if (matchedRegion) {
+      town = town.replace(new RegExp(`,?\\s*${matchedRegion}`, "i"), "").trim();
+    }
+    return {
+      region: matchedRegion || "Yangon Region",
+      township: town || "Kamayut",
+    };
+  };
+
+  const initialLoc = parseLocation(initialFormData?.business_address || "Kamayut");
+  const [storeRegion, setStoreRegion] = useState<string>(initialLoc.region);
+  const [storeTownship, setStoreTownship] = useState<string>(initialLoc.township);
+
   const initialHydratedRef = React.useRef(false);
 
   useEffect(() => {
@@ -132,6 +150,11 @@ export function Onboarding({
           });
           return merged;
         });
+        if (initialFormData.business_address) {
+          const parsed = parseLocation(initialFormData.business_address);
+          setStoreRegion(parsed.region);
+          setStoreTownship(parsed.township);
+        }
         initialHydratedRef.current = true;
       }
     }
@@ -431,18 +454,51 @@ export function Onboarding({
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <SearchableSelect
-                    label="Store Township / City (Delivery Origin)"
-                    options={townships}
-                    value={formData.business_address}
-                    onChange={(township) => setFormData({ ...formData, business_address: township })}
-                    placeholder="Search township (e.g. Kamayut, Yankin, Hledan)..."
-                    required
-                  />
-                  <p className="text-[11px] text-stone-400 mt-1">
-                    Your base township is used to compute customer delivery fees and dispatch routes.
-                  </p>
+                <div className="pt-2 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                      Store State / Region <span className="text-[#0069FF]">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={storeRegion}
+                        onChange={(e) => {
+                          const newReg = e.target.value;
+                          setStoreRegion(newReg);
+                          const fullAddr = storeTownship ? `${storeTownship}, ${newReg}` : newReg;
+                          setFormData((prev) => ({ ...prev, business_address: fullAddr }));
+                        }}
+                        className="w-full bg-[#FAF8F5]/60 border border-stone-200/80 rounded-xl px-3.5 py-3 text-sm text-stone-900 focus:bg-white focus:outline-none focus:border-[#0069FF] focus:ring-2 focus:ring-[#0069FF]/15 transition-all font-medium cursor-pointer"
+                      >
+                        {MYANMAR_REGIONS.map((region) => (
+                          <option key={region} value={region}>
+                            {region}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className="text-[11px] text-stone-400 mt-1">
+                      Select your store operating state or region (supports all 14 states & regions of Myanmar).
+                    </p>
+                  </div>
+
+                  <div>
+                    <SearchableSelect
+                      label="Store Township / City (Delivery Origin)"
+                      options={townships}
+                      value={storeTownship}
+                      onChange={(township) => {
+                        setStoreTownship(township);
+                        const fullAddr = township ? `${township}, ${storeRegion}` : storeRegion;
+                        setFormData((prev) => ({ ...prev, business_address: fullAddr }));
+                      }}
+                      placeholder="Search township or city (e.g. Kamayut, Chanayethazan, Taunggyi)..."
+                      required
+                    />
+                    <p className="text-[11px] text-stone-400 mt-1">
+                      Your base location is used by AI to compute local city deliveries vs. inter-state highway bus gate dispatches.
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             )}

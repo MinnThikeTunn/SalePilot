@@ -9,23 +9,40 @@ function statePath(userId: string) {
 }
 
 export async function getShopState(userId: string): Promise<SystemState> {
-  const { data, error } = await supabase.storage.from(BUCKET).download(statePath(userId));
+  if (!userId) return createEmptyShopState();
+  try {
+    const { data, error } = await supabase.storage.from(BUCKET).download(statePath(userId));
 
-  if (error || !data) {
-    const empty = createEmptyShopState();
-    await saveShopState(userId, empty);
-    return empty;
+    if (error || !data) {
+      const empty = createEmptyShopState();
+      try {
+        await saveShopState(userId, empty);
+      } catch {
+        // Silently ignore storage upload failure
+      }
+      return empty;
+    }
+
+    const text = await data.text();
+    return { ...createEmptyShopState(), ...JSON.parse(text) } as SystemState;
+  } catch (err) {
+    console.warn("[shopState] getShopState fallback to empty state:", err);
+    return createEmptyShopState();
   }
-
-  const text = await data.text();
-  return { ...createEmptyShopState(), ...JSON.parse(text) } as SystemState;
 }
 
 export async function saveShopState(userId: string, state: SystemState): Promise<void> {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const { error } = await supabase.storage.from(BUCKET).upload(statePath(userId), blob, {
-    upsert: true,
-    contentType: "application/json",
-  });
-  if (error) throw error;
+  if (!userId) return;
+  try {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const { error } = await supabase.storage.from(BUCKET).upload(statePath(userId), blob, {
+      upsert: true,
+      contentType: "application/json",
+    });
+    if (error) {
+      console.warn("[shopState] Storage upload error:", error);
+    }
+  } catch (err) {
+    console.warn("[shopState] Storage upload exception:", err);
+  }
 }

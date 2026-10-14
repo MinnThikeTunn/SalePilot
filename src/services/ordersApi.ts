@@ -24,14 +24,17 @@ export function mapDbRowToOrder(r: any): Order {
  * Fetch all orders for a shop owner from the Supabase Postgres "orders" table.
  */
 export async function getOrdersForOwner(ownerId?: string, shopId?: string): Promise<Order[]> {
+  const cleanOwnerId = ownerId?.trim() || "";
+  const cleanShopId = shopId?.trim() || "";
+
   try {
     const isUuid = (val?: string) =>
       Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim()));
 
     let query = supabase.from("orders").select("*");
 
-    const validOwnerUuid = isUuid(ownerId) ? ownerId?.trim() : undefined;
-    const textShopId = (shopId?.trim() || (!isUuid(ownerId) ? ownerId?.trim() : undefined)) || undefined;
+    const validOwnerUuid = isUuid(cleanOwnerId) ? cleanOwnerId : undefined;
+    const textShopId = (cleanShopId || (!isUuid(cleanOwnerId) ? cleanOwnerId : undefined)) || undefined;
 
     if (validOwnerUuid && textShopId) {
       query = query.or(`owner_id.eq.${validOwnerUuid},shop_id.eq.${textShopId}`);
@@ -83,3 +86,25 @@ export async function updateDbOrderStatus(orderId: string, status: string): Prom
     return false;
   }
 }
+
+/**
+ * Update order payment details (transaction ID and/or screenshot slip) in the Supabase Postgres "orders" table.
+ */
+export async function updateDbOrderPaymentDetails(orderId: string, paymentDetails: any): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("orders")
+      .update({ payment_details: paymentDetails, updated_at: new Date().toISOString() })
+      .or(`id.eq.${orderId},invoice_id.eq.${orderId}`);
+
+    if (error) {
+      console.warn("[ordersApi] Error updating payment details in DB:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("[ordersApi] Exception updating payment details:", err);
+    return false;
+  }
+}
+

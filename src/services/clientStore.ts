@@ -1,13 +1,36 @@
 import { cloneDefaultState, DEFAULT_STATE } from "../data/defaultState";
+import { createEmptyShopState, getDefaultSessions } from "./defaults";
 import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order, TelegramSession } from "../types";
 import { processCustomerMessage } from "./botSimulator";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 import { invokeApi } from "./api";
-import { getDefaultSessions } from "./defaults";
-
-const STORAGE_KEY = "sales_brain_state_v3";
-
+let activeUserId: string | null = null;
 let memoryState: SystemState | null = null;
+
+export function setActiveUser(userId: string | null) {
+  if (activeUserId !== userId) {
+    activeUserId = userId;
+    memoryState = null;
+  }
+}
+
+export function clearUserState(userId?: string) {
+  memoryState = null;
+  if (typeof localStorage !== "undefined") {
+    const key = userId ? `sales_brain_state_${userId}` : (activeUserId ? `sales_brain_state_${activeUserId}` : "sales_brain_state_guest");
+    localStorage.removeItem(key);
+    localStorage.removeItem("sales_brain_state_v3");
+    localStorage.removeItem("sales_brain_state_v2");
+    localStorage.removeItem("sales_brain_state_v1");
+  }
+}
+
+function getStorageKey(): string {
+  if (activeUserId) {
+    return `sales_brain_state_${activeUserId}`;
+  }
+  return "sales_brain_state_guest";
+}
 
 function sanitizeSessionsToEnglish(sessions: Record<string, TelegramSession>): Record<string, TelegramSession> {
   const defaults = getDefaultSessions();
@@ -24,18 +47,25 @@ function sanitizeSessionsToEnglish(sessions: Record<string, TelegramSession>): R
 
 function load(): SystemState {
   if (memoryState) return memoryState;
+  const key = getStorageKey();
   try {
     if (typeof localStorage !== "undefined" && localStorage.getItem("sales_brain_state_v1")) {
       localStorage.removeItem("sales_brain_state_v1");
     }
-    // Check v3 first, then fallback to migrating v2
-    const raw = typeof localStorage !== "undefined" 
-      ? (localStorage.getItem(STORAGE_KEY) || localStorage.getItem("sales_brain_state_v2")) 
+    const raw = typeof localStorage !== "undefined"
+      ? (localStorage.getItem(key) || (!activeUserId ? (localStorage.getItem("sales_brain_state_v3") || localStorage.getItem("sales_brain_state_v2")) : null))
       : null;
     if (raw) {
-      memoryState = { ...cloneDefaultState(), ...JSON.parse(raw) };
+      const base = activeUserId ? createEmptyShopState() : cloneDefaultState();
+      memoryState = { ...base, ...JSON.parse(raw) };
       if (!Array.isArray(memoryState.deliveryZones)) {
         memoryState.deliveryZones = [];
+      }
+      // Purge any unowned or foreign orders that leaked into local storage for this user
+      if (activeUserId && Array.isArray(memoryState.orders)) {
+        memoryState.orders = memoryState.orders.filter(
+          (o) => o.owner_id === activeUserId || (memoryState!.config.shopId && (o as any).shop_id === memoryState!.config.shopId)
+        );
       }
       if (!memoryState.sessions || Object.keys(memoryState.sessions).length === 0) {
         memoryState.sessions = getDefaultSessions();
@@ -48,7 +78,9 @@ function load(): SystemState {
   } catch {
     /* ignore */
   }
-  memoryState = cloneDefaultState();
+
+  // Brand new logged-in account starts with clean, isolated empty state
+  memoryState = activeUserId ? createEmptyShopState() : cloneDefaultState();
   if (!Array.isArray(memoryState.deliveryZones)) {
     memoryState.deliveryZones = [];
   }
@@ -63,7 +95,7 @@ function save() {
   if (!memoryState) return;
   try {
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState));
+      localStorage.setItem(getStorageKey(), JSON.stringify(memoryState));
     }
   } catch (e) {
     console.warn("Could not persist state to localStorage", e);
@@ -74,8 +106,13 @@ export function getState(): SystemState {
   return load();
 }
 
+export function setStoreState(next: SystemState): void {
+  memoryState = next;
+  save();
+}
+
 export function resetState(): SystemState {
-  memoryState = cloneDefaultState();
+  memoryState = activeUserId ? createEmptyShopState() : cloneDefaultState();
   save();
   return memoryState;
 }
@@ -172,6 +209,12 @@ export function setClientProducts(products: Product[]) {
 
 export function addOrder(order: Order) {
   const state = load();
+  if (activeUserId && !order.owner_id) {
+    order.owner_id = activeUserId;
+  }
+  if (state.config.shopId && !(order as any).shop_id) {
+    (order as any).shop_id = state.config.shopId;
+  }
   state.orders.unshift(order);
   save();
   return state;
@@ -218,6 +261,24 @@ export function updateOrderStatus(orderId: string, status: "confirmed" | "cancel
   save();
   return state;
 }
+
+export function updateOrderPaymentDetails(
+  orderId: string,
+  paymentDetails: {
+    method: "KPay" | "WavePay" | "CBPay" | "AYA Pay" | "CoD";
+    transactionId: string;
+    screenshotUrl?: string;
+  }
+) {
+  const state = load();
+  const order = state.orders.find((o) => o.id === orderId || o.invoiceId === orderId);
+  if (order) {
+    order.paymentDetails = paymentDetails;
+  }
+  save();
+  return state;
+}
+
 
 export function botTakeover(sessionId: string) {
   const state = load();
