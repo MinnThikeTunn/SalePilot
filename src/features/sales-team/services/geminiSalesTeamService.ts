@@ -527,7 +527,7 @@ export async function generateAgentChatResponse(
 
   const storeName = ctx.storeName || "Our Store";
 
-  const systemPrompt = `You are ${agentName}, the ${agentTitle} in Sales Brain AI.
+  const systemPrompt = `You are ${agentName}, the ${agentTitle} in SalePilot AI.
 Your Persona: ${personaPrompt}
 Your Personal Motto: "${motto}"
 

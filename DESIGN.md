@@ -1,5 +1,5 @@
 ---
-name: Sales Brain AI
+name: SalePilot AI
 description: Curated Conversational Commerce for Independent Merchants
 colors:
   primary: "#0069FF"
@@ -86,13 +86,13 @@ components:
     padding: "10px 20px"
 ---
 
-# Design System: Sales Brain AI
+# Design System: SalePilot AI
 
 ## Overview
 
 **Creative North Star: "The Modern Commerce Command"**
 
-Sales Brain AI adopts an elevated, contemporary software aesthetic inspired by modern SaaS pioneers like Calendly and Perplexity. The design pairs a calming, warm porcelain canvas (`#FAF8F5`) with crisp Midnight Ink typography (`#0A1B2A`), high-voltage Electric Cobalt accents (`#0069FF`), luminous Sky Blue announcement gradients (`#70B4FF`), and generous `rounded-[32px]` containers.
+SalePilot AI adopts an elevated, contemporary software aesthetic inspired by modern SaaS pioneers like Calendly and Perplexity. The design pairs a calming, warm porcelain canvas (`#FAF8F5`) with crisp Midnight Ink typography (`#0A1B2A`), high-voltage Electric Cobalt accents (`#0069FF`), luminous Sky Blue announcement gradients (`#70B4FF`), and generous `rounded-[32px]` containers.
 
 The visual system projects utmost institutional confidence, speed, and precision for Myanmar SME merchants. It elevates chat automation, mobile wallet slip audit (KBZPay, WavePay), and township logistics from manual chaos into a pristine, trustworthy workflow.
 

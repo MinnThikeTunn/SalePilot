@@ -1,4 +1,4 @@
-# Sales Brain AI — Domain Model
+# SalePilot AI — Domain Model
 
 An AI-orchestrated social commerce platform and decision engine for Myanmar SMEs, combining conversational Telegram commerce with an evidence-based multi-agent Sales Council.
 

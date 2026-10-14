@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Sales Brain Team: Migration 20261017000000_shop_business_policies.sql
+-- SalePilot Team: Migration 20261017000000_shop_business_policies.sql
 -- Table: shop_business_policies
 -- Manages financial policy guardrails, discount caps, and contribution margin floors
 -- Enforces UUID shop-scoped foreign key and tenant-isolated RLS

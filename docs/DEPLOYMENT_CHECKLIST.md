@@ -126,7 +126,7 @@ netlify deploy --prod
 1. [ ] "Show me all shops" → Lists shops from database
 2. [ ] "What products are available?" → Lists products
 3. [ ] "Tell me about [shop name]" → Shows shop details
-4. [ ] "How does Sales Brain AI work?" → General response (no tool call)
+4. [ ] "How does SalePilot AI work?" → General response (no tool call)
 5. [ ] Invalid shop ID → Graceful error handling
 6. [ ] Empty database → Clear "no data" message
 

@@ -223,7 +223,7 @@ export function Onboarding({
         shopId: shopId,
       });
 
-      const aiSummary = `Business Profile Saved! Based on ${formData.bot_personality} personality, Sales Brain AI is now ready for your ${formData.business_category} store.`;
+      const aiSummary = `Business Profile Saved! Based on ${formData.bot_personality} personality, SalePilot AI is now ready for your ${formData.business_category} store.`;
 
       if (!isEditMode) {
         setStep(6); // Step 6 is the final Activation screen
@@ -270,7 +270,7 @@ export function Onboarding({
         businessAddress: formData.business_address || "Yangon",
         shopId: generatedShopId,
       },
-      `Welcome to Sales Brain! Your shop ${formData.business_name} has been activated.`
+      `Welcome to SalePilot! Your shop ${formData.business_name} has been activated.`
     );
   };
 
@@ -780,7 +780,7 @@ export function Onboarding({
 
         {/* Footer info */}
         <p className="text-center text-[11px] text-stone-400">
-          © 2026 Sales Brain AI • Autonomous Social Commerce Platform
+          © 2026 SalePilot AI • Autonomous Social Commerce Platform
         </p>
       </div>
     </div>

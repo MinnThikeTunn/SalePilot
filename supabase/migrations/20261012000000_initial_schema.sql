@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Sales Brain AI — Clean Unified Database Schema
+-- SalePilot AI — Clean Unified Database Schema
 -- Run this in your Supabase Project: SQL Editor -> New Query -> Run
 -- ==============================================================================
 

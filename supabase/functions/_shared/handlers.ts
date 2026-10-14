@@ -235,7 +235,7 @@ async function handleAiStrategy(ctx: ShopContext, body: Record<string, unknown>,
         products: ctx.state.products.map((p) => ({ name: p.name, stock: p.stock })),
       })}`,
       config: {
-        systemInstruction: `You are Sales Brain advisor. Write a detailed, comprehensive, and professional SME strategy report in ${lang === "my" ? "Burmese" : "English"}. Provide deep insights and actionable steps. No markdown hashes or asterisks. Aim for a thorough analysis of around 600-800 words.`,
+        systemInstruction: `You are SalePilot advisor. Write a detailed, comprehensive, and professional SME strategy report in ${lang === "my" ? "Burmese" : "English"}. Provide deep insights and actionable steps. No markdown hashes or asterisks. Aim for a thorough analysis of around 600-800 words.`,
         temperature: 0.4,
       },
     });

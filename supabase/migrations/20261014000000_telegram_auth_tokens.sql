@@ -1,7 +1,7 @@
 -- ==============================================================================
 -- Telegram Deep-Linking Handshake Tokens
 -- Enables authenticated merchants and customers to link their Telegram account
--- to their Sale Brain shop profile via /start link_<token>
+-- to their SalePilot shop profile via /start link_<token>
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.telegram_auth_tokens (

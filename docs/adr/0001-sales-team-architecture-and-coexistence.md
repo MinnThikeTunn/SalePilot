@@ -1,7 +1,7 @@
 # 0001. Sales Team Coexistence and Edge Function Orchestration
 
 ## Context
-Sales Brain AI already contains an `AIStrategyDesk` component under the Insights tab that performs basic unit economics and heuristic opportunity detection. The user requested the full 5-agent Sales Council described in `docs/feature Request.txt`, while explicitly choosing to preserve the existing Insights tab rather than replacing it. Furthermore, the merchant must be able to trigger both full 5-agent council deliberations and ad-hoc single-agent inquiries (e.g., Scout, Echo, Guardian) or evidence lookups.
+SalePilot AI already contains an `AIStrategyDesk` component under the Insights tab that performs basic unit economics and heuristic opportunity detection. The user requested the full 5-agent Sales Council described in `docs/feature Request.txt`, while explicitly choosing to preserve the existing Insights tab rather than replacing it. Furthermore, the merchant must be able to trigger both full 5-agent council deliberations and ad-hoc single-agent inquiries (e.g., Scout, Echo, Guardian) or evidence lookups.
 
 ## Decision
 1. **Feature Coexistence**: Create a new top-level workspace for the Sales Team (`activeTab === 'sales_team'`), keeping the existing `AIStrategyDesk` (`insights`) intact as a fast analytical overview.

@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
           tools: [{ functionDeclarations: tools }],
           systemInstruction: {
             parts: [{
-              text: `You are a helpful AI assistant for Sales Brain AI, a platform that helps Myanmar businesses sell via Telegram.
+              text: `You are a helpful AI assistant for SalePilot AI, a platform that helps Myanmar businesses sell via Telegram.
 
 When users ask about shops or products, use the provided tools to fetch real data from the Supabase database.
 When users ask general questions or chat casually, respond naturally without using tools.

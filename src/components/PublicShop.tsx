@@ -238,7 +238,7 @@ export function PublicShop({ shopId }: { shopId: string }) {
             href="/"
             className="inline-block bg-[#0069FF] hover:bg-[#0052CC] text-white px-8 py-3 rounded-xl text-xs font-semibold uppercase tracking-wider transition shadow-xs"
           >
-            Go to Sales Brain AI
+            Go to SalePilot AI
           </a>
         </div>
       </div>

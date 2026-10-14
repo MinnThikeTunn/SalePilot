@@ -3,7 +3,7 @@ import type { CopyHints } from "./campaignEngine";
 
 export function getStrategyBriefing(state: SystemState, _lang?: string): string {
   const lowStock = state.products.find((p) => p.stock <= 5);
-  return `Sales Brain AI Strategy Briefing
+  return `SalePilot AI Strategy Briefing
 
 1. Peak Purchasing Activity
 Customer inquiry rates peak between 6:00 PM and 9:30 PM (MMT).

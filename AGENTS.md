@@ -1,8 +1,8 @@
-# AI Agent Instructions for Sales Brain AI Workspace
+# AI Agent Instructions for SalePilot AI Workspace
 
 ## Project Overview
 
-This repository contains "Sales Brain AI" — a Vite + React (TypeScript) SPA for AI-assisted Telegram commerce demos. Store data, bot simulation, and marketing insights run in the browser via `src/services/clientStore.ts` and `localStorage`. The app deploys as static files on Vercel (no Express server).
+This repository contains "SalePilot AI" — a Vite + React (TypeScript) SPA for AI-assisted Telegram commerce demos. Store data, bot simulation, and marketing insights run in the browser via `src/services/clientStore.ts` and `localStorage`. The app deploys as static files on Vercel (no Express server).
 
 ### Technology Stack
 

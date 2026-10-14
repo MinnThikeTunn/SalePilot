@@ -9,7 +9,6 @@ import {
   Check,
   ChevronRight,
   X,
-  Store,
   LogOut,
   Menu
 } from "lucide-react";
@@ -60,7 +59,7 @@ export function LandingPage({
       {bannerVisible && (
         <div className="bg-[#70B4FF] text-[#0A1B2A] py-2 px-4 sm:px-8 text-xs font-medium flex items-center justify-between border-b border-[#5B9FEA]/40 transition-all">
           <div className="flex-1 text-center flex items-center justify-center gap-2">
-            <span className="font-semibold">Introducing the new Sales Brain AI, built to automate social commerce.</span>
+            <span className="font-semibold">Introducing the new SalePilot AI, built to automate social commerce.</span>
             <button
               type="button"
               onClick={onGetStarted}
@@ -89,10 +88,10 @@ export function LandingPage({
             onClick={onGetStarted}
             className="font-serif text-2xl sm:text-[26px] tracking-tight text-stone-900 font-medium hover:opacity-80 transition text-left cursor-pointer flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-stone-900 text-stone-100 flex items-center justify-center shadow-xs">
-              <Store className="w-4 h-4 text-stone-200" strokeWidth={1.8} />
+            <div className="w-8 h-8 rounded-xl bg-[#0A1B2A] flex items-center justify-center shadow-xs shrink-0">
+              <img src="/logo-icon-white.png" alt="SalePilot" className="w-5 h-5 object-contain" />
             </div>
-            <span>Sales Brain</span>
+            <span>SalePilot</span>
           </button>
 
           {/* Center Navigation Links */}
@@ -437,7 +436,7 @@ export function LandingPage({
               Commerce for Conversations, Always
             </h2>
             <p className="mt-6 text-stone-600 text-sm sm:text-base leading-relaxed font-normal">
-              In social-first markets, transactions are born in direct messages, voice notes, and payment screenshots—not static web checkout carts. Sales Brain eliminates the manual friction of answering inventory questions, calculating township fees, and auditing bank accounts. We partner directly with modern makers across studios to doorsteps, keeping orders moving with zero overhead.
+              In social-first markets, transactions are born in direct messages, voice notes, and payment screenshots—not static web checkout carts. SalePilot eliminates the manual friction of answering inventory questions, calculating township fees, and auditing bank accounts. We partner directly with modern makers across studios to doorsteps, keeping orders moving with zero overhead.
             </p>
             <div className="mt-8">
               <button
@@ -608,9 +607,14 @@ export function LandingPage({
       <footer id="about" className="bg-[#F5F1EA] border-t border-stone-200/80 pt-16 pb-12 text-stone-600 text-xs">
         <div className="max-w-7xl mx-auto px-6 sm:px-12 grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-14">
           <div>
-            <h4 className="font-serif text-lg text-stone-900 mb-4 font-normal">
-              Sales Brain
-            </h4>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-xl bg-[#0A1B2A] flex items-center justify-center shrink-0">
+                <img src="/logo-icon-white.png" alt="SalePilot" className="w-5 h-5 object-contain" />
+              </div>
+              <h4 className="font-serif text-lg text-stone-900 font-normal">
+                SalePilot
+              </h4>
+            </div>
             <p className="text-stone-500 leading-relaxed max-w-xs font-normal">
               Curating timeless, autonomous commerce tools for independent merchants and social brands.
             </p>
@@ -664,7 +668,7 @@ export function LandingPage({
         </div>
 
         <div className="max-w-7xl mx-auto px-6 sm:px-12 mt-16 pt-8 border-t border-stone-200/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-stone-400 text-[11px]">
-          <p>© 2026 Sales Brain AI. All rights reserved.</p>
+          <p>© 2026 SalePilot AI. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <span className="hover:text-stone-600 transition cursor-pointer">Telegram</span>
             <span className="hover:text-stone-600 transition cursor-pointer">Facebook</span>

@@ -924,7 +924,7 @@ export function SmartMarketing({ state }: SmartMarketingProps) {
                 "Copy promotional text and share to your Telegram channel or Facebook page",
                 "Attach the generated campaign poster to grab visual attention",
                 "Ensure your Telegram bot is active and responding to customer chats",
-                "Pre-launch baseline recorded: Sales Brain automatically tracks orders against your 7-day average",
+                "Pre-launch baseline recorded: SalePilot automatically tracks orders against your 7-day average",
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <Check size={13} className="text-emerald-600 mt-0.5 shrink-0" />
@@ -1246,7 +1246,7 @@ export function SmartMarketing({ state }: SmartMarketingProps) {
                   <div>
                     <h3 className="font-serif text-base font-medium text-[#1C1917]">Campaign Playbook</h3>
                     <p className="text-[11px] text-[#78716C]">
-                      Saved learnings are remembered by Sales Brain to guide future diagnostic recommendations.
+                      Saved learnings are remembered by SalePilot to guide future diagnostic recommendations.
                     </p>
                   </div>
                 </div>

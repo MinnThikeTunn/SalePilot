@@ -1,5 +1,5 @@
 
-We should build this on your existing Sale Brain project rather than starting a separate system. Your existing product management, order tracking, Telegram sales bot, Smart Marketing, and Supabase database become the foundation.
+We should build this on your existing SalePilot project rather than starting a separate system. Your existing product management, order tracking, Telegram sales bot, Smart Marketing, and Supabase database become the foundation.
 
 ## 1. Product vision and system design
 
@@ -9,7 +9,7 @@ Owner — Business decision-maker
 
 Sets goals, defines restrictions, reviews proposals, approves external actions, and evaluates results.
 
-Sale Brain Team — AI orchestration
+SalePilot Team — AI orchestration
 
 Scout · Muse · Guardian · Echo · Commander
 
@@ -556,7 +556,7 @@ The UI should distinguish observed fact, AI interpretation, scenario estimate, a
 
 ## 7. The Sales Council orchestration workflow
 
-The orchestrator is the core of Sale Brain Team. It decides which agent runs, what data each agent may access, how proposals are reviewed, and when the session can move forward.
+The orchestrator is the core of SalePilot Team. It decides which agent runs, what data each agent may access, how proposals are reviewed, and when the session can move forward.
 
 ### 7.1 Workflow state machine
 
@@ -653,7 +653,7 @@ The home page should answer five questions immediately:
 
 Recommended layout:
 
-Sale Brain Team
+SalePilot Team
 
 Illustrative layout — values below are not live shop data.
 
@@ -734,7 +734,7 @@ Separate permanent business policies from temporary observations. A previous cam
 
 Display missing costs, stale prices, incomplete order histories, unmatched inquiries, and other gaps that limit the quality of recommendations.
 
-This is important because a business owner needs to understand not only what Sale Brain recommends, but also how much confidence the available data deserves.
+This is important because a business owner needs to understand not only what SalePilot recommends, but also how much confidence the available data deserves.
 
 ## 9. Approval, execution, and safety
 
@@ -814,7 +814,7 @@ For marketing:
 
 ## 10. Campaign attribution and outcome tracking
 
-This is what turns Sale Brain from a recommendation generator into a system that can learn which decisions actually work.
+This is what turns SalePilot from a recommendation generator into a system that can learn which decisions actually work.
 
 ### 10.1 Add campaign-to-sale tracking
 
@@ -1190,7 +1190,7 @@ Track these values for every session:
 
 Set actual limits after benchmarking with your Gemini model and Edge Function runtime. Avoid assuming a fixed cost or latency before measuring it.
 
-## 16. What makes Sale Brain defensible?
+## 16. What makes SalePilot defensible?
 
 The differentiator is not simply having five AI agents. Another developer can reproduce that architecture.
 
@@ -1214,7 +1214,7 @@ Recommendations must respect verified costs, stock, policies, and owner approval
 
 5\. Outcome evidence
 
-Over time, Sale Brain can measure which recommendations work for which types of shops and under what conditions.
+Over time, SalePilot can measure which recommendations work for which types of shops and under what conditions.
 
 For Myanmar-focused commerce, make Burmese and English communication, township delivery pricing, local shop workflows, and reliable payment-status handling first-class capabilities. Payment claims must remain distinct from verified payments.
 
@@ -1238,7 +1238,7 @@ Track the following from the first pilot.
 
 Do not optimize only for recommendation acceptance. A model that tells owners what they want to hear may receive approvals without creating business value.
 
-Likewise, don't claim that Sale Brain increases revenue by a particular percentage until controlled or otherwise credible measurement supports the claim.
+Likewise, don't claim that SalePilot increases revenue by a particular percentage until controlled or otherwise credible measurement supports the claim.
 
 ## 18. Recommended MVP scope
 
@@ -1326,11 +1326,11 @@ Copy checklistCopy status report
 
 Use the following as the persistent instruction for your coding agent before implementing the feature.
 
-# Sale Brain Team — Engineering Contract
+# SalePilot Team — Engineering Contract
 
 ## Objective
 
-Implement Sale Brain Team, an evidence-based virtual sales department, inside the existing Sale Brain repository. The feature must investigate real shop data, develop and compare strategies, protect profitability, obtain owner approval, execute approved actions safely, and measure outcomes.
+Implement SalePilot Team, an evidence-based virtual sales department, inside the existing SalePilot repository. The feature must investigate real shop data, develop and compare strategies, protect profitability, obtain owner approval, execute approved actions safely, and measure outcomes.
 
 ## Before changing code
 
@@ -1394,4 +1394,4 @@ Implement Sale Brain Team, an evidence-based virtual sales department, inside th
 
 Complete the repository audit, map the existing data model and integrations, identify required schema changes, and implement the evidence/analytics foundation. Do not start by building all five agents at once.
 
-My strongest recommendation: make Release 1 exceptionally reliable before adding autonomous execution. If Sale Brain can explain why a strategy is recommended, demonstrate that its numbers are correct, and show owners what happened after their decisions, you will have a much stronger product than a collection of agents that simply chat about sales.
+My strongest recommendation: make Release 1 exceptionally reliable before adding autonomous execution. If SalePilot can explain why a strategy is recommended, demonstrate that its numbers are correct, and show owners what happened after their decisions, you will have a much stronger product than a collection of agents that simply chat about sales.
