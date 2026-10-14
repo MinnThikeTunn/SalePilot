@@ -102,15 +102,15 @@ export const UnitEconomicsView: React.FC<UnitEconomicsViewProps> = ({ products, 
       </div>
 
       {/* 2. Product Margin & Profitability Matrix Table */}
-      <div className="bg-white border border-slate-200/80 rounded-[28px] p-6 space-y-4 shadow-xs">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 space-y-5 shadow-xs">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h4 className="font-black text-base text-[#0A1B2A]">Product Unit Margin Leaderboard</h4>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[#64748B] mt-0.5">
               Individual product economics ranked by contribution profit generated.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-slate-500 font-semibold">
+          <span className="text-[11px] font-mono text-[#64748B] font-semibold">
             {products.length} catalog items
           </span>
         </div>

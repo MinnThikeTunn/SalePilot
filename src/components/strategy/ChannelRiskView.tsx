@@ -103,11 +103,11 @@ export const ChannelRiskView: React.FC<ChannelRiskViewProps> = ({ orders }) => {
       </div>
 
       {/* 2. Payment Channel Volume Breakdown */}
-      <div className="bg-white border border-slate-200/80 rounded-[28px] p-6 space-y-4 shadow-xs">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 space-y-5 shadow-xs">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h4 className="font-black text-base text-[#0A1B2A]">Payment Channel Distribution</h4>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[#64748B] mt-0.5">
               Breakdown of transaction volume and success rates by payment provider.
             </p>
           </div>
@@ -134,7 +134,7 @@ export const ChannelRiskView: React.FC<ChannelRiskViewProps> = ({ orders }) => {
       </div>
 
       {/* 3. Township Logistics & Delivery Demand Table */}
-      <div className="bg-white border border-slate-200/80 rounded-[28px] p-6 space-y-4 shadow-xs">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 space-y-5 shadow-xs">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h4 className="font-black text-base text-[#0A1B2A]">Township Logistics & Geographic Demand</h4>

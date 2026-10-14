@@ -65,7 +65,9 @@ export function ShopPoliciesDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            aria-label="Close dialog"
+            title="Close dialog"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
           >
             <X size={16} />
           </button>

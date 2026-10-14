@@ -265,16 +265,18 @@ export function SingleAgentChatbotDrawer({
             <button
               type="button"
               onClick={handleResetChat}
-              className="p-2 rounded-xl text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer"
+              aria-label="Reset conversation"
               title="Reset conversation"
+              className="p-2 min-w-[36px] min-h-[36px] rounded-xl text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
             >
               <RotateCcw size={15} />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer"
+              aria-label="Close dialog"
               title="Close drawer"
+              className="p-2 min-w-[36px] min-h-[36px] rounded-xl text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
             >
               <X size={16} />
             </button>

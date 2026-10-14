@@ -39,7 +39,7 @@ export function CustomChart({ data, color = "#10b981", title, unit = "" }: Custo
     : "";
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-[24px] p-5 shadow-xs relative overflow-hidden">
+    <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 shadow-xs relative overflow-hidden">
       {title && (
         <h4 className="text-[11px] font-mono tracking-wider text-slate-500 mb-4 flex items-center justify-between uppercase font-semibold">
           <span>{title}</span>
@@ -82,7 +82,7 @@ export function CustomChart({ data, color = "#10b981", title, unit = "" }: Custo
           {points.length > 0 && (
             <path
               d={areaPath}
-              className="fill-indigo-500/5 transition-all duration-300"
+              className="fill-[#0069FF]/5 transition-all duration-300"
               style={{ stroke: "none" }}
             />
           )}
@@ -122,7 +122,7 @@ export function CustomChart({ data, color = "#10b981", title, unit = "" }: Custo
                   y1={paddingTop}
                   x2={p.x}
                   y2={chartHeight - paddingBottom}
-                  stroke="#6366f1"
+                  stroke="#0069FF"
                   strokeWidth="1"
                   strokeDasharray="2 2"
                   className="pointer-events-none"

@@ -342,7 +342,7 @@ export function CouncilTelegramRoom({
         ref={scrollRef}
         className="h-[460px] overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#F8F6F2] relative"
         style={{
-          backgroundImage: `radial-gradient(#CBD5E1 0.75px, transparent 0.75px)`,
+          backgroundImage: `radial-gradient(#E2E8F0 0.85px, transparent 0.85px)`,
           backgroundSize: "18px 18px",
         }}
       >

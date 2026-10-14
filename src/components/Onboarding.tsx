@@ -521,10 +521,11 @@ export function Onboarding({
                     {PAYMENTS.map((pm) => {
                       const isSelected = formData.payment_method === pm.id;
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={pm.id}
                           onClick={() => setFormData({ ...formData, payment_method: pm.id })}
-                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] ${
                             isSelected
                               ? "bg-[#EFF6FF] border-[#0069FF] shadow-xs"
                               : "bg-white border-stone-200/80 hover:border-stone-300"
@@ -535,7 +536,7 @@ export function Onboarding({
                             <p className="text-xs font-semibold text-stone-900">{pm.label}</p>
                             <p className="text-[11px] text-stone-500 mt-0.5">{pm.desc}</p>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -549,10 +550,11 @@ export function Onboarding({
                     {DELIVERIES.map((del) => {
                       const isSelected = formData.delivery_method === del.id;
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={del.id}
                           onClick={() => setFormData({ ...formData, delivery_method: del.id })}
-                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] ${
                             isSelected
                               ? "bg-[#EFF6FF] border-[#0069FF] shadow-xs"
                               : "bg-white border-stone-200/80 hover:border-stone-300"
@@ -563,7 +565,7 @@ export function Onboarding({
                             <p className="text-xs font-semibold text-stone-900">{del.label}</p>
                             <p className="text-[11px] text-stone-500 mt-0.5">{del.desc}</p>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -589,10 +591,11 @@ export function Onboarding({
                     {PERSONALITIES.map((p) => {
                       const isSelected = formData.bot_personality === p.id;
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={p.id}
                           onClick={() => setFormData({ ...formData, bot_personality: p.id, matter_most: p.id })}
-                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] ${
                             isSelected
                               ? "bg-[#EFF6FF] border-[#0069FF] shadow-xs ring-1 ring-[#0069FF]"
                               : "bg-white border-stone-200/80 hover:border-stone-300"
@@ -610,7 +613,7 @@ export function Onboarding({
                           }`}>
                             {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

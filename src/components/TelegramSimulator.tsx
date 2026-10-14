@@ -335,7 +335,7 @@ export function TelegramSimulator({
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-3 py-4 space-y-4 bg-slate-950 relative"
         style={{
-          backgroundImage: `radial-gradient(#1e293b 0.6px, transparent 0.6px)`,
+          backgroundImage: `radial-gradient(rgba(226, 232, 240, 0.12) 0.75px, transparent 0.75px)`,
           backgroundSize: "16px 16px"
         }}
       >
@@ -463,10 +463,10 @@ export function TelegramSimulator({
             <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-pink-500 to-amber-400 flex items-center justify-center text-[10px]">🍭</div>
             <div className="bg-slate-900 px-3 py-2 border border-slate-800 rounded-2xl rounded-bl-none text-xs text-slate-400 flex items-center gap-1.5">
               <span>Candy is typing</span>
-              <span className="flex gap-0.5">
-                <span className="w-1 h-1 bg-slate-500 rounded-full animate-bounce"></span>
-                <span className="w-1 h-1 bg-slate-500 rounded-full animate-bounce delay-150"></span>
-                <span className="w-1 h-1 bg-slate-500 rounded-full animate-bounce delay-300"></span>
+              <span className="flex gap-1 items-center">
+                <span className="w-1.5 h-1.5 bg-[#70B4FF] rounded-full animate-pulse"></span>
+                <span className="w-1.5 h-1.5 bg-[#70B4FF] rounded-full animate-pulse [animation-delay:180ms]"></span>
+                <span className="w-1.5 h-1.5 bg-[#70B4FF] rounded-full animate-pulse [animation-delay:360ms]"></span>
               </span>
             </div>
           </div>
@@ -673,20 +673,23 @@ export function TelegramSimulator({
 
         <input
           type="text"
+          aria-label="Customer inquiry input"
           placeholder={session?.liveTakeoverActive ? "Direct message as Customer..." : "Type custom inquiries in English..."}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSendMessage();
           }}
-          className="flex-1 bg-slate-950 border border-slate-800 text-white rounded-full px-3.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 transition-all font-sans animate-in fade-in"
+          className="flex-1 bg-slate-950 border border-slate-800 text-white rounded-full px-3.5 py-2 text-xs focus:outline-none focus:border-[#0069FF] focus-visible:ring-2 focus-visible:ring-[#0069FF] transition-all font-sans"
         />
         <button
           onClick={() => handleSendMessage()}
           disabled={!inputText.trim() && !customAttachBase64}
-          className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer"
+          aria-label="Send message"
+          title="Send message"
+          className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-[#0069FF] hover:bg-[#0052CC] disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
         >
-          <Send size={12} />
+          <Send size={13} />
         </button>
       </div>
     </>

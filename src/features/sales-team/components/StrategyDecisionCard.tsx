@@ -314,8 +314,17 @@ export function StrategyDecisionCard({
                     className="bg-[#FAF8F5] border border-[#E2E8F0] rounded-xl overflow-hidden text-xs"
                   >
                     <div
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={isExpanded}
                       onClick={() => setExpandedEvidenceId(isExpanded ? null : ev.id)}
-                      className="p-3 flex items-center justify-between cursor-pointer hover:bg-[#F4F2EC] transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedEvidenceId(isExpanded ? null : ev.id);
+                        }
+                      }}
+                      className="p-3 flex items-center justify-between cursor-pointer hover:bg-[#F4F2EC] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="font-mono text-xs font-bold text-[#0069FF] bg-[#EFF6FF] px-2 py-0.5 rounded">
