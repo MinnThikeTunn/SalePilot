@@ -1,20 +1,69 @@
 import { supabase } from "../utils/supabase";
 import type { Product } from "../types";
 
-export async function getProducts(userId: string): Promise<Product[]> {
-  if (!userId) return [];
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .eq("owner_id", userId)
-    .order("created_at", { ascending: false });
+export async function getProducts(userId?: string): Promise<Product[]> {
+  let targetId = userId?.trim();
 
-  if (error) {
-    console.error("Error fetching products:", error);
-    return [];
+  // If targetId is missing or default_shop, fallback to current authenticated user
+  if (!targetId || targetId === "default_shop") {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        targetId = authData.user.id;
+      }
+    } catch {
+      // ignore
+    }
   }
 
-  return (data || []).map((row) => ({
+  let rows: any[] = [];
+
+  if (targetId) {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .or(`owner_id.eq.${targetId},shop_id.eq.${targetId}`)
+        .order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        rows = data;
+      } else {
+        // Fallback: Query owner_id directly
+        const { data: ownerData } = await supabase
+          .from("products")
+          .select("*")
+          .eq("owner_id", targetId)
+          .order("created_at", { ascending: false });
+        if (ownerData && ownerData.length > 0) {
+          rows = ownerData;
+        }
+      }
+    } catch (e) {
+      console.warn("[productService] Error querying products with targetId:", e);
+    }
+  }
+
+  // Fallback: If still empty, check if authenticated user has products under their user ID
+  if (rows.length === 0) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id && authData.user.id !== targetId) {
+        const { data: authProducts } = await supabase
+          .from("products")
+          .select("*")
+          .or(`owner_id.eq.${authData.user.id},shop_id.eq.${authData.user.id}`)
+          .order("created_at", { ascending: false });
+        if (authProducts && authProducts.length > 0) {
+          rows = authProducts;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return rows.map((row) => ({
     id: row.id,
     name: row.name,
     price: row.price,

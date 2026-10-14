@@ -24,6 +24,7 @@ import {
   Coins,
   ChevronRight,
   ExternalLink,
+  ArrowUpRight,
   Smartphone,
   Send,
   Copy,
@@ -44,6 +45,8 @@ import { LandingPage } from "./components/LandingPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { PublicShop } from "./components/PublicShop";
 import { AIStrategyDesk } from "./components/strategy/AIStrategyDesk";
+import { TeamRoom } from "./features/sales-team/components/TeamRoom";
+import { SalesTeamPage } from "./features/sales-team/components/SalesTeamPage";
 import { useAuth } from "./contexts/AuthContext";
 import { invokeApi } from "./services/api";
 import { getShopState, saveShopState } from "./services/shopState";
@@ -253,6 +256,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [showLandingPage, setShowLandingPage] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'sales_team' || window.location.pathname === '/sales-team') return false;
     if (params.get('landing') === 'true') return true;
     return true;
   });
@@ -278,7 +282,12 @@ export default function App() {
     | "web_chatbot"
     | "live_support"
     | "smart_marketing"
-  >("orders");
+    | "sales_team"
+  >(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'sales_team' || window.location.pathname === '/sales-team') return "sales_team";
+    return "orders";
+  });
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
@@ -416,6 +425,13 @@ export default function App() {
           if (shopPhone) {
             data.config.phone = shopPhone;
           }
+          // Sync live store identity into clientStore so all offline/async tools have the exact human shopName & shopId
+          store.saveOnboarding({
+            shopName: shopRow.shop_name || undefined,
+            ownerName: shopRow.owner_name || undefined,
+            phone: shopPhone || undefined,
+            shopId: data.config.shopId || undefined,
+          });
         } else {
           setShopRecord(null);
         }
@@ -436,6 +452,8 @@ export default function App() {
       // 4. Fetch products from table
       const products = await getProducts(user.id);
       data.products = products;
+      // Sync into clientStore localStorage so sales team and tools always have immediate catalog access
+      store.setClientProducts(products);
 
       // 4.5. Fetch orders from Supabase Postgres table (source of truth) and merge
       try {
@@ -1195,6 +1213,37 @@ export default function App() {
     );
   }
  
+  // Render dedicated Sales Team page when activeTab is "sales_team"
+  if (activeTab === "sales_team") {
+    return (
+      <SalesTeamPage
+        shopId={storeState.config.shopId || shopRecord?.shop_id || user?.id || "default_shop"}
+        storeName={storeState.config.shopName || shopRecord?.shop_name || "Our Store"}
+        ownerName={storeState.config.ownerName || shopRecord?.owner_name || "Store Owner"}
+        onBackToDashboard={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+          setActiveTab("orders");
+        }}
+        onNavigateToInsights={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+          setActiveTab("insights");
+        }}
+        user={user}
+        lang={lang}
+        toggleLang={toggleLang}
+        t={t}
+        signOut={async () => {
+          await signOut();
+          setStoreState(null);
+          setShopRecord(null);
+        }}
+      />
+    );
+  }
 
   // Derived dashboard analytics values
   const productsCount = storeState.products.length;
@@ -1305,29 +1354,67 @@ export default function App() {
                   { id: "orders", label: t("tabOrders"), icon: ShoppingBag },
                   { id: "products", label: t("tabProducts"), icon: Database },
                   { id: "delivery", label: t("tabDelivery"), icon: Truck },
+                  { id: "sales_team", label: t("tabSalesTeam"), icon: Bot },
                   { id: "insights", label: t("tabInsights"), icon: Sparkles },
                   { id: "smart_marketing", label: t("tabSmartMarketing"), icon: TrendingUp },
                   { id: "live_support", label: t("tabLiveSupport"), icon: MessageSquare },
                   { id: "telegram_bot", label: t("tabTelegramBot"), icon: Send },
                   { id: "web_chatbot", label: t("tabWebChatbot"), icon: Store },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(item.id as any);
-                      setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                      activeTab === item.id
-                        ? "bg-slate-900 text-white font-bold"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <item.icon size={16} />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
+                ].map((item) => {
+                  const isSalesTeam = item.id === "sales_team";
+                  if (isSalesTeam) {
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("tab", "sales_team");
+                          window.open(url.toString(), "_blank");
+                          setActiveTab("sales_team");
+                          setMobileSidebarOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border bg-gradient-to-r from-blue-50/80 to-indigo-50/40 border-blue-200/80 text-[#0A1B2A] hover:bg-blue-100/70"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#0069FF] text-white shadow-2xs">
+                            <Bot size={13} strokeWidth={2.2} />
+                          </div>
+                          <span>{item.label}</span>
+                          <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded font-mono bg-[#0069FF] text-white shadow-2xs">
+                            PRO
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-mono">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                          </span>
+                          <ArrowUpRight size={13} className="text-[#0069FF]" />
+                        </div>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id as any);
+                        setMobileSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                        activeTab === item.id
+                          ? "bg-slate-900 text-white font-bold"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <item.icon size={16} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1483,6 +1570,53 @@ export default function App() {
               Intelligence &amp; Growth
             </p>
             <div className="space-y-1">
+              {/* Sales Team (Flagship PRO 5-Agent War Room) */}
+              <div className="relative group/pro mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("tab", "sales_team");
+                    window.open(url.toString(), "_blank");
+                    setActiveTab("sales_team");
+                  }}
+                  className="w-full text-left p-2.5 rounded-2xl transition-all duration-200 cursor-pointer border bg-gradient-to-br from-[#0069FF]/[0.07] via-white to-[#0069FF]/[0.02] border-[#0069FF]/25 hover:border-[#0069FF]/55 shadow-[0_1px_4px_rgba(0,105,255,0.06)] hover:shadow-[0_4px_14px_rgba(0,105,255,0.12)]"
+                  title="Open 5-Agent Sales Team Council in new window"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/pro:scale-105 bg-[#0069FF] text-white shadow-[0_2px_6px_rgba(0,105,255,0.3)]">
+                        <Bot size={15} strokeWidth={2.2} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold tracking-tight truncate text-[#0A1B2A] group-hover/pro:text-[#0069FF] transition-colors">
+                            {t("tabSalesTeam")}
+                          </span>
+                          <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded font-mono bg-[#0069FF] text-white shadow-2xs shrink-0">
+                            PRO
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="relative flex h-1.5 w-1.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                          </span>
+                          <span className="text-[10px] font-medium leading-tight truncate text-[#78716C]">
+                            5 Autonomous Agents
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ArrowUpRight
+                      size={14}
+                      className="shrink-0 mt-0.5 transition-all duration-150 text-[#0069FF]/70 group-hover/pro:text-[#0069FF] group-hover/pro:translate-x-0.5 group-hover/pro:-translate-y-0.5"
+                    />
+                  </div>
+                </button>
+              </div>
+
               {/* AI Strategy */}
               <button
                 type="button"

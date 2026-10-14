@@ -32,6 +32,7 @@ export interface Translations {
   tabTelegramBot: string;
   tabWebChatbot: string;
   tabLiveSupport: string;
+  tabSalesTeam: string;
 
   // KPIs & Stats
   totalStoreRevenue: string;
@@ -252,6 +253,7 @@ export const translations: Record<Language, Translations> = {
     tabTelegramBot: "Telegram Bot",
     tabWebChatbot: "Web Chatbot",
     tabLiveSupport: "Live VIP Support",
+    tabSalesTeam: "Sales Team",
 
     // KPIs & Stats
     totalStoreRevenue: "Total Store Revenue",
