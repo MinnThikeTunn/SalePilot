@@ -84,6 +84,24 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
     }
   };
 
+  const handleDemoLogin = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    setEmail("thikemin01@gmail.com");
+    setPassword("12345678");
+
+    try {
+      const result = await signIn("thikemin01@gmail.com", "12345678");
+      if (result.error) {
+        setError(result.error);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col justify-between selection:bg-stone-900 selection:text-white font-sans antialiased">
       {/* Top Header Navigation */}
@@ -303,6 +321,29 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
                 : "Create Merchant Account"}
             </button>
           </form>
+
+          {/* Quick Demo Sign In */}
+          <div className="relative my-6 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-stone-200/80" />
+            </div>
+            <div className="relative px-3 bg-white text-[11px] font-mono tracking-wider uppercase text-stone-400">
+              Or Live Demo Access
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={busy}
+            className="w-full py-3.5 px-4 rounded-xl text-xs font-semibold tracking-wide text-stone-900 bg-stone-50 hover:bg-stone-100 active:scale-[0.98] border border-stone-300/80 hover:border-stone-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2 group"
+          >
+            <Sparkles className="w-4 h-4 text-amber-500 transition-transform group-hover:scale-110" />
+            <span>Sign In with Demo Account</span>
+            <span className="text-[10px] font-mono text-stone-500 bg-stone-200/60 px-1.5 py-0.5 rounded ml-1">
+              thikemin01@gmail.com
+            </span>
+          </button>
 
           {/* Footer Assistance */}
           <div className="mt-8 pt-6 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
