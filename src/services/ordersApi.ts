@@ -23,16 +23,30 @@ export function mapDbRowToOrder(r: any): Order {
 /**
  * Fetch all orders for a shop owner from the Supabase Postgres "orders" table.
  */
-export async function getOrdersForOwner(ownerId: string, shopId?: string): Promise<Order[]> {
+export async function getOrdersForOwner(ownerId?: string, shopId?: string): Promise<Order[]> {
   try {
+    const isUuid = (val?: string) =>
+      Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim()));
+
     let query = supabase.from("orders").select("*");
 
-    if (ownerId && shopId) {
-      query = query.or(`owner_id.eq.${ownerId},shop_id.eq.${shopId}`);
-    } else if (ownerId) {
-      query = query.eq("owner_id", ownerId);
-    } else if (shopId) {
-      query = query.eq("shop_id", shopId);
+    const validOwnerUuid = isUuid(ownerId) ? ownerId?.trim() : undefined;
+    const textShopId = (shopId?.trim() || (!isUuid(ownerId) ? ownerId?.trim() : undefined)) || undefined;
+
+    if (validOwnerUuid && textShopId) {
+      query = query.or(`owner_id.eq.${validOwnerUuid},shop_id.eq.${textShopId}`);
+    } else if (validOwnerUuid) {
+      query = query.eq("owner_id", validOwnerUuid);
+    } else if (textShopId && textShopId !== "default_shop") {
+      query = query.eq("shop_id", textShopId);
+    } else {
+      // Fallback to authenticated user
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        query = query.eq("owner_id", authData.user.id);
+      } else {
+        return [];
+      }
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });

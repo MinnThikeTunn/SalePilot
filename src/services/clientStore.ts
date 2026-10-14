@@ -163,6 +163,13 @@ export function setClientDeliveryZones(zones: DeliveryZone[]) {
   return state;
 }
 
+export function setClientProducts(products: Product[]) {
+  const state = load();
+  state.products = products;
+  save();
+  return state;
+}
+
 export function addOrder(order: Order) {
   const state = load();
   state.orders.unshift(order);

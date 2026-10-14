@@ -71,7 +71,7 @@ export function EvidenceExplorerDrawer({
                 <span>Evidence Explorer &amp; Empirical Ledger</span>
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-stone-900 text-stone-100">
-                ADR-0002 Audited
+                Zero-PII Audited
               </span>
             </div>
             <p className="text-xs text-stone-500 font-medium">

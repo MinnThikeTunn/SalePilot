@@ -5,6 +5,7 @@ import type {
   AgentRoleKey,
 } from "../types/sales-team";
 import { getState } from "../../../services/clientStore";
+import { supabase } from "../../../utils/supabase";
 
 // Local in-memory policy cache with localStorage fallback
 const POLICY_STORAGE_KEY = "sales_brain_policies_v1";
@@ -40,6 +41,41 @@ export function getShopBusinessPolicies(shopId: string): ShopBusinessPolicy {
   return cachedPolicy;
 }
 
+export async function fetchShopBusinessPoliciesAsync(shopId: string): Promise<ShopBusinessPolicy> {
+  try {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("shop_business_policies")
+        .select("*")
+        .eq("shop_id", shopId)
+        .maybeSingle();
+
+      if (!error && data) {
+        const fromDb: ShopBusinessPolicy = {
+          shop_id: data.shop_id,
+          min_contribution_margin_pct: Number(data.min_contribution_margin_pct) || 15,
+          max_discount_pct: Number(data.max_discount_pct) || 20,
+          require_delivery_fee_coverage: Boolean(data.require_delivery_fee_coverage),
+          max_cod_return_allowance_pct: Number(data.max_cod_return_allowance_pct) || 10,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        };
+        cachedPolicy = fromDb;
+        if (typeof localStorage !== "undefined") {
+          try {
+            localStorage.setItem(`${POLICY_STORAGE_KEY}_${shopId}`, JSON.stringify(fromDb));
+          } catch {}
+        }
+        return fromDb;
+      }
+    }
+  } catch (e) {
+    console.warn("[salesTeamApi] Exception querying shop_business_policies from Supabase:", e);
+  }
+
+  return getShopBusinessPolicies(shopId);
+}
+
 export function updateShopBusinessPolicies(
   shopId: string,
   policies: Partial<ShopBusinessPolicy>
@@ -59,6 +95,30 @@ export function updateShopBusinessPolicies(
     } catch (e) {
       console.warn("Failed to persist shop policies:", e);
     }
+  }
+
+  // Asynchronously sync to Supabase table shop_business_policies when available
+  try {
+    if (supabase) {
+      Promise.resolve(
+        supabase
+          .from("shop_business_policies")
+          .upsert({
+            shop_id: shopId,
+            min_contribution_margin_pct: updated.min_contribution_margin_pct,
+            max_discount_pct: updated.max_discount_pct,
+            require_delivery_fee_coverage: updated.require_delivery_fee_coverage,
+            max_cod_return_allowance_pct: updated.max_cod_return_allowance_pct,
+            updated_at: updated.updated_at,
+          })
+      )
+        .then(({ error }) => {
+          if (error) console.warn("[salesTeamApi] DB sync warning for policies:", error.message);
+        })
+        .catch(() => {});
+    }
+  } catch {
+    // Ignore offline errors
   }
 
   return updated;

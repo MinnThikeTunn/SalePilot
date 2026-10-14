@@ -1,15 +1,34 @@
 import type { SalesTeamTool, ToolExecutionContext } from "../types/sales-team";
-import { getState } from "../../../services/clientStore";
+import { getState, setClientProducts } from "../../../services/clientStore";
+import { getShopBusinessPolicies, fetchShopBusinessPoliciesAsync } from "../services/salesTeamApi";
+import {
+  getBusinessMemories,
+  fetchBusinessMemoriesAsync,
+  retrieveRelevantMemories,
+} from "../services/businessMemoryService";
+import { supabase } from "../../../utils/supabase";
+import { getProducts } from "../../../services/productService";
+import { getOrdersForOwner } from "../../../services/ordersApi";
 
 export class ToolRegistry {
   private tools: Map<string, SalesTeamTool> = new Map();
+  private asyncHandlers: Map<
+    string,
+    (context: ToolExecutionContext & Record<string, any>, params?: any) => Promise<any>
+  > = new Map();
 
   constructor() {
     this.registerDefaultTools();
   }
 
-  register(tool: SalesTeamTool) {
+  register(
+    tool: SalesTeamTool,
+    asyncHandler?: (context: ToolExecutionContext & Record<string, any>, params?: any) => Promise<any>
+  ) {
     this.tools.set(tool.name, tool);
+    if (asyncHandler) {
+      this.asyncHandlers.set(tool.name, asyncHandler);
+    }
   }
 
   getTool(name: string): SalesTeamTool | undefined {
@@ -20,87 +39,227 @@ export class ToolRegistry {
     return Array.from(this.tools.values());
   }
 
-  executeTool(name: string, context: ToolExecutionContext & Record<string, any>): any {
+  executeTool(name: string, context: ToolExecutionContext & Record<string, any>, params?: any): any {
     const tool = this.tools.get(name);
     if (!tool) {
       throw new Error(`Tool '${name}' not found in registry`);
     }
-    return tool.execute(context, context);
+    return tool.execute(context, params || context);
+  }
+
+  async executeToolAsync(
+    name: string,
+    context: ToolExecutionContext & Record<string, any>,
+    params?: any
+  ): Promise<any> {
+    const tool = this.tools.get(name);
+    if (!tool) {
+      throw new Error(`Tool '${name}' not found in registry`);
+    }
+
+    const asyncHandler = this.asyncHandlers.get(name);
+    if (asyncHandler) {
+      try {
+        return await asyncHandler(context, params || context);
+      } catch (err) {
+        console.warn(`[toolRegistry] Async execution failed for '${name}', using sync fallback:`, err);
+      }
+    }
+
+    return await tool.execute(context, params || context);
   }
 
   private registerDefaultTools() {
-    // 1. Product Catalog Tool
-    this.register({
-      name: "get_product_catalog",
-      description: "Fetches current product catalog including prices, COGS (cost_price), stock levels, lead times, and buffer safety thresholds.",
-      parameters: {
-        type: "object",
-        properties: {
-          shopId: { type: "string", description: "Shop identifier" },
+    // 1. Product Catalog Tool (Dual Layer: Supabase DB + clientStore)
+    this.register(
+      {
+        name: "get_product_catalog",
+        description:
+          "Fetches current product catalog including prices, COGS (cost_price), stock levels, lead times, and buffer safety thresholds from live database and store cache.",
+        parameters: {
+          type: "object",
+          properties: {
+            shopId: { type: "string", description: "Shop identifier" },
+          },
+          required: ["shopId"],
         },
-        required: ["shopId"],
+        execute: (context) => {
+          const state = getState();
+          return {
+            products: state.products || [],
+            totalCount: (state.products || []).length,
+            timestamp: new Date().toISOString(),
+            source: "local_cache",
+          };
+        },
       },
-      execute: (context) => {
+      async (context) => {
         const state = getState();
-        return {
-          products: state.products || [],
-          totalCount: (state.products || []).length,
-          timestamp: new Date().toISOString(),
-        };
-      },
-    });
+        let products = [...(state.products || [])];
 
-    // 2. Order History Tool
-    this.register({
-      name: "get_order_history",
-      description: "Fetches completed, confirmed, and pending order records with item breakdowns, payment methods, delivery fees, and order timestamps.",
-      parameters: {
-        type: "object",
-        properties: {
-          shopId: { type: "string", description: "Shop identifier" },
-          status: { type: "string", description: "Filter by status (confirmed, completed, pending, etc.)" },
+        try {
+          if (supabase) {
+            const dbProducts = await getProducts(context.shopId);
+            if (dbProducts && dbProducts.length > 0) {
+              const existingIds = new Set(products.map((p) => p.id));
+              let addedAny = false;
+              dbProducts.forEach((p) => {
+                if (!existingIds.has(p.id)) {
+                  products.push(p);
+                  existingIds.add(p.id);
+                  addedAny = true;
+                }
+              });
+              if (addedAny || products.length > (state.products || []).length) {
+                setClientProducts(products);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[toolRegistry] Database query failed for products:", e);
+        }
+
+        return {
+          products,
+          totalCount: products.length,
+          timestamp: new Date().toISOString(),
+          source: "database_merged",
+        };
+      }
+    );
+
+    // 2. Order History Tool (Dual Layer: Supabase DB + clientStore)
+    this.register(
+      {
+        name: "get_order_history",
+        description:
+          "Fetches completed, confirmed, and pending order records with item breakdowns, payment methods, delivery fees, and order timestamps from database and store ledger.",
+        parameters: {
+          type: "object",
+          properties: {
+            shopId: { type: "string", description: "Shop identifier" },
+            status: { type: "string", description: "Filter by status (confirmed, completed, pending, etc.)" },
+          },
+          required: ["shopId"],
         },
-        required: ["shopId"],
+        execute: (context, params) => {
+          const state = getState();
+          const orders = state.orders || [];
+          const filtered = params?.status
+            ? orders.filter((o) => o.status === params.status)
+            : orders;
+          return {
+            orders: filtered,
+            totalCount: filtered.length,
+            timestamp: new Date().toISOString(),
+            source: "local_cache",
+          };
+        },
       },
-      execute: (context, params) => {
+      async (context, params) => {
         const state = getState();
-        const orders = state.orders || [];
+        let orders = [...(state.orders || [])];
+
+        try {
+          if (supabase && context.shopId) {
+            const dbOrders = await getOrdersForOwner(context.shopId, context.shopId);
+            if (dbOrders && dbOrders.length > 0) {
+              const existingIds = new Set(orders.map((o) => o.id));
+              dbOrders.forEach((o) => {
+                if (!existingIds.has(o.id)) {
+                  orders.push(o);
+                  existingIds.add(o.id);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("[toolRegistry] Database query failed for orders:", e);
+        }
+
         const filtered = params?.status
           ? orders.filter((o) => o.status === params.status)
           : orders;
+
         return {
           orders: filtered,
           totalCount: filtered.length,
           timestamp: new Date().toISOString(),
+          source: "database_merged",
         };
-      },
-    });
+      }
+    );
 
-    // 3. Delivery Matrix Tool
-    this.register({
-      name: "get_delivery_matrix",
-      description: "Fetches configured township delivery rates, transit timelines, and regional coverage.",
-      parameters: {
-        type: "object",
-        properties: {
-          shopId: { type: "string", description: "Shop identifier" },
+    // 3. Delivery Matrix Tool (Dual Layer: Supabase DB + clientStore)
+    this.register(
+      {
+        name: "get_delivery_matrix",
+        description:
+          "Fetches configured township delivery rates, transit timelines, and regional coverage from database.",
+        parameters: {
+          type: "object",
+          properties: {
+            shopId: { type: "string", description: "Shop identifier" },
+          },
+          required: ["shopId"],
         },
-        required: ["shopId"],
+        execute: (context) => {
+          const state = getState();
+          return {
+            zones: state.deliveryZones || [],
+            totalCount: (state.deliveryZones || []).length,
+            timestamp: new Date().toISOString(),
+            source: "local_cache",
+          };
+        },
       },
-      execute: (context) => {
+      async (context) => {
         const state = getState();
+        let zones = [...(state.deliveryZones || [])];
+
+        try {
+          if (supabase && context.shopId) {
+            const { data, error } = await supabase
+              .from("delivery_zones")
+              .select("*")
+              .or(`owner_id.eq.${context.shopId},shop_id.eq.${context.shopId}`);
+
+            if (!error && Array.isArray(data) && data.length > 0) {
+              const existingIds = new Set(zones.map((z) => z.id));
+              data.forEach((row: any) => {
+                if (!existingIds.has(row.id)) {
+                  zones.push({
+                    id: row.id,
+                    township_name: row.township_name,
+                    region: row.region || "",
+                    division: row.division || "",
+                    rate: Math.max(0, Number(row.rate) || 0),
+                    estimated_transit_timeline: row.estimated_transit_timeline || "1-2 Days",
+                    created_at: row.created_at,
+                  });
+                  existingIds.add(row.id);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("[toolRegistry] Database query failed for delivery zones:", e);
+        }
+
         return {
-          zones: state.deliveryZones || [],
-          totalCount: (state.deliveryZones || []).length,
+          zones,
+          totalCount: zones.length,
           timestamp: new Date().toISOString(),
+          source: "database_merged",
         };
-      },
-    });
+      }
+    );
 
     // 4. Deterministic Unit Economics Calculator Tool
     this.register({
       name: "calculate_unit_economics",
-      description: "Deterministically calculates net revenue, gross margin, contribution margin %, and COD return risk deductions. Never guesses numbers.",
+      description:
+        "Deterministically calculates net revenue, gross margin, contribution margin %, and COD return risk deductions. Never guesses numbers.",
       parameters: {
         type: "object",
         properties: {
@@ -148,7 +307,8 @@ export class ToolRegistry {
     // 5. Customer Friction Signals Tool
     this.register({
       name: "get_customer_friction_signals",
-      description: "Extracts anonymized friction and drop-off categories from Telegram sessions without accessing or leaking raw customer messages or PII.",
+      description:
+        "Extracts anonymized friction and drop-off categories from Telegram sessions without accessing or leaking raw customer messages or PII.",
       parameters: {
         type: "object",
         properties: {
@@ -159,7 +319,7 @@ export class ToolRegistry {
       execute: (context) => {
         const state = getState();
         const sessions = Object.values(state.sessions || {});
-        
+
         let deliveryObjections = 0;
         let paymentDropoffs = 0;
         let priceHesitations = 0;
@@ -169,8 +329,8 @@ export class ToolRegistry {
           if (sess.currentStep === "selecting_township") deliveryObjections++;
           if (sess.currentStep === "selecting_payment" || sess.currentStep === "prepayment_pending") paymentDropoffs++;
           if (sess.cart && sess.cart.length > 0 && sess.currentStep !== "completed") abandonedCarts++;
-          
-          sess.messages.forEach((m) => {
+
+          (sess.messages || []).forEach((m) => {
             const text = (m.content || "").toLowerCase();
             if (text.includes("ဈေးကြီး") || text.includes("expensive") || text.includes("discount")) priceHesitations++;
             if (text.includes("ပို့ခ") || text.includes("delivery") || text.includes("transit")) deliveryObjections++;
@@ -190,31 +350,43 @@ export class ToolRegistry {
       },
     });
 
-    // 6. Shop Policies Tool
-    this.register({
-      name: "get_shop_policies",
-      description: "Fetches merchant-configured policy thresholds for contribution margins, discount caps, and courier allowances.",
-      parameters: {
-        type: "object",
-        properties: {
-          shopId: { type: "string", description: "Shop identifier" },
+    // 6. Shop Policies Tool (Dynamic DB + Cache Lookup)
+    this.register(
+      {
+        name: "get_shop_policies",
+        description:
+          "Fetches merchant-configured policy thresholds for contribution margins, discount caps, and courier allowances.",
+        parameters: {
+          type: "object",
+          properties: {
+            shopId: { type: "string", description: "Shop identifier" },
+          },
+          required: ["shopId"],
         },
-        required: ["shopId"],
+        execute: (context) => {
+          const policies = getShopBusinessPolicies(context.shopId || "default_shop");
+          return {
+            ...policies,
+            timestamp: new Date().toISOString(),
+            source: "cache",
+          };
+        },
       },
-      execute: (context) => {
+      async (context) => {
+        const policies = await fetchShopBusinessPoliciesAsync(context.shopId || "default_shop");
         return {
-          min_contribution_margin_pct: 15,
-          max_discount_pct: 20,
-          require_delivery_fee_coverage: true,
-          max_cod_return_allowance_pct: 15,
+          ...policies,
+          timestamp: new Date().toISOString(),
+          source: "database",
         };
-      },
-    });
+      }
+    );
 
     // 7. External Market Intelligence & Persona Context Tool
     this.register({
       name: "search_market_intelligence",
-      description: "Provides verified external Myanmar social commerce benchmarks, seasonal retail patterns (Thadingyut, Tazaungdaing, Thingyan), COD return rate averages, and consumer payment psychology to enrich agent personas.",
+      description:
+        "Provides verified external Myanmar social commerce benchmarks, seasonal retail patterns (Thadingyut, Tazaungdaing, Thingyan), COD return rate averages, and consumer payment psychology to enrich agent personas.",
       parameters: {
         type: "object",
         properties: {
@@ -263,8 +435,47 @@ export class ToolRegistry {
         };
       },
     });
+
+    // 8. Business Memory Tool (Dual Layer: Supabase DB + Local Storage)
+    this.register(
+      {
+        name: "get_business_memory",
+        description:
+          "Fetches verified business memories, owner corrections, past experiment results, and store policies.",
+        parameters: {
+          type: "object",
+          properties: {
+            shopId: { type: "string", description: "Shop identifier" },
+            query: { type: "string", description: "Optional search query to filter memories" },
+          },
+          required: ["shopId"],
+        },
+        execute: (context, params) => {
+          const memories = params?.query
+            ? retrieveRelevantMemories({ shopId: context.shopId || "default_shop", query: params.query })
+            : getBusinessMemories(context.shopId || "default_shop");
+          return {
+            memories,
+            totalCount: memories.length,
+            timestamp: new Date().toISOString(),
+            source: "cache",
+          };
+        },
+      },
+      async (context, params) => {
+        const memories = await fetchBusinessMemoriesAsync(context.shopId || "default_shop");
+        const filtered = params?.query
+          ? retrieveRelevantMemories({ shopId: context.shopId || "default_shop", query: params.query })
+          : memories;
+        return {
+          memories: filtered,
+          totalCount: filtered.length,
+          timestamp: new Date().toISOString(),
+          source: "database",
+        };
+      }
+    );
   }
 }
 
 export const toolRegistry = new ToolRegistry();
-

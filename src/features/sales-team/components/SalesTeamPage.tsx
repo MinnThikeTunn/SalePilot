@@ -18,6 +18,8 @@ import { TeamRoom } from "./TeamRoom";
 
 interface SalesTeamPageProps {
   shopId: string;
+  storeName?: string;
+  ownerName?: string;
   onBackToDashboard: () => void;
   onNavigateToInsights?: () => void;
   user?: any;
@@ -29,6 +31,8 @@ interface SalesTeamPageProps {
 
 export function SalesTeamPage({
   shopId,
+  storeName,
+  ownerName,
   onBackToDashboard,
   onNavigateToInsights,
   user,
@@ -58,7 +62,7 @@ export function SalesTeamPage({
 
             <div className="flex items-center gap-2.5">
               <span className="font-serif text-lg sm:text-xl font-medium tracking-tight text-[#0A1B2A]">
-                Sales Brain AI
+                {storeName || "Sales Brain AI"}
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20">
                 <Bot size={11} />
@@ -113,6 +117,7 @@ export function SalesTeamPage({
         >
           <TeamRoom
             shopId={shopId}
+            storeName={storeName}
             onNavigateToInsights={onNavigateToInsights}
           />
         </motion.div>

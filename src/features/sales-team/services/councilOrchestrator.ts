@@ -5,6 +5,7 @@ import type {
   TeamDebate,
   TeamDecision,
   TeamEvidence,
+  CouncilChatMessage,
 } from "../types/sales-team";
 import { getShopBusinessPolicies } from "./salesTeamApi";
 import { runScoutInquiry } from "../agents/scoutRunner";
@@ -30,6 +31,7 @@ export interface CouncilDeliberationResult {
   debates: TeamDebate[];
   decision: TeamDecision;
   evidence: TeamEvidence[];
+  chatMessages?: CouncilChatMessage[];
   executedAt: string;
 }
 

@@ -161,7 +161,7 @@ export function SingleAgentInquiryDrawer({
             <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 flex items-center gap-2.5">
               <Lock size={15} className="text-emerald-700 shrink-0" />
               <span>
-                <strong>ADR-0002 Zero-PII Guarantee:</strong> Echo inspects anonymized conversation stages and drop-offs. Customer names, phone numbers, and raw chat logs are strictly omitted from analysis.
+                <strong>Zero-PII Privacy Guarantee:</strong> Echo inspects anonymized conversation stages and drop-offs. Customer names, phone numbers, and raw chat logs are strictly omitted from analysis.
               </span>
             </div>
           )}

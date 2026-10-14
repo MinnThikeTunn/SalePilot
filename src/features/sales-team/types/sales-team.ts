@@ -164,3 +164,35 @@ export interface SalesTeamTool<TParams = any, TResult = any> {
   parameters: Record<string, any>;
   execute: (context: ToolExecutionContext, params?: TParams) => Promise<TResult> | TResult;
 }
+
+// Single-Agent Interactive Chatbot Types
+export interface AgentChatMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  senderKey?: AgentRoleKey;
+  content: string;
+  timestamp: string;
+  toolCalls?: Array<{ toolName: string; summary: string; result?: any }>;
+}
+
+// Council Telegram Chamber Chat Types
+export interface CouncilChatMessage {
+  id: string;
+  senderKey: AgentRoleKey;
+  stepNumber: number;
+  phase: "investigating" | "policy" | "formulating" | "debating" | "consensus";
+  content: string;
+  timestamp: string;
+  widget?: {
+    type: "inventory_table" | "margin_calc" | "offer_draft" | "decision_summary";
+    data: Record<string, any>;
+  };
+}
+
+export interface CouncilDeliberationStep {
+  stepNumber: number;
+  phase: "investigating" | "policy" | "formulating" | "debating" | "consensus";
+  activeAgentKey: AgentRoleKey;
+  statusText: string;
+}
+

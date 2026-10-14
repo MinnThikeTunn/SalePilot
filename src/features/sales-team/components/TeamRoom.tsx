@@ -36,7 +36,8 @@ import {
 } from "../services/dataScarcityService";
 import { getBusinessMemories } from "../services/businessMemoryService";
 import { ShopPoliciesDrawer } from "./ShopPoliciesDrawer";
-import { SingleAgentInquiryDrawer } from "./SingleAgentInquiryDrawer";
+import { SingleAgentChatbotDrawer } from "./SingleAgentChatbotDrawer";
+import { CouncilTelegramRoom } from "./CouncilTelegramRoom";
 import { StrategyDecisionCard } from "./StrategyDecisionCard";
 import { ActionCenterDrawer } from "./ActionCenterDrawer";
 import { EvidenceExplorerDrawer } from "./EvidenceExplorerDrawer";
@@ -45,13 +46,43 @@ import {
   runCouncilDeliberation,
   type CouncilDeliberationResult,
 } from "../services/councilOrchestrator";
+import {
+  resolveStoreName,
+  resolveStoreNameSync,
+} from "../services/geminiSalesTeamService";
 
 interface TeamRoomProps {
   shopId?: string;
+  storeName?: string;
   onNavigateToInsights?: () => void;
 }
 
-export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: TeamRoomProps) {
+function SpecialistAvatar({ agent, icon }: { agent: AgentRosterInfo; icon: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#F4F2EC] border border-[#E2E8F0] flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+      {!hasError && agent.avatarUrl ? (
+        <img
+          src={agent.avatarUrl}
+          alt={agent.name}
+          className="w-full h-full object-cover"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          {icon}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TeamRoom({ shopId = "default_shop", storeName, onNavigateToInsights }: TeamRoomProps) {
+  const [currentStoreName, setCurrentStoreName] = useState<string>(() =>
+    resolveStoreNameSync(shopId, storeName)
+  );
+
   const [roster, setRoster] = useState<AgentRosterInfo[]>([]);
   const [freshness, setFreshness] = useState<DataFreshnessStatus | null>(null);
   const [scarcity, setScarcity] = useState<DataScarcityEvaluation>(() => evaluateDataScarcity(shopId));
@@ -66,8 +97,6 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   const [memoryCount, setMemoryCount] = useState<number>(0);
 
   // Council Deliberation State
-  const [isDeliberating, setIsDeliberating] = useState<boolean>(false);
-  const [deliberationStep, setDeliberationStep] = useState<string>("idle");
   const [councilResult, setCouncilResult] = useState<CouncilDeliberationResult | null>(null);
   const [councilGoal, setCouncilGoal] = useState<string>(
     "Maximize revenue for upcoming Thadingyut Lighting Festival without sacrificing contribution margin"
@@ -83,7 +112,8 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   useEffect(() => {
     setRoster(getAgentRoster());
     refreshTelemetry();
-  }, [shopId]);
+    resolveStoreName(shopId, storeName).then(setCurrentStoreName);
+  }, [shopId, storeName]);
 
   const handleSavePolicies = (newPolicies: any) => {
     const updated = updateShopBusinessPolicies(shopId, newPolicies);
@@ -110,26 +140,12 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
   };
 
   const handleConveneCouncil = () => {
-    setIsDeliberating(true);
-    setDeliberationStep("investigating");
-
-    // Sequential stepper animation for calm UX feedback
-    setTimeout(() => {
-      setDeliberationStep("debating");
-      setTimeout(() => {
-        setDeliberationStep("synthesizing");
-        setTimeout(() => {
-          const result = runCouncilDeliberation({
-            shopId,
-            goal: councilGoal,
-          });
-          setCouncilResult(result);
-          setIsDeliberating(false);
-          setDeliberationStep("completed");
-          refreshTelemetry();
-        }, 450);
-      }, 450);
-    }, 500);
+    const result = runCouncilDeliberation({
+      shopId,
+      goal: councilGoal,
+    });
+    setCouncilResult(result);
+    refreshTelemetry();
   };
 
   const getAgentIcon = (key: string) => {
@@ -153,8 +169,8 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
     <div className="space-y-10 max-w-7xl mx-auto pb-16 font-sans">
       {/* 1. Command Header & Telemetry Strip */}
       <div className="p-6 sm:p-10 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-8">
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-          <div className="space-y-2.5 max-w-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2.5 flex-1">
             <div className="flex items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20">
                 <Bot size={12} />
@@ -166,70 +182,121 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               </span>
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#0A1B2A] tracking-tight leading-tight text-balance">
+            <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#0A1B2A] tracking-tight leading-tight whitespace-normal">
               Merchant Council Chamber
             </h1>
 
-            <p className="text-sm sm:text-base text-[#475569] leading-relaxed font-normal text-balance">
-              Five coordinated AI specialists investigating real inventory, customer friction, and profit margin rules under strict merchant governance.
+            <p className="text-sm sm:text-base text-[#475569] leading-relaxed font-normal whitespace-normal">
+              Five coordinated AI specialists investigating real inventory, customer friction, and profit margin rules for <strong className="text-[#0A1B2A]">{currentStoreName}</strong> under strict merchant governance.
             </p>
           </div>
+        </div>
 
-          {/* Action pills toolbar */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {/* Pending Approvals Pill */}
-            <button
-              type="button"
-              onClick={() => setActionCenterOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#EFF6FF] hover:bg-[#0069FF] text-[#0069FF] hover:text-white border border-[#0069FF]/30 text-xs font-semibold cursor-pointer transition-all shadow-xs group"
-              title="View pending merchant approvals"
-            >
-              <Lock size={13} className="text-[#0069FF] group-hover:text-white transition-colors" />
-              <span>Pending Approvals</span>
-              <span className="font-mono text-xs bg-white text-[#0069FF] px-2 py-0.5 rounded-md font-bold shadow-2xs group-hover:bg-white/20 group-hover:text-white">
-                {pendingApprovalsCount}
+        {/* 4 Control & Governance Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          {/* 1. Pending Approvals Card */}
+          <button
+            type="button"
+            onClick={() => setActionCenterOpen(true)}
+            className="p-4 bg-[#FAF8F5] hover:bg-white border border-[#E2E8F0] hover:border-[#0069FF]/40 rounded-2xl text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+            title="View pending merchant approvals"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] border border-[#0069FF]/20 flex items-center justify-center text-[#0069FF] group-hover:bg-[#0069FF] group-hover:text-white transition-colors">
+                <Lock size={15} />
+              </div>
+              <span className="font-mono text-xs px-2.5 py-0.5 rounded-full font-bold bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20">
+                Action Required
               </span>
-            </button>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-[#64748B] block">Pending Approvals</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-2xl font-bold text-[#0A1B2A] tracking-tight">
+                  {pendingApprovalsCount}
+                </span>
+                <span className="text-xs text-[#64748B]">proposals</span>
+              </div>
+            </div>
+          </button>
 
-            {/* Shop Guardrails Pill */}
-            <button
-              type="button"
-              onClick={() => setPoliciesOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] text-xs font-medium transition-all shadow-xs cursor-pointer"
-            >
-              <Sliders size={13} className="text-[#64748B]" />
-              <span>Shop Guardrails</span>
-              <span className="font-mono text-[11px] text-[#0069FF] bg-[#EFF6FF] px-2 py-0.5 rounded font-semibold">
-                {policies.min_contribution_margin_pct}% Min
+          {/* 2. Shop Guardrails Card */}
+          <button
+            type="button"
+            onClick={() => setPoliciesOpen(true)}
+            className="p-4 bg-[#FAF8F5] hover:bg-white border border-[#E2E8F0] hover:border-[#0069FF]/40 rounded-2xl text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+            title="Configure shop safety guardrails"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-8 h-8 rounded-xl bg-[#FAF8F5] border border-[#E2E8F0] flex items-center justify-center text-[#64748B] group-hover:border-[#0069FF]/30 group-hover:text-[#0069FF] transition-colors">
+                <Sliders size={15} />
+              </div>
+              <span className="font-mono text-xs px-2.5 py-0.5 rounded-full font-semibold bg-white text-[#475569] border border-[#E2E8F0]">
+                Policy Active
               </span>
-            </button>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-[#64748B] block">Shop Guardrails</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-2xl font-bold text-[#0069FF] tracking-tight">
+                  {policies.min_contribution_margin_pct}%
+                </span>
+                <span className="text-xs text-[#64748B]">Min Margin</span>
+              </div>
+            </div>
+          </button>
 
-            {/* Business Memory Pill */}
-            <button
-              type="button"
-              onClick={() => setMemoryDrawerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] text-xs font-medium transition-all shadow-xs cursor-pointer"
-            >
-              <Brain size={13} className="text-purple-600" />
-              <span>Business Memory</span>
-              <span className="font-mono text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">
-                {memoryCount}
+          {/* 3. Business Memory Card */}
+          <button
+            type="button"
+            onClick={() => setMemoryDrawerOpen(true)}
+            className="p-4 bg-[#FAF8F5] hover:bg-white border border-[#E2E8F0] hover:border-purple-300 rounded-2xl text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+            title="Inspect merchant learned memories"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                <Brain size={15} />
+              </div>
+              <span className="font-mono text-xs px-2.5 py-0.5 rounded-full font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                Persistent
               </span>
-            </button>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-[#64748B] block">Business Memory</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-2xl font-bold text-[#0A1B2A] tracking-tight">
+                  {memoryCount}
+                </span>
+                <span className="text-xs text-[#64748B]">rules learned</span>
+              </div>
+            </div>
+          </button>
 
-            {/* Evidence Ledger Pill */}
-            <button
-              type="button"
-              onClick={() => setEvidenceExplorerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4F2EC] border border-[#E2E8F0] text-[#0A1B2A] text-xs font-medium transition-all shadow-xs cursor-pointer"
-            >
-              <Database size={13} className="text-[#10B981]" />
-              <span>Evidence Ledger</span>
-              <span className="font-mono text-[11px] bg-[#ECFDF5] text-[#047857] px-2 py-0.5 rounded font-semibold">
-                {(councilResult?.evidence || []).length}
+          {/* 4. Evidence Ledger Card */}
+          <button
+            type="button"
+            onClick={() => setEvidenceExplorerOpen(true)}
+            className="p-4 bg-[#FAF8F5] hover:bg-white border border-[#E2E8F0] hover:border-emerald-300 rounded-2xl text-left transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+            title="Explore telemetry audit evidence"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-8 h-8 rounded-xl bg-[#ECFDF5] border border-[#10B981]/20 flex items-center justify-center text-[#047857] group-hover:bg-[#10B981] group-hover:text-white transition-colors">
+                <Database size={15} />
+              </div>
+              <span className="font-mono text-xs px-2.5 py-0.5 rounded-full font-semibold bg-[#ECFDF5] text-[#047857] border border-[#10B981]/20">
+                Audited
               </span>
-            </button>
-          </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-[#64748B] block">Evidence Ledger</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-2xl font-bold text-[#0A1B2A] tracking-tight">
+                  {(councilResult?.evidence || []).length}
+                </span>
+                <span className="text-xs text-[#64748B]">records</span>
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* Low-Data Warning Notice */}
@@ -349,19 +416,7 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#F4F2EC] border border-[#E2E8F0] flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-                    <img
-                      src={agent.avatarUrl}
-                      alt={agent.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = "none";
-                      }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {getAgentIcon(agent.key)}
-                    </div>
-                  </div>
+                  <SpecialistAvatar agent={agent} icon={getAgentIcon(agent.key)} />
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#ECFDF5] text-[#047857]">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
                     Ready
@@ -396,94 +451,20 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         </div>
       </div>
 
-      {/* 3. Council Deliberation Workspace */}
+      {/* 3. Council Deliberation Workspace (Telegram-Style Chamber) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Deliberation Launch & Flow */}
-        <div className="lg:col-span-2 p-6 sm:p-8 bg-white border border-[#E2E8F0] rounded-[32px] shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight text-balance">
-                Council Deliberation Theater
-              </h2>
-              <p className="text-xs sm:text-sm text-[#64748B] mt-0.5 text-balance">
-                Debate store inventory, buyer hesitation, and discount economics across all 5 specialists.
-              </p>
-            </div>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20 self-start sm:self-auto">
-              2-Revision Cap
-            </span>
-          </div>
-
-          {/* Goal Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-[#0A1B2A]">
-              Council Strategic Objective:
-            </label>
-            <input
-              type="text"
-              value={councilGoal}
-              onChange={(e) => setCouncilGoal(e.target.value)}
-              disabled={isDeliberating}
-              placeholder="e.g. Maximize revenue for upcoming festival without sacrificing contribution margin..."
-              className="w-full px-4 py-3 rounded-xl bg-[#FAF8F5] border border-[#E2E8F0] text-xs sm:text-sm text-[#0A1B2A] placeholder-[#94A3B8] focus:bg-white focus:outline-none focus:border-[#0069FF] focus:ring-2 focus:ring-[#0069FF]/10 transition-all"
-            />
-          </div>
-
-          {/* 5-Phase Loop Visualization - Serene, quiet progress rail */}
-          <div className="grid grid-cols-5 gap-1 py-4 px-2 bg-[#FAF8F5] border border-[#E2E8F0] rounded-2xl text-center text-xs">
-            <div className={`space-y-1 py-1 transition-colors ${deliberationStep === "investigating" ? "text-[#0069FF] font-semibold" : "text-[#64748B]"}`}>
-              <p className="font-mono text-xs text-[#94A3B8]">01</p>
-              <p className="font-semibold text-xs text-[#0A1B2A]">Investigate</p>
-              <p className="text-xs text-[#64748B]">Scout &amp; Echo</p>
-            </div>
-            <div className="space-y-1 py-1 border-l border-[#E2E8F0] text-[#64748B]">
-              <p className="font-mono text-xs text-[#94A3B8]">02</p>
-              <p className="font-semibold text-xs text-[#0A1B2A]">Floor Rules</p>
-              <p className="text-xs text-[#64748B]">Guardian</p>
-            </div>
-            <div className="space-y-1 py-1 border-l border-[#E2E8F0] text-[#64748B]">
-              <p className="font-mono text-xs text-[#94A3B8]">03</p>
-              <p className="font-semibold text-xs text-[#0A1B2A]">Draft Offers</p>
-              <p className="text-xs text-[#64748B]">Muse</p>
-            </div>
-            <div className={`space-y-1 py-1 border-l border-[#E2E8F0] transition-colors ${deliberationStep === "debating" ? "text-amber-600 font-semibold" : "text-[#64748B]"}`}>
-              <p className="font-mono text-xs text-[#94A3B8]">04</p>
-              <p className="font-semibold text-xs text-[#0A1B2A]">Profit Audit</p>
-              <p className="text-xs text-[#64748B]">Margin Veto</p>
-            </div>
-            <div className={`space-y-1 py-1 border-l border-[#E2E8F0] transition-colors ${deliberationStep === "synthesizing" ? "text-[#0069FF] font-semibold" : "text-[#64748B]"}`}>
-              <p className="font-mono text-xs text-[#94A3B8]">05</p>
-              <p className="font-semibold text-xs text-[#0A1B2A]">Decision Card</p>
-              <p className="text-xs text-[#64748B]">Commander</p>
-            </div>
-          </div>
-
-          {/* Primary Action Button */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-            <p className="text-xs text-[#64748B] leading-relaxed">
-              {isDeliberating
-                ? "Council deliberating: Analyzing store inventory, drop-offs, and margin rules..."
-                : "Ready to run multi-agent debate and synthesize a Strategy Decision Card."}
-            </p>
-            <button
-              type="button"
-              onClick={handleConveneCouncil}
-              disabled={isDeliberating}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl text-xs sm:text-sm font-semibold bg-[#0069FF] hover:bg-[#0052CC] text-white flex items-center justify-center gap-2.5 cursor-pointer shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 shrink-0"
-            >
-              {isDeliberating ? (
-                <>
-                  <Loader2 size={16} className="animate-spin text-white" />
-                  <span>Deliberating ({deliberationStep})...</span>
-                </>
-              ) : (
-                <>
-                  <Bot size={16} />
-                  <span>Convene Full Sales Council</span>
-                </>
-              )}
-            </button>
-          </div>
+        {/* Left 2 Cols: Telegram Group Chamber */}
+        <div className="lg:col-span-2">
+          <CouncilTelegramRoom
+            shopId={shopId}
+            storeName={currentStoreName}
+            goal={councilGoal}
+            onGoalChange={(newGoal) => setCouncilGoal(newGoal)}
+            onDeliberationFinished={(result) => {
+              setCouncilResult(result);
+              refreshTelemetry();
+            }}
+          />
         </div>
 
         {/* Right Col: Active Policy Protections */}
@@ -534,8 +515,9 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
               <h2 className="font-serif text-2xl font-normal text-[#0A1B2A] tracking-tight text-balance">
                 Synthesized Strategy Decision
               </h2>
-              <span className="text-xs font-mono text-[#64748B]">
-                Session {councilResult.session.id}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#047857] border border-[#10B981]/30">
+                <CheckCircle2 size={12} />
+                <span>Deliberation Consensus</span>
               </span>
             </div>
             <button
@@ -566,10 +548,11 @@ export function TeamRoom({ shopId = "default_shop", onNavigateToInsights }: Team
         onSave={handleSavePolicies}
       />
 
-      <SingleAgentInquiryDrawer
+      <SingleAgentChatbotDrawer
         isOpen={inquiryDrawerOpen}
         agent={selectedAgent}
         shopId={shopId}
+        storeName={currentStoreName}
         onClose={() => setInquiryDrawerOpen(false)}
       />
 

@@ -229,7 +229,7 @@ export function ActionCenterDrawer({
                     <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2">
                       <AlertTriangle size={14} className="text-rose-600 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-[11px]">ADR-0003 Pre-execution Guard Triggered:</p>
+                        <p className="font-bold text-[11px]">Pre-execution Guard Triggered:</p>
                         <p className="text-[11px] mt-0.5">
                           Underlying product stock or pricing was modified in the store after this action was approved. This approval was automatically invalidated to protect business integrity.
                         </p>

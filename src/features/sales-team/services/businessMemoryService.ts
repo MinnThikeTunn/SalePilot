@@ -1,4 +1,5 @@
 import type { BusinessMemory } from "../types/sales-team";
+import { supabase } from "../../../utils/supabase";
 
 const MEMORY_STORAGE_KEY = "sales_brain_memories_v1";
 
@@ -62,6 +63,33 @@ export function saveBusinessMemory(input: SaveMemoryInput): BusinessMemory {
 
   inMemoryStorage[id] = memory;
   persistMemories(shopId);
+
+  // Asynchronously sync to Supabase table business_memory when available
+  try {
+    if (supabase) {
+      Promise.resolve(
+        supabase
+          .from("business_memory")
+          .upsert({
+            id: memory.id,
+            shop_id: memory.shop_id,
+            memory_type: memory.memory_type,
+            content: memory.content,
+            source_refs: memory.source_refs,
+            confidence: memory.confidence,
+            expires_at: memory.expires_at,
+            created_at: memory.created_at,
+          })
+      )
+        .then(({ error }) => {
+          if (error) console.warn("[businessMemoryService] DB sync warning:", error.message);
+        })
+        .catch(() => {});
+    }
+  } catch {
+    // Ignore offline errors
+  }
+
   return memory;
 }
 
@@ -72,11 +100,52 @@ export function getBusinessMemories(shopId: string): BusinessMemory[] {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
+export async function fetchBusinessMemoriesAsync(shopId: string): Promise<BusinessMemory[]> {
+  loadMemories(shopId);
+  try {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("business_memory")
+        .select("*")
+        .eq("shop_id", shopId)
+        .order("created_at", { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        data.forEach((row: any) => {
+          const mem: BusinessMemory = {
+            id: row.id,
+            shop_id: row.shop_id,
+            memory_type: row.memory_type,
+            content: row.content,
+            source_refs: Array.isArray(row.source_refs) ? row.source_refs : [],
+            confidence: row.confidence || "high",
+            expires_at: row.expires_at,
+            created_at: row.created_at,
+          };
+          inMemoryStorage[mem.id] = mem;
+        });
+        persistMemories(shopId);
+      }
+    }
+  } catch (e) {
+    console.warn("[businessMemoryService] Supabase fetch exception:", e);
+  }
+  return getBusinessMemories(shopId);
+}
+
 export function deleteBusinessMemory(memoryId: string, shopId: string): boolean {
   loadMemories(shopId);
   if (inMemoryStorage[memoryId]) {
     delete inMemoryStorage[memoryId];
     persistMemories(shopId);
+
+    // Delete in Supabase if available
+    try {
+      if (supabase) {
+        Promise.resolve(supabase.from("business_memory").delete().eq("id", memoryId)).catch(() => {});
+      }
+    } catch {}
+
     return true;
   }
   return false;

@@ -387,6 +387,13 @@ export default function App() {
           if (shopPhone) {
             data.config.phone = shopPhone;
           }
+          // Sync live store identity into clientStore so all offline/async tools have the exact human shopName & shopId
+          store.saveOnboarding({
+            shopName: shopRow.shop_name || undefined,
+            ownerName: shopRow.owner_name || undefined,
+            phone: shopPhone || undefined,
+            shopId: data.config.shopId || undefined,
+          });
         } else {
           setShopRecord(null);
         }
@@ -407,6 +414,8 @@ export default function App() {
       // 4. Fetch products from table
       const products = await getProducts(user.id);
       data.products = products;
+      // Sync into clientStore localStorage so sales team and tools always have immediate catalog access
+      store.setClientProducts(products);
 
       // 4.5. Fetch orders from Supabase Postgres table (source of truth) and merge
       try {
@@ -1121,6 +1130,8 @@ export default function App() {
     return (
       <SalesTeamPage
         shopId={storeState.config.shopId || shopRecord?.shop_id || user?.id || "default_shop"}
+        storeName={storeState.config.shopName || shopRecord?.shop_name || "Our Store"}
+        ownerName={storeState.config.ownerName || shopRecord?.owner_name || "Store Owner"}
         onBackToDashboard={() => {
           const url = new URL(window.location.href);
           url.searchParams.delete("tab");
