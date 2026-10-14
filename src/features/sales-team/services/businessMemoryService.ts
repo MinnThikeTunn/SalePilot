@@ -82,7 +82,7 @@ export function saveBusinessMemory(input: SaveMemoryInput): BusinessMemory {
           })
       )
         .then(({ error }) => {
-          if (error) console.warn("[businessMemoryService] DB sync warning:", error.message);
+          if (error) console.debug("[businessMemoryService] DB sync note:", error.message);
         })
         .catch(() => {});
     }

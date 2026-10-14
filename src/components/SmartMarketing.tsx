@@ -510,7 +510,7 @@ export function SmartMarketing({ state, lang = "en" }: SmartMarketingProps) {
     ctx.fillText(posterDiscount, 80, 431);
 
     // Small footer note / CTA for Telegram Bot right-aligned
-    ctx.fillStyle = "#cbd5e1";
+    ctx.fillStyle = "#E2E8F0";
     ctx.font = "bold 10px monospace";
     ctx.textAlign = "right";
     ctx.fillText(`@${state.config.telegramBotUsername || "SmeBot"}`, width - 30, 420);
@@ -536,13 +536,13 @@ export function SmartMarketing({ state, lang = "en" }: SmartMarketingProps) {
     <div className="space-y-6">
       
       {/* STEPPER NAVIGATOR CARD */}
-      <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5 self-start md:self-auto">
-          <div className="w-9 h-9 rounded-full bg-[#1C1917] flex items-center justify-center text-white font-mono text-xs font-semibold select-none shadow-2xs">
-            0{currentStep}
+          <div className="w-9 h-9 rounded-full bg-[#0069FF] flex items-center justify-center text-white font-mono text-xs font-bold select-none shadow-xs">
+            {currentStep}
           </div>
           <div className="text-left select-none">
-            <span className="font-serif text-base font-medium text-[#1C1917] block tracking-tight">
+            <span className="font-serif text-base font-medium text-[#0A1B2A] block tracking-tight">
               {currentStep === 1 && tSM("stepTitle1")}
               {currentStep === 2 && tSM("stepTitle2")}
               {currentStep === 3 && tSM("stepTitle3")}

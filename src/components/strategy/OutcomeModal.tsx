@@ -34,15 +34,18 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white border border-slate-200 rounded-[28px] max-w-lg w-full shadow-xl p-6 space-y-5 text-[#0A1B2A]">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] max-w-lg w-full shadow-2xl p-6 sm:p-8 space-y-5 text-[#0A1B2A]">
         <div className="flex items-start justify-between pb-3 border-b border-slate-100">
           <div>
             <h3 className="font-bold text-base text-[#0A1B2A]">Record Completed Action</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{opportunity.title}</p>
+            <p className="text-xs text-[#64748B] mt-0.5">{opportunity.title}</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-all"
+            aria-label="Close dialog"
+            title="Close dialog"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-[#F4F2EC] hover:bg-[#E2E8F0] text-[#0A1B2A] flex items-center justify-center cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-[#0069FF]"
           >
             <X size={15} />
           </button>
@@ -50,7 +53,7 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="font-semibold text-slate-700 block mb-1">
+            <label className="font-semibold text-[#0A1B2A] block mb-1">
               Action Notes & Implementation Details
             </label>
             <textarea
@@ -58,7 +61,7 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Launched weekend 10% promo on top items; announced in Telegram channel."
               rows={3}
-              className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl p-3 text-xs text-[#0A1B2A] focus:outline-none focus:border-[#0069FF]"
+              className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl p-3 text-xs text-[#0A1B2A] focus:outline-none focus:border-[#0069FF] focus-visible:ring-2 focus-visible:ring-[#0069FF]"
             />
           </div>
 

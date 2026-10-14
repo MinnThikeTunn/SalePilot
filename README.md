@@ -1,7 +1,3 @@
-<p align="center">
-  <img width="1200" height="475" alt="Sales Brain AI Banner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</p>
-
 # Sales Brain AI
 
 AI-powered conversational commerce platform for Myanmar businesses. Enable your shop to sell products via Telegram and Facebook Messenger with automated customer service powered by Google Gemini AI.

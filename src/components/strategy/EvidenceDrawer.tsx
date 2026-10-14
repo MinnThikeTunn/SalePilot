@@ -14,18 +14,21 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({ opportunity, onC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white border border-slate-200 rounded-[28px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl p-6 space-y-6 text-[#0A1B2A]">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6 text-[#0A1B2A]">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-100">
           <div>
-            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono text-[11px] font-semibold">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20 font-mono text-[11px] font-semibold">
               Deterministic Evidence Audit
             </span>
             <h3 className="font-bold text-lg text-[#0A1B2A] mt-1.5">{title}</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-all"
+            aria-label="Close dialog"
+            title="Close dialog"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-[#F4F2EC] hover:bg-[#E2E8F0] text-[#0A1B2A] flex items-center justify-center cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-[#0069FF]"
           >
             <X size={16} />
           </button>

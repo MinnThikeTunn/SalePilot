@@ -666,13 +666,14 @@ export default function App() {
     if (!user) return;
 
     const channel = supabase
-      .channel("public-orders-sync")
+      .channel(`orders-sync-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "orders",
+          filter: `owner_id=eq.${user.id}`,
         },
         () => {
           fetchState(true);
@@ -904,6 +905,19 @@ export default function App() {
 
       if (status === "confirmed" && prevStatus !== "confirmed" && targetOrder?.items && user) {
         await deductProductStock(user.id, targetOrder.items);
+        setStoreState((prev) => {
+          if (!prev) return prev;
+          const updatedProducts = prev.products.map((p) => {
+            const item = targetOrder.items.find(
+              (it) => (it.productId && it.productId === p.id) || (it.productName && it.productName === p.name)
+            );
+            if (item) {
+              return { ...p, stock: Math.max(0, (p.stock || 0) - (Number(item.quantity) || 1)) };
+            }
+            return p;
+          });
+          return { ...prev, products: updatedProducts };
+        });
       }
 
       showToast(
@@ -2080,34 +2094,45 @@ export default function App() {
 
               {/* EVALUATOR PANEL PREVIEW MODAL ASIDE PANEL */}
               {activeVerificationReceipt && (
-                <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-lg animate-fadeIn grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 shadow-xs animate-fadeIn grid grid-cols-1 md:grid-cols-12 gap-6">
                   
                   {/* LEFT COLUMN: ORDER SUMMARY & APPROVAL ACTIONS */}
                   <div className="md:col-span-5 space-y-4">
-                    <span className="text-xs font-semibold font-mono text-amber-900 select-none block bg-amber-50 p-2.5 rounded-xl border border-amber-200/70">
-                      PAYMENT EVALUATOR — Audit Transaction ID & Payment Slip Proof
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold font-mono text-[#0069FF] select-none block bg-[#EFF6FF] px-3 py-1.5 rounded-xl border border-[#0069FF]/20">
+                        PAYMENT EVALUATOR — Audit Slip Proof
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveVerificationReceipt(null)}
+                        aria-label="Close evaluator"
+                        title="Close evaluator"
+                        className="md:hidden p-1.5 rounded-full hover:bg-[#F4F2EC] text-[#64748B] hover:text-[#0A1B2A] transition cursor-pointer"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("invoiceRef")}:</span>
-                        <strong className="text-[#1C1917] mt-0.5">{activeVerificationReceipt.invoiceId}</strong>
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("invoiceRef")}:</span>
+                        <strong className="text-[#0A1B2A] mt-0.5">{activeVerificationReceipt.invoiceId}</strong>
                       </div>
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("clientCustomer")}:</span>
-                        <strong className="text-[#1C1917] mt-0.5">{activeVerificationReceipt.customerName}</strong>
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("clientCustomer")}:</span>
+                        <strong className="text-[#0A1B2A] mt-0.5">{activeVerificationReceipt.customerName}</strong>
                       </div>
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("transactionId")}:</span>
-                        <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-xs break-all">
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("transactionId")}:</span>
+                        <strong className="text-[#0069FF] mt-0.5 font-bold font-mono text-xs break-all">
                           {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
                             ? activeVerificationReceipt.paymentDetails.transactionId
                             : "— (Slip Attached)"}
                         </strong>
                       </div>
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("paymentChannel")}:</span>
-                        <strong className="text-[#57534E] mt-0.5">{activeVerificationReceipt.paymentDetails?.method || "Mobile Prepay"}</strong>
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("paymentChannel")}:</span>
+                        <strong className="text-[#475569] mt-0.5">{activeVerificationReceipt.paymentDetails?.method || "Mobile Prepay"}</strong>
                       </div>
                     </div>
 
@@ -2167,20 +2192,20 @@ export default function App() {
                   {/* RIGHT COLUMN: BOTH TRANSACTION ID AND SCREENSHOT SLIP EVIDENCE */}
                   <div className="md:col-span-7 space-y-4">
                     {/* 1. Transaction ID Audit Card */}
-                    <div className="border border-indigo-200 bg-indigo-50/50 p-4 rounded-2xl space-y-2.5">
+                    <div className="border border-[#0069FF]/20 bg-[#EFF6FF]/60 p-4 rounded-2xl space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
-                          <CreditCard size={13} className="text-indigo-600" />
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#0A1B2A] flex items-center gap-1.5">
+                          <CreditCard size={13} className="text-[#0069FF]" />
                           <span>Mobile Remittance Transaction ID</span>
                         </span>
-                        <span className="text-[10px] font-mono font-semibold bg-white border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                        <span className="text-[11px] font-mono font-semibold bg-white border border-[#0069FF]/20 text-[#0069FF] px-2.5 py-0.5 rounded-full">
                           {activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white border-2 border-indigo-300/80 rounded-xl px-3 py-2 shadow-2xs">
-                          <strong className="text-sm sm:text-base font-mono font-bold text-indigo-950 tracking-wider select-all block break-all">
+                        <div className="flex-1 bg-white border-2 border-[#0069FF]/30 rounded-xl px-3 py-2 shadow-2xs">
+                          <strong className="text-sm sm:text-base font-mono font-bold text-[#0A1B2A] tracking-wider select-all block break-all">
                             {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
                               ? activeVerificationReceipt.paymentDetails.transactionId
                               : "No TX ID Provided (Payment Slip Attached)"}
@@ -2193,7 +2218,7 @@ export default function App() {
                               navigator.clipboard.writeText(activeVerificationReceipt.paymentDetails!.transactionId);
                               showToast("Transaction ID copied to clipboard!", "success");
                             }}
-                            className="px-3 py-2 rounded-xl bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition shadow-2xs active:scale-[0.98] shrink-0"
+                            className="px-3.5 py-2 min-h-[40px] rounded-xl bg-white border border-[#0069FF]/30 hover:bg-[#EFF6FF] text-[#0069FF] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-[0.98] shrink-0 focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                             title="Copy Transaction ID"
                           >
                             <Copy size={13} />
@@ -2302,16 +2327,19 @@ export default function App() {
                   onClick={() => setSelectedSlipPreview(null)}
                 >
                   <div
-                    className="relative max-w-3xl max-h-[92vh] bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col"
+                    className="relative max-w-3xl max-h-[92vh] bg-white border border-[#E2E8F0] rounded-[32px] p-4 sm:p-6 shadow-2xl overflow-hidden flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200">
-                      <span className="text-xs font-bold font-mono text-stone-800 uppercase tracking-wider">
+                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#E2E8F0]">
+                      <span className="text-xs font-bold font-mono text-[#0A1B2A] uppercase tracking-wider">
                         Payment Slip Verification (Full Size)
                       </span>
                       <button
+                        type="button"
                         onClick={() => setSelectedSlipPreview(null)}
-                        className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-800 cursor-pointer transition"
+                        aria-label="Close image preview"
+                        title="Close image preview"
+                        className="p-2 min-w-[36px] min-h-[36px] rounded-full hover:bg-[#F4F2EC] text-[#64748B] hover:text-[#0A1B2A] cursor-pointer transition focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                       >
                         <X size={16} />
                       </button>
@@ -2439,12 +2467,18 @@ export default function App() {
                   {/* Backdrop Click Dismiss */}
                   <div className="fixed inset-0 cursor-default" onClick={() => setShowProductModal(false)}></div>
 
-                  <div className="bg-white rounded-2xl border border-[#E7E5E4] shadow-2xl p-6 w-full max-w-lg text-[#1C1917] relative z-10 space-y-4 animate-in zoom-in-95 duration-200 my-8">
-                    <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
-                      <h4 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                  <div className="bg-white rounded-[32px] border border-[#E2E8F0] shadow-2xl p-6 sm:p-8 w-full max-w-lg text-[#0A1B2A] relative z-10 space-y-4 animate-in zoom-in-95 duration-200 my-8">
+                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+                      <h4 className="font-serif text-lg font-medium text-[#0A1B2A] tracking-tight">
                         {editingProduct ? t("editProductHeader") : t("addNewProductHeader")}
                       </h4>
-                      <button onClick={() => setShowProductModal(false)} className="text-[#78716C] hover:text-[#1C1917] cursor-pointer p-1 rounded-full hover:bg-[#FAF8F5] transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setShowProductModal(false)}
+                        aria-label="Close dialog"
+                        title="Close dialog"
+                        className="text-[#64748B] hover:text-[#0A1B2A] cursor-pointer p-2 min-w-[36px] min-h-[36px] rounded-full hover:bg-[#F4F2EC] transition-colors focus-visible:ring-2 focus-visible:ring-[#0069FF]"
+                      >
                         <X size={16} />
                       </button>
                     </div>
@@ -2780,21 +2814,22 @@ export default function App() {
               </div>
 
               {/* Search Input */}
-              <div className="bg-white border border-[#E7E5E4] p-4 rounded-2xl shadow-2xs">
+              <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl shadow-2xs">
                 <input
                   type="text"
+                  aria-label="Search delivery zones"
                   value={deliveryZonesSearch}
                   onChange={(e) => {
                     setDeliveryZonesSearch(e.target.value);
                     setDeliveryZonesPage(1);
                   }}
                   placeholder="Search township or region name..."
-                  className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF]"
+                  className="w-full bg-[#FAF8F5] border border-[#E2E8F0] p-2.5 rounded-xl text-[#0A1B2A] text-xs focus:outline-none focus:border-[#0069FF] focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                 />
               </div>
 
               {/* Township list grid */}
-              <div className="bg-white border border-[#E7E5E4] rounded-2xl overflow-hidden text-xs shadow-2xs">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-x-auto text-xs shadow-2xs">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[#E7E5E4] bg-[#FAF8F5]/80 text-[10px] uppercase font-mono tracking-wider font-semibold text-[#78716C]">

@@ -82,7 +82,9 @@ export function EvidenceExplorerDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+            title="Close dialog"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
           >
             <X size={16} />
           </button>
@@ -94,10 +96,11 @@ export function EvidenceExplorerDrawer({
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
               type="text"
+              aria-label="Search evidence records"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by metric key, source entity, or unit..."
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#FAF8F5] border border-stone-200 text-xs text-stone-800 placeholder-stone-400 focus:outline-hidden focus:ring-2 focus:ring-stone-900/10"
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#FAF8F5] border border-stone-200 text-xs text-[#0A1B2A] placeholder-[#64748B] focus:outline-none focus:border-[#0069FF] focus-visible:ring-2 focus-visible:ring-[#0069FF]"
             />
           </div>
 

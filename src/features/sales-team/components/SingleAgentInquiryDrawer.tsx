@@ -138,7 +138,9 @@ export function SingleAgentInquiryDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+            title="Close dialog"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
           >
             <X size={16} />
           </button>
@@ -698,23 +700,23 @@ export function SingleAgentInquiryDrawer({
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <h5 className="text-sm font-bold text-stone-900">{item.productName}</h5>
-                        <p className="text-[10px] font-mono text-stone-500">
+                        <p className="text-[11px] font-mono text-stone-500">
                           Retail Price: {item.originalPrice.toLocaleString()} MMK • Available Stock: {item.currentStock} units
                         </p>
                       </div>
 
                       {item.status === "approved" && (
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase flex items-center gap-1">
                           <CheckCircle2 size={11} /> Approved
                         </span>
                       )}
                       {item.status === "vetoed" && (
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300 uppercase flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300 uppercase flex items-center gap-1">
                           <AlertTriangle size={11} /> Vetoed
                         </span>
                       )}
                       {item.status === "warning_unverified" && (
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 uppercase flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300 uppercase flex items-center gap-1">
                           <AlertTriangle size={11} /> Unverified
                         </span>
                       )}
@@ -747,43 +749,43 @@ export function SingleAgentInquiryDrawer({
                     {/* Numbers Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
                       <div className="p-2.5 bg-white rounded-xl border border-stone-200">
-                        <p className="text-[9px] font-mono text-stone-500 uppercase">Net Selling Price</p>
+                        <p className="text-[11px] font-mono text-stone-500 uppercase">Net Selling Price</p>
                         <p className="font-mono font-bold text-stone-900 mt-0.5">
                           {item.netPrice.toLocaleString()} MMK
                         </p>
                         {item.discountPct > 0 && (
-                          <span className="text-[9px] text-amber-600 font-mono">
+                          <span className="text-[11px] text-amber-600 font-mono">
                             (-{item.discountPct}%)
                           </span>
                         )}
                       </div>
 
                       <div className="p-2.5 bg-white rounded-xl border border-stone-200">
-                        <p className="text-[9px] font-mono text-stone-500 uppercase">Product COGS</p>
+                        <p className="text-[11px] font-mono text-stone-500 uppercase">Product COGS</p>
                         <p className="font-mono font-bold text-stone-900 mt-0.5">
                           {item.costPrice !== null ? `${item.costPrice.toLocaleString()} MMK` : "Unknown"}
                         </p>
                       </div>
 
                       <div className="p-2.5 bg-white rounded-xl border border-stone-200">
-                        <p className="text-[9px] font-mono text-stone-500 uppercase">Gross Margin</p>
+                        <p className="text-[11px] font-mono text-stone-500 uppercase">Gross Margin</p>
                         <p className="font-mono font-bold text-stone-900 mt-0.5">
                           {item.grossMarginMmk !== null ? `${item.grossMarginMmk.toLocaleString()} MMK` : "Unknown"}
                         </p>
                         {item.grossMarginPct !== null && (
-                          <span className="text-[9px] text-stone-500 font-mono">
+                          <span className="text-[11px] text-stone-500 font-mono">
                             ({item.grossMarginPct}%)
                           </span>
                         )}
                       </div>
 
                       <div className="p-2.5 bg-white rounded-xl border border-stone-200">
-                        <p className="text-[9px] font-mono text-stone-500 uppercase">Contribution Margin</p>
+                        <p className="text-[11px] font-mono text-stone-500 uppercase">Contribution Margin</p>
                         <p className={`font-mono font-bold mt-0.5 ${item.contributionMmk && item.contributionMmk > 0 ? "text-emerald-700" : "text-rose-700"}`}>
                           {item.contributionMmk !== null ? `${item.contributionMmk.toLocaleString()} MMK` : "Unknown"}
                         </p>
                         {item.contributionMarginPct !== null && (
-                          <span className={`text-[9px] font-mono font-bold ${item.isVetoed ? "text-rose-600" : "text-emerald-600"}`}>
+                          <span className={`text-[11px] font-mono font-bold ${item.isVetoed ? "text-rose-600" : "text-emerald-600"}`}>
                             ({item.contributionMarginPct}%)
                           </span>
                         )}
@@ -800,7 +802,7 @@ export function SingleAgentInquiryDrawer({
 
                     {/* Evidence Citations */}
                     <div className="space-y-2 pt-2 border-t border-stone-200/60">
-                      <p className="text-[10px] font-mono text-stone-500 font-bold uppercase">
+                      <p className="text-[11px] font-mono text-stone-500 font-bold uppercase tracking-wider">
                         Deterministic Financial Snapshots:
                       </p>
                       <div className="space-y-1.5">
@@ -814,13 +816,22 @@ export function SingleAgentInquiryDrawer({
                               className="bg-white border border-stone-200/90 rounded-xl overflow-hidden text-[11px]"
                             >
                               <div
+                                role="button"
+                                tabIndex={0}
+                                aria-expanded={isExpanded}
                                 onClick={() =>
                                   setExpandedEvidenceId(isExpanded ? null : ev.id)
                                 }
-                                className="p-2.5 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setExpandedEvidenceId(isExpanded ? null : ev.id);
+                                  }
+                                }}
+                                className="p-2.5 flex items-center justify-between cursor-pointer hover:bg-stone-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                                  <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                                     {ev.source_type.toUpperCase()}
                                   </span>
                                   <span className="font-bold text-stone-800">
@@ -838,7 +849,7 @@ export function SingleAgentInquiryDrawer({
                               </div>
 
                               {isExpanded && ev.snapshot && (
-                                <div className="p-3 bg-stone-900 text-stone-200 font-mono text-[10px] border-t border-stone-200 space-y-1">
+                                <div className="p-3 bg-stone-900 text-stone-200 font-mono text-[11px] border-t border-stone-200 space-y-1">
                                   <p className="text-stone-400 font-bold">
                                     Financial Math Snapshot (Source: {ev.source_id}):
                                   </p>

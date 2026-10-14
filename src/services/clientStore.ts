@@ -236,7 +236,7 @@ export function clearSessionCart(sessionId?: string) {
 
 export function updateOrderStatus(orderId: string, status: "confirmed" | "cancelled" | "completed") {
   const state = load();
-  const order = state.orders.find((o) => o.id === orderId);
+  const order = state.orders.find((o) => o.id === orderId || o.invoiceId === orderId);
   if (order) {
     const prevStatus = order.status;
     order.status = status;
@@ -252,7 +252,7 @@ export function updateOrderStatus(orderId: string, status: "confirmed" | "cancel
     }
     if (status === "confirmed" || status === "completed") {
       Object.values(state.sessions).forEach((s) => {
-        if (s.activeOrderId === orderId || s.customerTelegramId === order.customerTelegramId) {
+        if (s.activeOrderId === orderId || (order.invoiceId && s.activeOrderId === order.invoiceId) || s.customerTelegramId === order.customerTelegramId) {
           s.cart = [];
         }
       });

@@ -405,10 +405,19 @@ export function TeamRoom({ shopId = "default_shop", storeName, onNavigateToInsig
           {roster.map((agent) => (
             <motion.div
               key={agent.key}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open ${agent.name} specialist inquiry`}
               whileHover={{ y: -2 }}
               transition={{ duration: 0.2 }}
               onClick={() => handleAgentClick(agent)}
-              className={`p-5 rounded-2xl border transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4 bg-white shadow-xs ${
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleAgentClick(agent);
+                }
+              }}
+              className={`p-5 rounded-2xl border transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-4 bg-white shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] ${
                 selectedAgent?.key === agent.key
                   ? "border-[#0069FF] ring-2 ring-[#0069FF]/15 shadow-sm"
                   : "border-[#E2E8F0] hover:border-[#0069FF]/40 hover:shadow-sm"

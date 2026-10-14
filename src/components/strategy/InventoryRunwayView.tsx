@@ -116,11 +116,11 @@ export const InventoryRunwayView: React.FC<InventoryRunwayViewProps> = ({ produc
       </div>
 
       {/* 2. Product Runway Depletion Grid */}
-      <div className="bg-white border border-slate-200/80 rounded-[28px] p-6 space-y-4 shadow-xs">
+      <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 space-y-5 shadow-xs">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h4 className="font-black text-base text-[#0A1B2A]">Product Stockout Countdown & Runway</h4>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[#64748B] mt-0.5">
               Real-time days of inventory remaining based on trailing daily order pace.
             </p>
           </div>
