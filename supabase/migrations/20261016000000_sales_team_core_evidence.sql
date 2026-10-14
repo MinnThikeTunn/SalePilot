@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Sales Brain Team: Migration 20261016000000_sales_team_core_evidence.sql
+-- SalePilot Team: Migration 20261016000000_sales_team_core_evidence.sql
 -- Foundational Tables: team_sessions, team_agent_runs, team_evidence
 -- Enforces UUID shop-scoped foreign keys and tenant-isolated RLS
 -- ==============================================================================

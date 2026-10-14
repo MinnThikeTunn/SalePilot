@@ -1,4 +1,4 @@
-# Specification: Sale Brain Team (The 5-Agent Sales Council & War Room)
+# Specification: SalePilot Team (The 5-Agent Sales Council & War Room)
 
 **Status:** ready-for-agent  
 **Related ADRs:** [ADR-0001](../adr/0001-sales-team-architecture-and-coexistence.md), [ADR-0002](../adr/0002-privacy-conscious-evidence-snapshots.md), [ADR-0003](../adr/0003-cryptographic-action-approvals-and-bounded-debate.md)  
@@ -17,7 +17,7 @@ While AI chatbots can automate initial conversations, merchants lack a strategic
 
 ## Solution
 
-Sale Brain Team introduces an evidence-based multi-agent Sales Council and interactive War Room integrated into Sales Brain AI. Built directly on top of the merchant's real product catalog, order history, Telegram sales interactions, and delivery matrix, it orchestrates five specialized agent roles:
+SalePilot Team introduces an evidence-based multi-agent Sales Council and interactive War Room integrated into SalePilot AI. Built directly on top of the merchant's real product catalog, order history, Telegram sales interactions, and delivery matrix, it orchestrates five specialized agent roles:
 
 1. **Scout (Opportunity Hunter):** Identifies slow-moving stock, stockout hazards, repeat buyers, and sales pattern anomalies.
 2. **Echo (Customer Advocate):** Categorizes customer friction, reasons for conversation abandonment, and delivery fee objections.

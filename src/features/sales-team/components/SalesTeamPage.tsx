@@ -62,7 +62,7 @@ export function SalesTeamPage({
 
             <div className="flex items-center gap-2.5">
               <span className="font-serif text-lg sm:text-xl font-medium tracking-tight text-[#0A1B2A]">
-                {storeName || "Sales Brain AI"}
+                {storeName || "SalePilot AI"}
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-[#EFF6FF] text-[#0069FF] border border-[#0069FF]/20">
                 <Bot size={11} />
@@ -126,7 +126,7 @@ export function SalesTeamPage({
       {/* Subtle Footer */}
       <footer className="border-t border-[#E2E8F0] py-6 px-4 sm:px-8 text-center text-xs text-[#64748B] bg-[#FAF8F5]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© {new Date().getFullYear()} Sales Brain AI • Autonomous Commerce Council for Independent Merchants</p>
+          <p>© {new Date().getFullYear()} SalePilot AI • Autonomous Commerce Council for Independent Merchants</p>
           <p className="text-[11px] font-mono text-[#64748B]">
             All agent proposals require explicit merchant authorization before execution
           </p>

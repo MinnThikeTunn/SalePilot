@@ -1,4 +1,4 @@
-# Sales Brain AI
+# SalePilot AI
 
 AI-powered conversational commerce platform for Myanmar businesses. Enable your shop to sell products via Telegram and Facebook Messenger with automated customer service powered by Google Gemini AI.
 
@@ -6,7 +6,7 @@ AI-powered conversational commerce platform for Myanmar businesses. Enable your 
 
 ## 📋 Description
 
-**Sales Brain AI** is a modern full-stack web application designed for Myanmar SMEs. Shop owners can manage their product catalog, track orders, configure delivery zones, run AI marketing campaigns, and automate customer conversations via Telegram.
+**SalePilot AI** is a modern full-stack web application designed for Myanmar SMEs. Shop owners can manage their product catalog, track orders, configure delivery zones, run AI marketing campaigns, and automate customer conversations via Telegram.
 
 Built for Myanmar businesses, featuring:
 - Multi-language support (English / Burmese)

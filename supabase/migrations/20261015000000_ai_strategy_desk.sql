@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Sales Brain AI — AI Strategy Desk Schema Migration
+-- SalePilot AI — AI Strategy Desk Schema Migration
 -- Implements tables and constraints required by docs/AI_Strategy_Feature.md
 -- ==============================================================================
 

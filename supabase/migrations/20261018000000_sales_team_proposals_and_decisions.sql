@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Sales Brain Team: Migration 20261018000000_sales_team_proposals_and_decisions.sql
+-- SalePilot Team: Migration 20261018000000_sales_team_proposals_and_decisions.sql
 -- Tables: team_proposals, team_debates, team_decisions, team_approvals
 -- Enforces UUID shop-scoped foreign keys and tenant-isolated RLS
 -- ==============================================================================

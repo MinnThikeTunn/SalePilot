@@ -70,7 +70,7 @@ export function ToolChat({ fullPage = false }: ToolChatProps) {
     "Show me all shops",
     "What products are available?",
     "Tell me about shop features",
-    "How does Sales Brain AI work?"
+    "How does SalePilot AI work?"
   ];
 
   const composer = (
@@ -107,7 +107,7 @@ export function ToolChat({ fullPage = false }: ToolChatProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               AI Assistant
             </p>
-            <h2 className="mt-1 text-lg font-semibold text-slate-950">Sales Brain AI</h2>
+            <h2 className="mt-1 text-lg font-semibold text-slate-950">SalePilot AI</h2>
           </div>
           <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
             Online
@@ -123,7 +123,7 @@ export function ToolChat({ fullPage = false }: ToolChatProps) {
                 How can I help you?
               </h3>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 sm:text-base">
-                Ask about shops, products, or general questions about Sales Brain AI.
+                Ask about shops, products, or general questions about SalePilot AI.
               </p>
             </div>
             <div className="space-y-3">

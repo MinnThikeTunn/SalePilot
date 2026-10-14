@@ -1096,7 +1096,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Sales_Brain_Accounting_Audit_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `SalePilot_Accounting_Audit_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1156,11 +1156,13 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col justify-center items-center font-sans space-y-4">
         <div className="relative">
-          <div className="w-12 h-12 border-3 border-[#0069FF]/20 border-t-[#0069FF] rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center font-serif font-bold text-xs text-[#0069FF]">SB</div>
+          <div className="w-14 h-14 border-3 border-[#0069FF]/20 border-t-[#0069FF] rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img src="/logo-icon.png" alt="SalePilot" className="w-6 h-6 object-contain" />
+          </div>
         </div>
         <div className="text-center font-sans">
-          <h2 className="font-serif text-lg tracking-tight text-stone-900">Sales Brain AI</h2>
+          <h2 className="font-serif text-lg tracking-tight text-stone-900">SalePilot AI</h2>
           <p className="text-xs text-stone-500 mt-1">Preparing your store...</p>
         </div>
       </div>
@@ -1331,12 +1333,12 @@ export default function App() {
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-[#1C1917] text-stone-100 flex items-center justify-center shadow-xs">
-                    <Store size={16} strokeWidth={1.8} className="text-stone-200" />
+                  <div className="w-8 h-8 rounded-xl bg-[#0A1B2A] flex items-center justify-center shadow-xs shrink-0">
+                    <img src="/logo-icon-white.png" alt="SalePilot" className="w-5 h-5 object-contain" />
                   </div>
                   <div>
                     <h1 className="font-serif text-sm font-medium text-stone-900 tracking-tight">
-                      Sales Brain
+                      SalePilot
                     </h1>
                     <span className="text-[9px] font-medium text-stone-500 tracking-wide">
                       Commerce Studio
@@ -1456,12 +1458,12 @@ export default function App() {
           {/* Brand Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#1C1917] text-stone-100 flex items-center justify-center shadow-xs">
-                <Store size={16} strokeWidth={1.8} className="text-stone-200" />
+              <div className="w-8 h-8 rounded-xl bg-[#0A1B2A] flex items-center justify-center shadow-xs shrink-0">
+                <img src="/logo-icon-white.png" alt="SalePilot" className="w-5 h-5 object-contain" />
               </div>
               <div>
                 <h1 className="font-serif text-base font-medium text-[#1C1917] tracking-tight">
-                  Sales Brain
+                  SalePilot
                 </h1>
                 <span className="text-[10px] font-medium text-[#78716C] tracking-wide block">
                   Commerce Studio

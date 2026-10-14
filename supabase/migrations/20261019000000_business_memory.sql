@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Sales Brain Team: Migration 20261019000000_business_memory.sql
+-- SalePilot Team: Migration 20261019000000_business_memory.sql
 -- Table: business_memory
 -- Stores verified shop lessons, owner corrections, and past decision outcomes
 -- Enforces UUID shop-scoped foreign keys and tenant-isolated RLS

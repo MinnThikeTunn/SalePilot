@@ -34,7 +34,7 @@ export async function enrichOpportunitiesWithAi(
       recommended_action: opp.recommended_action.title,
     }));
 
-    const systemPrompt = `You are Sales Brain AI Strategy Analyst.
+    const systemPrompt = `You are SalePilot AI Strategy Analyst.
 Explain verified small-business opportunities in clear, concise, actionable English for a non-technical shop owner.
 Rules:
 1. Use ONLY the verified numbers provided in the payload. NEVER invent sales figures, percentages, or metrics.

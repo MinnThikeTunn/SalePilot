@@ -1,6 +1,6 @@
 import { cloneDefaultState, DEFAULT_STATE } from "../data/defaultState";
 import { createEmptyShopState, getDefaultSessions } from "./defaults";
-import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order, TelegramSession } from "../types";
+import type { Product, ShopConfig, SystemState, DeliveryZone, DeliveryZoneFormData, Order, TelegramSession, CampaignRecord } from "../types";
 import { processCustomerMessage } from "./botSimulator";
 import { getMarketingImageUrl, getMarketingInsights, getStrategyBriefing } from "./fallbackAi";
 import { invokeApi } from "./api";
@@ -61,6 +61,9 @@ function load(): SystemState {
       if (!Array.isArray(memoryState.deliveryZones)) {
         memoryState.deliveryZones = [];
       }
+      if (!Array.isArray(memoryState.campaignRecords)) {
+        memoryState.campaignRecords = [];
+      }
       // Purge any unowned or foreign orders that leaked into local storage for this user
       if (activeUserId && Array.isArray(memoryState.orders)) {
         memoryState.orders = memoryState.orders.filter(
@@ -83,6 +86,9 @@ function load(): SystemState {
   memoryState = activeUserId ? createEmptyShopState() : cloneDefaultState();
   if (!Array.isArray(memoryState.deliveryZones)) {
     memoryState.deliveryZones = [];
+  }
+  if (!Array.isArray(memoryState.campaignRecords)) {
+    memoryState.campaignRecords = [];
   }
   if (!memoryState.sessions || Object.keys(memoryState.sessions).length === 0) {
     memoryState.sessions = getDefaultSessions();
@@ -443,6 +449,54 @@ export async function getAiMarketingImage(campaignType: string, prompt?: string)
     success: true,
     imageUrl: getMarketingImageUrl(campaignType),
   };
+}
+
+export function mutateCampaignRecord(
+  action: "add" | "update",
+  record: Partial<CampaignRecord> & { id?: string }
+) {
+  const state = load();
+  if (!Array.isArray(state.campaignRecords)) state.campaignRecords = [];
+
+  if (action === "add") {
+    const launchTime = record.launchedAt ?? new Date().toISOString();
+    // Close any previous active campaign so orders are never double-counted
+    state.campaignRecords = state.campaignRecords.map((r) => {
+      if (!r.endedAt) {
+        return { ...r, endedAt: launchTime, status: "ended" as const };
+      }
+      return r;
+    });
+
+    const newRecord: CampaignRecord = {
+      id: `camp-${Date.now()}`,
+      campaignTheme: record.campaignTheme ?? "General",
+      goal: record.goal ?? "more_profit",
+      offer: record.offer ?? "full_price",
+      discountPct: record.discountPct ?? 0,
+      selectedProductIds: record.selectedProductIds ?? [],
+      copyEn: record.copyEn ?? "",
+      copyMy: record.copyMy ?? "",
+      launchedAt: launchTime,
+      endedAt: null,
+      status: "active",
+      measuredAt: null,
+      ordersGenerated: 0,
+      revenueGenerated: 0,
+      baselineOrders: record.baselineOrders ?? 0,
+      winner: null,
+      variants: record.variants ?? [],
+      notes: record.notes ?? "",
+    };
+    state.campaignRecords.unshift(newRecord);
+  } else if (action === "update" && record.id) {
+    state.campaignRecords = state.campaignRecords.map((r) =>
+      r.id === record.id ? { ...r, ...record } : r
+    );
+  }
+
+  save();
+  return state;
 }
 
 /** Seed export for tests */

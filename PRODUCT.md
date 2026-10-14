@@ -13,11 +13,11 @@ web
 
 ## Product Purpose
 
-Sales Brain AI enables Myanmar SMEs to automate conversational sales and order workflows using Google Gemini AI, reducing the overhead of manual chat handling while maintaining high customer trust through payment slip verification, accurate township shipping calculations, and human live support takeover.
+SalePilot AI enables Myanmar SMEs to automate conversational sales and order workflows using Google Gemini AI, reducing the overhead of manual chat handling while maintaining high customer trust through payment slip verification, accurate township shipping calculations, and human live support takeover.
 
 ## Positioning
 
-Unlike generic global e-commerce platforms or basic chat ticketing tools, Sales Brain AI is tailored specifically for Myanmar's social commerce ecosystem:
+Unlike generic global e-commerce platforms or basic chat ticketing tools, SalePilot AI is tailored specifically for Myanmar's social commerce ecosystem:
 - Native bilingual support (Burmese / English)
 - Township-based shipping matrix covering Yangon and regional transit fees
 - Specialized payment slip audit workflow for KBZPay, WavePay, CBPay, and AYA Pay alongside Cash on Delivery (COD)
@@ -48,7 +48,7 @@ Unlike generic global e-commerce platforms or basic chat ticketing tools, Sales 
 
 ## Brand Commitments
 
-- **Product Name:** Sales Brain AI
+- **Product Name:** SalePilot AI
 - **Bot Persona:** "Candy" (warm, helpful, and culturally respectful AI sales assistant)
 - **Voice & Tone:** Modern, professional, transparent, and approachable for local SME merchants
 

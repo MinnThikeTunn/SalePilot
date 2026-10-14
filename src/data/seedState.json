@@ -15,5 +15,6 @@
   "products": [],
   "deliveryZones": [],
   "orders": [],
-  "sessions": {}
+  "sessions": {},
+  "campaignRecords": []
 }

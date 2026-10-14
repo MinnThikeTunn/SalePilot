@@ -76,5 +76,6 @@ export function createEmptyShopState(): SystemState {
     deliveryZones: [],
     orders: [],
     sessions: getDefaultSessions(),
+    campaignRecords: [],
   };
 }

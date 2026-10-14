@@ -3,7 +3,7 @@
 ## 1. Feature Overview
 
 **Feature Name:** AI Strategy Desk  
-**Product:** Sale Brain AI  
+**Product:** SalePilot AI  
 **Category:** AI-Powered Business Analytics and Decision Support
 
 ### Purpose
@@ -20,7 +20,7 @@ The system must not behave as a generic chatbot or generate recommendations base
 
 ## 2. Primary User Story
 
-As a small-business owner, I want Sale Brain to analyze my sales, orders, products, inventory, and available customer-interaction data so that I can identify the most important actions to improve my business.
+As a small-business owner, I want SalePilot to analyze my sales, orders, products, inventory, and available customer-interaction data so that I can identify the most important actions to improve my business.
 
 ### Key Questions the Feature Must Answer
 
@@ -462,6 +462,6 @@ The feature is complete when:
 - Data-quality status and freshness are visible.
 - Tenant access is properly enforced.
 - Tests cover normal, edge, and failure cases.
-- Existing Sale Brain functionality remains intact.
+- Existing SalePilot functionality remains intact.
 
 **Engineering principle:** Code determines what is true, business rules determine what is actionable, and AI explains why it matters.

@@ -102,9 +102,9 @@ AI: "Shop X has the following products: ..."
 
 ### Example 3: General Question
 ```
-User: "How does Sales Brain AI work?"
+User: "How does SalePilot AI work?"
 AI: [No tool call needed]
-AI: "Sales Brain AI is a platform that helps Myanmar businesses..."
+AI: "SalePilot AI is a platform that helps Myanmar businesses..."
 ```
 
 ## Integration with Existing App

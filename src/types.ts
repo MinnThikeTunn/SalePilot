@@ -180,12 +180,75 @@ export interface BusinessOnboarding {
   updated_at?: string;
 }
 
+// ─── Campaign Memory & A/B Testing ────────────────────────────────────────────
+
+export type CampaignGoal =
+  | "more_profit"
+  | "faster_turnover"
+  | "higher_order_value"
+  | "repeat_purchases";
+
+export type CampaignOfferType =
+  | "full_price"
+  | "percentage_discount"
+  | "bundle"
+  | "delivery_subsidy";
+
+export interface OfferSimulation {
+  type: CampaignOfferType;
+  label: string;
+  discountPct: number;       // 0 = no discount
+  bundleQty: number;         // 1 = no bundle
+  deliverySubsidy: number;   // MMK subsidised
+  contributionPerOrder: number; // deterministic: price - cost - variable - discount
+  revenueAtVolume: number;   // contribution * expected volume
+  breakEvenUnits: number;    // fixed overhead / contribution (0 if no overhead known)
+}
+
+export interface ABTestVariant {
+  id: string;
+  label: string; // "Variant A" | "Variant B"
+  copyEn: string;
+  copyMy: string;
+  orders: number;
+  impressions?: number;
+}
+
+export interface CampaignRecord {
+  id: string;
+  campaignTheme: string;
+  goal: CampaignGoal;
+  offer: CampaignOfferType;
+  discountPct: number;
+  selectedProductIds: string[];
+  copyEn: string;
+  copyMy: string;
+  launchedAt: string;        // ISO timestamp
+  endedAt?: string | null;   // null = currently active / ongoing
+  status?: "active" | "ended";
+  measuredAt: string | null; // null = not yet measured
+  // Outcome metrics
+  ordersGenerated: number;
+  revenueGenerated: number;
+  baselineOrders: number;    // orders in same period before campaign
+  baselineRevenue?: number;  // MMK in baseline period
+  orderLiftPct?: number;     // % lift vs baseline
+  revenueLiftPct?: number;   // % revenue lift vs baseline
+  estimatedMarginDelta?: number; // estimated MMK net profit change
+  profitImpact?: "positive" | "neutral" | "negative";
+  verdict?: "Strong Winner" | "Profitable Growth" | "Volume Boost Only" | "Underperforming" | "Gathering Data";
+  winner?: "A" | "B" | null;
+  variants?: ABTestVariant[];
+  notes: string;
+}
+
 export interface SystemState {
   config: ShopConfig;
   products: Product[];
   deliveryZones: DeliveryZone[];
   orders: Order[];
   sessions: { [id: string]: TelegramSession };
+  campaignRecords: CampaignRecord[];
 }
 
 // ==============================================================================

@@ -163,7 +163,7 @@ const [language, setLanguage] = useState<"en" | "my">("my");
 // Update system instruction in Edge Function
 systemInstruction: {
   parts: [{
-    text: "You are a helpful AI assistant for Sales Brain AI..."
+    text: "You are a helpful AI assistant for SalePilot AI..."
   }]
 }
 ```
@@ -185,7 +185,7 @@ systemInstruction: {
 - [ ] Deploy Edge Function successfully
 - [ ] Test with "Show me all shops" → Should list shops
 - [ ] Test with "What products are available?" → Should query products
-- [ ] Test with "How does Sales Brain work?" → Should respond without tools
+- [ ] Test with "How does SalePilot work?" → Should respond without tools
 - [ ] Test with invalid shop_id → Should handle gracefully
 - [ ] Test with empty database → Should explain no data found
 - [ ] Test UI in full-page mode

@@ -134,6 +134,11 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
         <div className="bg-white rounded-[32px] border border-stone-200/80 p-8 sm:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition-all">
           {/* Brand & Editorial Title */}
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#0A1B2A] flex items-center justify-center shadow-sm">
+                <img src="/logo-icon-white.png" alt="SalePilot" className="w-6 h-6 object-contain" />
+              </div>
+            </div>
             <span className="text-[11px] font-mono font-semibold tracking-[0.2em] uppercase text-stone-700 inline-flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-stone-700" />
               Merchant Sanctuary
@@ -362,7 +367,7 @@ export function AuthPage({ initialMode = "login", onBackToHome }: AuthPageProps)
 
       {/* Footer Copyright */}
       <footer className="text-center py-6 text-stone-400 text-xs">
-        <p>© 2026 Sales Brain AI. All rights reserved.</p>
+        <p>© 2026 SalePilot AI. All rights reserved.</p>
       </footer>
     </div>
   );

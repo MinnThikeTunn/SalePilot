@@ -1,13 +1,13 @@
 # Architecture Overview
 
-> **Project:** Sales Brain AI — AI-Powered Conversational Commerce Platform  
+> **Project:** SalePilot AI — AI-Powered Conversational Commerce Platform  
 > **Architecture Pattern:** Decoupled Jamstack SPA + Serverless BaaS (Supabase)
 
 ---
 
 ## 1. High-Level Architecture
 
-Sales Brain AI is structured as a client-side Single Page Application (SPA) powered by Supabase services for backend functionality, persistent storage, and AI orchestration.
+SalePilot AI is structured as a client-side Single Page Application (SPA) powered by Supabase services for backend functionality, persistent storage, and AI orchestration.
 
 ```
 ┌────────────────────────────────────────────────────────┐
