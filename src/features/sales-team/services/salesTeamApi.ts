@@ -113,7 +113,7 @@ export function updateShopBusinessPolicies(
           })
       )
         .then(({ error }) => {
-          if (error) console.warn("[salesTeamApi] DB sync warning for policies:", error.message);
+          if (error) console.debug("[salesTeamApi] DB sync note for policies:", error.message);
         })
         .catch(() => {});
     }

@@ -153,21 +153,50 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Owners can manage orders" ON public.orders;
 DROP POLICY IF EXISTS "Public can place orders" ON public.orders;
 DROP POLICY IF EXISTS "Public can view order by invoice" ON public.orders;
+DROP POLICY IF EXISTS "Public can update order payment details" ON public.orders;
 
 CREATE POLICY "Owners can manage orders"
 ON public.orders FOR ALL
 TO authenticated
-USING (auth.uid() = owner_id);
+USING (auth.uid() = owner_id)
+WITH CHECK (auth.uid() = owner_id);
 
 CREATE POLICY "Public can place orders"
 ON public.orders FOR INSERT
-TO public
+TO anon, authenticated
 WITH CHECK (true);
 
-CREATE POLICY "Public can view order by invoice"
-ON public.orders FOR SELECT
-TO public
-USING (true);
+CREATE POLICY "Public can update order payment details"
+ON public.orders FOR UPDATE
+TO anon, authenticated
+USING (status IN ('pending', 'verifying'))
+WITH CHECK (status IN ('pending', 'verifying'));
+
+-- Safe RPC to lookup a single order by invoice without exposing the entire table to anonymous dumps
+CREATE OR REPLACE FUNCTION public.get_order_by_invoice(p_invoice_id TEXT)
+RETURNS SETOF public.orders AS $$
+  SELECT * FROM public.orders WHERE invoice_id = p_invoice_id LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Atomic stock decrement function
+CREATE OR REPLACE FUNCTION public.decrement_product_stock(
+  p_product_id TEXT,
+  p_quantity INT,
+  p_owner_id UUID DEFAULT NULL
+) RETURNS INT AS $$
+DECLARE
+  v_new_stock INT;
+BEGIN
+  UPDATE public.products
+  SET stock = GREATEST(0, stock - p_quantity),
+      updated_at = now()
+  WHERE id = p_product_id
+    AND (p_owner_id IS NULL OR owner_id = p_owner_id)
+  RETURNING stock INTO v_new_stock;
+  
+  RETURN COALESCE(v_new_stock, 0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
 -- ==============================================================================

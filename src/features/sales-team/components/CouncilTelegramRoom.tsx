@@ -93,6 +93,8 @@ export function CouncilTelegramRoom({
     };
   }, [isPlaying, currentStepIndex, fullScript, speed, isCompleted, shopId, goal]);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const handleStartDeliberation = async () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setHasStarted(true);
@@ -100,16 +102,33 @@ export function CouncilTelegramRoom({
     setMessages([]);
     setCurrentStepIndex(0);
     setIsCompleted(false);
+    setErrorMessage(null);
 
     try {
       // 1. Generate full deliberation turns with Gemini (or rich fallback)
       const script = await generateCouncilDeliberationDialogue({ shopId, storeName, goal });
+      if (!script || script.length === 0) {
+        throw new Error("Empty deliberation dialogue generated.");
+      }
       setFullScript(script);
       setIsSynthesizing(false);
       setIsPlaying(true);
     } catch (e) {
-      console.error("Council dialogue generation failed:", e);
+      console.warn("Council dialogue generation fallback engaged:", e);
+      try {
+        const fallbackResult = runCouncilDeliberation({ shopId, goal });
+        if (fallbackResult.chatMessages && fallbackResult.chatMessages.length > 0) {
+          setFullScript(fallbackResult.chatMessages);
+          setIsSynthesizing(false);
+          setIsPlaying(true);
+          return;
+        }
+      } catch (fallbackErr) {
+        console.error("Deterministic council fallback failed:", fallbackErr);
+      }
       setIsSynthesizing(false);
+      setHasStarted(false);
+      setErrorMessage("Council deliberation encountered a network timeout. Please retry.");
     }
   };
 
@@ -342,6 +361,19 @@ export function CouncilTelegramRoom({
                 Watch Commander, Scout, Echo, Guardian, and Muse debate live in a Telegram-style war room. Every proposal is cross-examined against real inventory, buyer friction, and strict margin rules.
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="w-full p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2">
+                <span>{errorMessage}</span>
+                <button
+                  type="button"
+                  onClick={() => handleStartDeliberation()}
+                  className="px-2.5 py-1 rounded-lg bg-rose-700 text-white font-semibold text-[11px] hover:bg-rose-800 cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
             {/* Strategic Objective Input */}
             <div className="w-full space-y-1 text-left pt-2">

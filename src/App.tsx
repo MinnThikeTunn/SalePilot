@@ -666,13 +666,14 @@ export default function App() {
     if (!user) return;
 
     const channel = supabase
-      .channel("public-orders-sync")
+      .channel(`orders-sync-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "orders",
+          filter: `owner_id=eq.${user.id}`,
         },
         () => {
           fetchState(true);
@@ -904,6 +905,19 @@ export default function App() {
 
       if (status === "confirmed" && prevStatus !== "confirmed" && targetOrder?.items && user) {
         await deductProductStock(user.id, targetOrder.items);
+        setStoreState((prev) => {
+          if (!prev) return prev;
+          const updatedProducts = prev.products.map((p) => {
+            const item = targetOrder.items.find(
+              (it) => (it.productId && it.productId === p.id) || (it.productName && it.productName === p.name)
+            );
+            if (item) {
+              return { ...p, stock: Math.max(0, (p.stock || 0) - (Number(item.quantity) || 1)) };
+            }
+            return p;
+          });
+          return { ...prev, products: updatedProducts };
+        });
       }
 
       showToast(

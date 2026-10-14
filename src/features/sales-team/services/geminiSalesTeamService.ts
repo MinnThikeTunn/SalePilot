@@ -409,9 +409,29 @@ export async function resolveAndExecuteRelevantTools(
  * Call Google Gemini API directly from Vite client using VITE_GEMINI_API_KEY
  */
 async function callGemini(systemPrompt: string, userPrompt: string): Promise<string | null> {
+  // 1. Secure Server-Side invocation via Supabase Edge Function
+  try {
+    if (supabase) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (token) {
+        const { data, error } = await supabase.functions.invoke("chat-with-tools", {
+          body: { systemPrompt, userPrompt },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!error && data?.text) {
+          return data.text.trim();
+        }
+      }
+    }
+  } catch {
+    // Edge function unavailable; proceed to secure fallback
+  }
+
+  // 2. Direct API call only if secure server/node environment variable is set
   const apiKey =
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    (typeof process !== "undefined" ? (process.env?.GEMINI_API_KEY as string) : "");
+    (typeof process !== "undefined" ? (process.env?.GEMINI_API_KEY as string) : "") ||
+    (typeof window !== "undefined" && (window as any).__DEV_GEMINI_KEY__ ? (window as any).__DEV_GEMINI_KEY__ : "");
 
   if (!apiKey || apiKey === "undefined" || apiKey.trim() === "") {
     return null;

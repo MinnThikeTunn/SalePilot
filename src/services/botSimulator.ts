@@ -149,6 +149,12 @@ export function processCustomerMessage(
 
     if (mappedPayMethod === "cod") {
       newOrder.paymentDetails = { method: "CoD", transactionId: "CASH_ON_DELIVERY" };
+      itemsList.forEach((item) => {
+        const prod = state.products.find((p) => p.id === item.productId);
+        if (prod) {
+          prod.stock = Math.max(0, (prod.stock || 0) - item.quantity);
+        }
+      });
     }
 
     state.orders.push(newOrder);
@@ -239,10 +245,19 @@ export function processCustomerMessage(
   } else if (/order (is )?confirmed|confirm order|order status|track order|my order|receipt/.test(lContent)) {
     responseText = "Your order has been recorded! Our merchant team is handling it now. Your shopping cart has been cleared.";
   } else if (/(add to (cart|bag|basket)|add .* to|buy |want to order|want to buy)/.test(lContent) && matchedProd) {
-    const existing = session.cart.find((c) => c.productId === matchedProd.id);
-    if (existing) existing.quantity += 1;
-    else session.cart.push({ productId: matchedProd.id, quantity: 1 });
-    responseText = `Added ${matchedProd.name} to your basket! Choose COD or Prepay when you are ready to checkout.`;
+    if (matchedProd.stock <= 0) {
+      responseText = `Sorry, ${matchedProd.name} is currently out of stock. We will notify you once replenished!`;
+    } else {
+      const existing = session.cart.find((c) => c.productId === matchedProd.id);
+      const currentQty = existing ? existing.quantity : 0;
+      if (currentQty >= matchedProd.stock) {
+        responseText = `Only ${matchedProd.stock} unit(s) of ${matchedProd.name} available in stock. Cannot add more!`;
+      } else {
+        if (existing) existing.quantity += 1;
+        else session.cart.push({ productId: matchedProd.id, quantity: 1 });
+        responseText = `Added ${matchedProd.name} to your basket! Choose COD or Prepay when you are ready to checkout.`;
+      }
+    }
   } else if (matchedProd) {
     responseText = `${matchedProd.name} is ${matchedProd.price.toLocaleString()} MMK (${matchedProd.stock} in stock). Reply "Add ${matchedProd.name}" if you wish to purchase!`;
   } else if (lContent.includes("checkout") || lContent.includes("cart") || lContent.includes("basket")) {

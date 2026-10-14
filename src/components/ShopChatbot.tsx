@@ -22,6 +22,7 @@ import { Product, DeliveryZone, Order, OrderItem } from "../types";
 import { addOrder, clearSessionCart, getState } from "../services/clientStore";
 import { getShopState, saveShopState } from "../services/shopState";
 import { cleanNormalText } from "../utils/textUtils";
+import { deductProductStock } from "../services/productService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -852,6 +853,15 @@ Candy:`,
       }
 
       addOrder(newOrder);
+
+      // Deduct catalog stock for this placed order
+      if (orderItems.length > 0) {
+        try {
+          await deductProductStock(ownerId || shopId || "default_shop", orderItems);
+        } catch (stockErr) {
+          console.warn("[ShopChatbot] Could not deduct product stock:", stockErr);
+        }
+      }
 
       // Dispatch browser custom event for instant live update if dashboard is open in same window
       if (typeof window !== "undefined") {
