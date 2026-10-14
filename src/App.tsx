@@ -24,6 +24,7 @@ import {
   Coins,
   ChevronRight,
   ExternalLink,
+  ArrowUpRight,
   Smartphone,
   Send,
   Copy,
@@ -44,6 +45,8 @@ import { LandingPage } from "./components/LandingPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { PublicShop } from "./components/PublicShop";
 import { AIStrategyDesk } from "./components/strategy/AIStrategyDesk";
+import { TeamRoom } from "./features/sales-team/components/TeamRoom";
+import { SalesTeamPage } from "./features/sales-team/components/SalesTeamPage";
 import { useAuth } from "./contexts/AuthContext";
 import { invokeApi } from "./services/api";
 import { getShopState, saveShopState } from "./services/shopState";
@@ -253,6 +256,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [showLandingPage, setShowLandingPage] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'sales_team' || window.location.pathname === '/sales-team') return false;
     if (params.get('landing') === 'true') return true;
     return true;
   });
@@ -278,7 +282,12 @@ export default function App() {
     | "web_chatbot"
     | "live_support"
     | "smart_marketing"
-  >("orders");
+    | "sales_team"
+  >(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'sales_team' || window.location.pathname === '/sales-team') return "sales_team";
+    return "orders";
+  });
   const [activeSessionId, setActiveSessionId] = useState<string>("default_customer");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
 
@@ -416,6 +425,13 @@ export default function App() {
           if (shopPhone) {
             data.config.phone = shopPhone;
           }
+          // Sync live store identity into clientStore so all offline/async tools have the exact human shopName & shopId
+          store.saveOnboarding({
+            shopName: shopRow.shop_name || undefined,
+            ownerName: shopRow.owner_name || undefined,
+            phone: shopPhone || undefined,
+            shopId: data.config.shopId || undefined,
+          });
         } else {
           setShopRecord(null);
         }
@@ -436,6 +452,8 @@ export default function App() {
       // 4. Fetch products from table
       const products = await getProducts(user.id);
       data.products = products;
+      // Sync into clientStore localStorage so sales team and tools always have immediate catalog access
+      store.setClientProducts(products);
 
       // 4.5. Fetch orders from Supabase Postgres table (source of truth) and merge
       try {
@@ -648,13 +666,14 @@ export default function App() {
     if (!user) return;
 
     const channel = supabase
-      .channel("public-orders-sync")
+      .channel(`orders-sync-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "orders",
+          filter: `owner_id=eq.${user.id}`,
         },
         () => {
           fetchState(true);
@@ -886,6 +905,19 @@ export default function App() {
 
       if (status === "confirmed" && prevStatus !== "confirmed" && targetOrder?.items && user) {
         await deductProductStock(user.id, targetOrder.items);
+        setStoreState((prev) => {
+          if (!prev) return prev;
+          const updatedProducts = prev.products.map((p) => {
+            const item = targetOrder.items.find(
+              (it) => (it.productId && it.productId === p.id) || (it.productName && it.productName === p.name)
+            );
+            if (item) {
+              return { ...p, stock: Math.max(0, (p.stock || 0) - (Number(item.quantity) || 1)) };
+            }
+            return p;
+          });
+          return { ...prev, products: updatedProducts };
+        });
       }
 
       showToast(
@@ -1195,6 +1227,37 @@ export default function App() {
     );
   }
  
+  // Render dedicated Sales Team page when activeTab is "sales_team"
+  if (activeTab === "sales_team") {
+    return (
+      <SalesTeamPage
+        shopId={storeState.config.shopId || shopRecord?.shop_id || user?.id || "default_shop"}
+        storeName={storeState.config.shopName || shopRecord?.shop_name || "Our Store"}
+        ownerName={storeState.config.ownerName || shopRecord?.owner_name || "Store Owner"}
+        onBackToDashboard={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+          setActiveTab("orders");
+        }}
+        onNavigateToInsights={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+          setActiveTab("insights");
+        }}
+        user={user}
+        lang={lang}
+        toggleLang={toggleLang}
+        t={t}
+        signOut={async () => {
+          await signOut();
+          setStoreState(null);
+          setShopRecord(null);
+        }}
+      />
+    );
+  }
 
   // Derived dashboard analytics values
   const productsCount = storeState.products.length;
@@ -1305,29 +1368,67 @@ export default function App() {
                   { id: "orders", label: t("tabOrders"), icon: ShoppingBag },
                   { id: "products", label: t("tabProducts"), icon: Database },
                   { id: "delivery", label: t("tabDelivery"), icon: Truck },
+                  { id: "sales_team", label: t("tabSalesTeam"), icon: Bot },
                   { id: "insights", label: t("tabInsights"), icon: Sparkles },
                   { id: "smart_marketing", label: t("tabSmartMarketing"), icon: TrendingUp },
                   { id: "live_support", label: t("tabLiveSupport"), icon: MessageSquare },
                   { id: "telegram_bot", label: t("tabTelegramBot"), icon: Send },
                   { id: "web_chatbot", label: t("tabWebChatbot"), icon: Store },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(item.id as any);
-                      setMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                      activeTab === item.id
-                        ? "bg-slate-900 text-white font-bold"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <item.icon size={16} />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
+                ].map((item) => {
+                  const isSalesTeam = item.id === "sales_team";
+                  if (isSalesTeam) {
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("tab", "sales_team");
+                          window.open(url.toString(), "_blank");
+                          setActiveTab("sales_team");
+                          setMobileSidebarOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border bg-gradient-to-r from-blue-50/80 to-indigo-50/40 border-blue-200/80 text-[#0A1B2A] hover:bg-blue-100/70"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-[#0069FF] text-white shadow-2xs">
+                            <Bot size={13} strokeWidth={2.2} />
+                          </div>
+                          <span>{item.label}</span>
+                          <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded font-mono bg-[#0069FF] text-white shadow-2xs">
+                            PRO
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-blue-600 font-mono">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                          </span>
+                          <ArrowUpRight size={13} className="text-[#0069FF]" />
+                        </div>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id as any);
+                        setMobileSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                        activeTab === item.id
+                          ? "bg-slate-900 text-white font-bold"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <item.icon size={16} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1483,6 +1584,53 @@ export default function App() {
               Intelligence &amp; Growth
             </p>
             <div className="space-y-1">
+              {/* Sales Team (Flagship PRO 5-Agent War Room) */}
+              <div className="relative group/pro mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("tab", "sales_team");
+                    window.open(url.toString(), "_blank");
+                    setActiveTab("sales_team");
+                  }}
+                  className="w-full text-left p-2.5 rounded-2xl transition-all duration-200 cursor-pointer border bg-gradient-to-br from-[#0069FF]/[0.07] via-white to-[#0069FF]/[0.02] border-[#0069FF]/25 hover:border-[#0069FF]/55 shadow-[0_1px_4px_rgba(0,105,255,0.06)] hover:shadow-[0_4px_14px_rgba(0,105,255,0.12)]"
+                  title="Open 5-Agent Sales Team Council in new window"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/pro:scale-105 bg-[#0069FF] text-white shadow-[0_2px_6px_rgba(0,105,255,0.3)]">
+                        <Bot size={15} strokeWidth={2.2} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold tracking-tight truncate text-[#0A1B2A] group-hover/pro:text-[#0069FF] transition-colors">
+                            {t("tabSalesTeam")}
+                          </span>
+                          <span className="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded font-mono bg-[#0069FF] text-white shadow-2xs shrink-0">
+                            PRO
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="relative flex h-1.5 w-1.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                          </span>
+                          <span className="text-[10px] font-medium leading-tight truncate text-[#78716C]">
+                            5 Autonomous Agents
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ArrowUpRight
+                      size={14}
+                      className="shrink-0 mt-0.5 transition-all duration-150 text-[#0069FF]/70 group-hover/pro:text-[#0069FF] group-hover/pro:translate-x-0.5 group-hover/pro:-translate-y-0.5"
+                    />
+                  </div>
+                </button>
+              </div>
+
               {/* AI Strategy */}
               <button
                 type="button"
@@ -1946,34 +2094,45 @@ export default function App() {
 
               {/* EVALUATOR PANEL PREVIEW MODAL ASIDE PANEL */}
               {activeVerificationReceipt && (
-                <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-lg animate-fadeIn grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 shadow-xs animate-fadeIn grid grid-cols-1 md:grid-cols-12 gap-6">
                   
                   {/* LEFT COLUMN: ORDER SUMMARY & APPROVAL ACTIONS */}
                   <div className="md:col-span-5 space-y-4">
-                    <span className="text-xs font-semibold font-mono text-amber-900 select-none block bg-amber-50 p-2.5 rounded-xl border border-amber-200/70">
-                      PAYMENT EVALUATOR — Audit Transaction ID & Payment Slip Proof
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold font-mono text-[#0069FF] select-none block bg-[#EFF6FF] px-3 py-1.5 rounded-xl border border-[#0069FF]/20">
+                        PAYMENT EVALUATOR — Audit Slip Proof
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveVerificationReceipt(null)}
+                        aria-label="Close evaluator"
+                        title="Close evaluator"
+                        className="md:hidden p-1.5 rounded-full hover:bg-[#F4F2EC] text-[#64748B] hover:text-[#0A1B2A] transition cursor-pointer"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("invoiceRef")}:</span>
-                        <strong className="text-[#1C1917] mt-0.5">{activeVerificationReceipt.invoiceId}</strong>
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("invoiceRef")}:</span>
+                        <strong className="text-[#0A1B2A] mt-0.5">{activeVerificationReceipt.invoiceId}</strong>
                       </div>
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("clientCustomer")}:</span>
-                        <strong className="text-[#1C1917] mt-0.5">{activeVerificationReceipt.customerName}</strong>
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("clientCustomer")}:</span>
+                        <strong className="text-[#0A1B2A] mt-0.5">{activeVerificationReceipt.customerName}</strong>
                       </div>
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("transactionId")}:</span>
-                        <strong className="text-indigo-700 mt-0.5 font-bold font-mono text-xs break-all">
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("transactionId")}:</span>
+                        <strong className="text-[#0069FF] mt-0.5 font-bold font-mono text-xs break-all">
                           {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
                             ? activeVerificationReceipt.paymentDetails.transactionId
                             : "— (Slip Attached)"}
                         </strong>
                       </div>
-                      <div className="flex flex-col border-b border-[#E7E5E4] pb-2">
-                        <span className="text-[10px] text-[#78716C] uppercase">{t("paymentChannel")}:</span>
-                        <strong className="text-[#57534E] mt-0.5">{activeVerificationReceipt.paymentDetails?.method || "Mobile Prepay"}</strong>
+                      <div className="flex flex-col border-b border-[#E2E8F0] pb-2">
+                        <span className="text-[11px] text-[#64748B] font-semibold uppercase">{t("paymentChannel")}:</span>
+                        <strong className="text-[#475569] mt-0.5">{activeVerificationReceipt.paymentDetails?.method || "Mobile Prepay"}</strong>
                       </div>
                     </div>
 
@@ -2033,20 +2192,20 @@ export default function App() {
                   {/* RIGHT COLUMN: BOTH TRANSACTION ID AND SCREENSHOT SLIP EVIDENCE */}
                   <div className="md:col-span-7 space-y-4">
                     {/* 1. Transaction ID Audit Card */}
-                    <div className="border border-indigo-200 bg-indigo-50/50 p-4 rounded-2xl space-y-2.5">
+                    <div className="border border-[#0069FF]/20 bg-[#EFF6FF]/60 p-4 rounded-2xl space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
-                          <CreditCard size={13} className="text-indigo-600" />
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#0A1B2A] flex items-center gap-1.5">
+                          <CreditCard size={13} className="text-[#0069FF]" />
                           <span>Mobile Remittance Transaction ID</span>
                         </span>
-                        <span className="text-[10px] font-mono font-semibold bg-white border border-indigo-200 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                        <span className="text-[11px] font-mono font-semibold bg-white border border-[#0069FF]/20 text-[#0069FF] px-2.5 py-0.5 rounded-full">
                           {activeVerificationReceipt.paymentDetails?.method || "KPay / WavePay"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white border-2 border-indigo-300/80 rounded-xl px-3 py-2 shadow-2xs">
-                          <strong className="text-sm sm:text-base font-mono font-bold text-indigo-950 tracking-wider select-all block break-all">
+                        <div className="flex-1 bg-white border-2 border-[#0069FF]/30 rounded-xl px-3 py-2 shadow-2xs">
+                          <strong className="text-sm sm:text-base font-mono font-bold text-[#0A1B2A] tracking-wider select-all block break-all">
                             {activeVerificationReceipt.paymentDetails?.transactionId && activeVerificationReceipt.paymentDetails.transactionId !== "SLIP_ATTACHED"
                               ? activeVerificationReceipt.paymentDetails.transactionId
                               : "No TX ID Provided (Payment Slip Attached)"}
@@ -2059,7 +2218,7 @@ export default function App() {
                               navigator.clipboard.writeText(activeVerificationReceipt.paymentDetails!.transactionId);
                               showToast("Transaction ID copied to clipboard!", "success");
                             }}
-                            className="px-3 py-2 rounded-xl bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition shadow-2xs active:scale-[0.98] shrink-0"
+                            className="px-3.5 py-2 min-h-[40px] rounded-xl bg-white border border-[#0069FF]/30 hover:bg-[#EFF6FF] text-[#0069FF] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-[0.98] shrink-0 focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                             title="Copy Transaction ID"
                           >
                             <Copy size={13} />
@@ -2168,16 +2327,19 @@ export default function App() {
                   onClick={() => setSelectedSlipPreview(null)}
                 >
                   <div
-                    className="relative max-w-3xl max-h-[92vh] bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col"
+                    className="relative max-w-3xl max-h-[92vh] bg-white border border-[#E2E8F0] rounded-[32px] p-4 sm:p-6 shadow-2xl overflow-hidden flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-stone-200">
-                      <span className="text-xs font-bold font-mono text-stone-800 uppercase tracking-wider">
+                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#E2E8F0]">
+                      <span className="text-xs font-bold font-mono text-[#0A1B2A] uppercase tracking-wider">
                         Payment Slip Verification (Full Size)
                       </span>
                       <button
+                        type="button"
                         onClick={() => setSelectedSlipPreview(null)}
-                        className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-800 cursor-pointer transition"
+                        aria-label="Close image preview"
+                        title="Close image preview"
+                        className="p-2 min-w-[36px] min-h-[36px] rounded-full hover:bg-[#F4F2EC] text-[#64748B] hover:text-[#0A1B2A] cursor-pointer transition focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                       >
                         <X size={16} />
                       </button>
@@ -2305,12 +2467,18 @@ export default function App() {
                   {/* Backdrop Click Dismiss */}
                   <div className="fixed inset-0 cursor-default" onClick={() => setShowProductModal(false)}></div>
 
-                  <div className="bg-white rounded-2xl border border-[#E7E5E4] shadow-2xl p-6 w-full max-w-lg text-[#1C1917] relative z-10 space-y-4 animate-in zoom-in-95 duration-200 my-8">
-                    <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
-                      <h4 className="font-serif text-lg font-medium text-[#1C1917] tracking-tight">
+                  <div className="bg-white rounded-[32px] border border-[#E2E8F0] shadow-2xl p-6 sm:p-8 w-full max-w-lg text-[#0A1B2A] relative z-10 space-y-4 animate-in zoom-in-95 duration-200 my-8">
+                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+                      <h4 className="font-serif text-lg font-medium text-[#0A1B2A] tracking-tight">
                         {editingProduct ? t("editProductHeader") : t("addNewProductHeader")}
                       </h4>
-                      <button onClick={() => setShowProductModal(false)} className="text-[#78716C] hover:text-[#1C1917] cursor-pointer p-1 rounded-full hover:bg-[#FAF8F5] transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setShowProductModal(false)}
+                        aria-label="Close dialog"
+                        title="Close dialog"
+                        className="text-[#64748B] hover:text-[#0A1B2A] cursor-pointer p-2 min-w-[36px] min-h-[36px] rounded-full hover:bg-[#F4F2EC] transition-colors focus-visible:ring-2 focus-visible:ring-[#0069FF]"
+                      >
                         <X size={16} />
                       </button>
                     </div>
@@ -2646,21 +2814,22 @@ export default function App() {
               </div>
 
               {/* Search Input */}
-              <div className="bg-white border border-[#E7E5E4] p-4 rounded-2xl shadow-2xs">
+              <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl shadow-2xs">
                 <input
                   type="text"
+                  aria-label="Search delivery zones"
                   value={deliveryZonesSearch}
                   onChange={(e) => {
                     setDeliveryZonesSearch(e.target.value);
                     setDeliveryZonesPage(1);
                   }}
                   placeholder="Search township or region name..."
-                  className="w-full bg-[#FAF8F5] border border-[#E7E5E4] p-2.5 rounded-xl text-[#1C1917] text-xs focus:outline-none focus:border-[#0069FF]"
+                  className="w-full bg-[#FAF8F5] border border-[#E2E8F0] p-2.5 rounded-xl text-[#0A1B2A] text-xs focus:outline-none focus:border-[#0069FF] focus-visible:ring-2 focus-visible:ring-[#0069FF]"
                 />
               </div>
 
               {/* Township list grid */}
-              <div className="bg-white border border-[#E7E5E4] rounded-2xl overflow-hidden text-xs shadow-2xs">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-x-auto text-xs shadow-2xs">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[#E7E5E4] bg-[#FAF8F5]/80 text-[10px] uppercase font-mono tracking-wider font-semibold text-[#78716C]">

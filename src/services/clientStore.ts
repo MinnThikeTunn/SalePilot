@@ -143,9 +143,12 @@ export function mutateProducts(action: string, product: Partial<Product> & { id?
   const state = load();
   if (action === "add") {
     state.products.push({
-      id: `prod-${Date.now()}`,
+      id: product.id || `prod-${Date.now()}`,
       name: product.name || "New Product",
       price: Number(product.price) || 0,
+      cost_price: product.cost_price !== undefined ? Number(product.cost_price) : 0,
+      safety_stock_threshold: product.safety_stock_threshold !== undefined ? Number(product.safety_stock_threshold) : 5,
+      lead_time_days: product.lead_time_days !== undefined ? Number(product.lead_time_days) : 3,
       stock: Number(product.stock) || 0,
       description: product.description || "",
       image:
@@ -153,14 +156,17 @@ export function mutateProducts(action: string, product: Partial<Product> & { id?
         "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400",
       varies: product.varies || [],
     });
-  } else if (action === "edit" && product.id) {
+
+  } else if ((action === "edit" || action === "update") && (product.id || (product as any).id)) {
+    const targetId = product.id || (product as any).id;
+    const patch = (product as any).product ? { ...(product as any).product, id: targetId } : product;
     state.products = state.products.map((p) =>
-      p.id === product.id
+      p.id === targetId
         ? {
             ...p,
-            ...product,
-            price: Number(product.price) ?? p.price,
-            stock: Number(product.stock) ?? p.stock,
+            ...patch,
+            price: patch.price !== undefined ? Number(patch.price) : p.price,
+            stock: patch.stock !== undefined ? Number(patch.stock) : p.stock,
           }
         : p
     );
@@ -200,6 +206,13 @@ export function setClientDeliveryZones(zones: DeliveryZone[]) {
   return state;
 }
 
+export function setClientProducts(products: Product[]) {
+  const state = load();
+  state.products = products;
+  save();
+  return state;
+}
+
 export function addOrder(order: Order) {
   const state = load();
   if (activeUserId && !order.owner_id) {
@@ -229,7 +242,7 @@ export function clearSessionCart(sessionId?: string) {
 
 export function updateOrderStatus(orderId: string, status: "confirmed" | "cancelled" | "completed") {
   const state = load();
-  const order = state.orders.find((o) => o.id === orderId);
+  const order = state.orders.find((o) => o.id === orderId || o.invoiceId === orderId);
   if (order) {
     const prevStatus = order.status;
     order.status = status;
@@ -245,7 +258,7 @@ export function updateOrderStatus(orderId: string, status: "confirmed" | "cancel
     }
     if (status === "confirmed" || status === "completed") {
       Object.values(state.sessions).forEach((s) => {
-        if (s.activeOrderId === orderId || s.customerTelegramId === order.customerTelegramId) {
+        if (s.activeOrderId === orderId || (order.invoiceId && s.activeOrderId === order.invoiceId) || s.customerTelegramId === order.customerTelegramId) {
           s.cart = [];
         }
       });
@@ -362,6 +375,18 @@ export function createSimulationCustomer(name?: string): TelegramSession {
     liveTakeoverActive: false,
   };
   state.sessions[id] = session;
+  save();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("sales_brain_session_updated", { detail: session })
+    );
+  }
+  return session;
+}
+
+export function addTelegramSession(session: TelegramSession): TelegramSession {
+  const state = load();
+  state.sessions[session.sessionId] = session;
   save();
   if (typeof window !== "undefined") {
     window.dispatchEvent(

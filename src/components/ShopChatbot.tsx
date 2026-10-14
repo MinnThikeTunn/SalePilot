@@ -22,6 +22,7 @@ import { Product, DeliveryZone, Order, OrderItem } from "../types";
 import { addOrder, clearSessionCart, getState } from "../services/clientStore";
 import { getShopState, saveShopState } from "../services/shopState";
 import { cleanNormalText } from "../utils/textUtils";
+import { deductProductStock } from "../services/productService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -853,6 +854,15 @@ Candy:`,
 
       addOrder(newOrder);
 
+      // Deduct catalog stock for this placed order
+      if (orderItems.length > 0) {
+        try {
+          await deductProductStock(ownerId || shopId || "default_shop", orderItems);
+        } catch (stockErr) {
+          console.warn("[ShopChatbot] Could not deduct product stock:", stockErr);
+        }
+      }
+
       // Dispatch browser custom event for instant live update if dashboard is open in same window
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("sales_brain_order_created", { detail: newOrder }));
@@ -1192,6 +1202,7 @@ Candy:`,
     >
       <textarea
         ref={composerInputRef}
+        aria-label={copy.placeholder || "Customer inquiry message"}
         value={input}
         onChange={(e) => {
           setInput(e.target.value);
@@ -1205,7 +1216,7 @@ Candy:`,
         }}
         placeholder={copy.placeholder}
         rows={1}
-        className="col-start-1 h-11 max-h-36 min-h-11 resize-none overflow-y-auto bg-transparent py-2.5 text-sm leading-relaxed text-[#1C1917] outline-none placeholder:text-[#78716C]"
+        className="col-start-1 h-11 max-h-36 min-h-11 resize-none overflow-y-auto bg-transparent py-2.5 px-2 text-sm leading-relaxed text-[#0A1B2A] outline-none placeholder:text-[#64748B] focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-xl"
       />
       <button
         type="button"
@@ -1442,22 +1453,25 @@ Candy:`,
               <button
                 type="button"
                 onClick={() => setIsCatalogOpen(false)}
-                className="w-8 h-8 rounded-full border border-[#E7E5E4] bg-white text-[#57534E] hover:text-[#1C1917] hover:bg-stone-50 flex items-center justify-center transition cursor-pointer"
+                aria-label="Close catalog"
+                title="Close catalog"
+                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full border border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0A1B2A] hover:bg-[#F4F2EC] flex items-center justify-center transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
               >
                 <X size={15} />
               </button>
             </div>
 
             {/* Search Input */}
-            <div className="p-3.5 border-b border-[#E7E5E4] bg-white shrink-0">
+            <div className="p-3.5 border-b border-[#E2E8F0] bg-white shrink-0">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                 <input
                   type="text"
+                  aria-label="Search catalog by name or category"
                   value={catalogSearch}
                   onChange={(e) => setCatalogSearch(e.target.value)}
                   placeholder="Search catalog by name, category..."
-                  className="w-full text-xs pl-8.5 pr-8 py-2 rounded-xl border border-[#E7E5E4] bg-[#FAF8F5] text-[#1C1917] focus:bg-white focus:border-[#0069FF] focus:outline-none transition"
+                  className="w-full text-xs pl-8.5 pr-8 py-2 rounded-xl border border-[#E2E8F0] bg-[#FAF8F5] text-[#0A1B2A] focus:bg-white focus:border-[#0069FF] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] transition"
                 />
                 {catalogSearch && (
                   <button

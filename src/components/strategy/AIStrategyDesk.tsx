@@ -370,9 +370,9 @@ export const AIStrategyDesk: React.FC<AIStrategyDeskProps> = ({
       {/* Tab Content Viewport */}
       {activeTab === "decisions" && (
         <div className="space-y-8 animate-fadeIn">
-          {/* 3. Top Priority Opportunity Spotlight Container (rounded-[28px]) */}
+          {/* 3. Top Priority Opportunity Spotlight Container (rounded-[32px]) */}
           {topPriority && topPriority.status !== "dismissed" && topPriority.status !== "completed" && (
-            <div className="bg-white border border-slate-200/90 rounded-[28px] p-6 sm:p-7 shadow-xs space-y-4">
+            <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-6 sm:p-8 shadow-xs space-y-5">
               <div className="flex items-center justify-between">
                 <span className="px-3 py-1 rounded-full bg-[#EFF6FF] text-[#0069FF] font-mono text-[11px] font-semibold border border-[#0069FF]/20 flex items-center gap-1.5">
                   <Award size={13} />

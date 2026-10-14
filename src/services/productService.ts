@@ -1,20 +1,70 @@
 import { supabase } from "../utils/supabase";
 import type { Product } from "../types";
+import { getState, setClientProducts } from "./clientStore";
 
-export async function getProducts(userId: string): Promise<Product[]> {
-  if (!userId) return [];
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .eq("owner_id", userId)
-    .order("created_at", { ascending: false });
+export async function getProducts(userId?: string): Promise<Product[]> {
+  let targetId = userId?.trim();
 
-  if (error) {
-    console.error("Error fetching products:", error);
-    return [];
+  // If targetId is missing or default_shop, fallback to current authenticated user
+  if (!targetId || targetId === "default_shop") {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        targetId = authData.user.id;
+      }
+    } catch {
+      // ignore
+    }
   }
 
-  return (data || []).map((row) => ({
+  let rows: any[] = [];
+
+  if (targetId) {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .or(`owner_id.eq.${targetId},shop_id.eq.${targetId}`)
+        .order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        rows = data;
+      } else {
+        // Fallback: Query owner_id directly
+        const { data: ownerData } = await supabase
+          .from("products")
+          .select("*")
+          .eq("owner_id", targetId)
+          .order("created_at", { ascending: false });
+        if (ownerData && ownerData.length > 0) {
+          rows = ownerData;
+        }
+      }
+    } catch (e) {
+      console.warn("[productService] Error querying products with targetId:", e);
+    }
+  }
+
+  // Fallback: If still empty, check if authenticated user has products under their user ID
+  if (rows.length === 0) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id && authData.user.id !== targetId) {
+        const { data: authProducts } = await supabase
+          .from("products")
+          .select("*")
+          .or(`owner_id.eq.${authData.user.id},shop_id.eq.${authData.user.id}`)
+          .order("created_at", { ascending: false });
+        if (authProducts && authProducts.length > 0) {
+          rows = authProducts;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return rows.map((row) => ({
     id: row.id,
     name: row.name,
     price: row.price,
@@ -123,12 +173,40 @@ export async function deductProductStock(
   userId: string,
   items: { productId?: string; productName?: string; quantity: number }[]
 ): Promise<boolean> {
-  if (!userId || !items || items.length === 0) return true;
+  if (!items || items.length === 0) return true;
 
   try {
+    const isUuid = (val?: string) =>
+      Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim()));
+    const validOwnerUuid = isUuid(userId) ? userId.trim() : null;
+
     for (const item of items) {
       const qty = Math.max(1, Number(item.quantity) || 1);
-      let query = supabase.from("products").select("id, stock").eq("owner_id", userId);
+
+      // 1. Attempt atomic SQL decrement via RPC if productId is provided
+      if (item.productId) {
+        try {
+          const { error: rpcError } = await supabase.rpc("decrement_product_stock", {
+            p_product_id: item.productId,
+            p_quantity: qty,
+            p_owner_id: validOwnerUuid,
+          });
+          if (!rpcError) {
+            continue; // Successfully decremented atomically
+          }
+        } catch {
+          // RPC unavailable (e.g. migration pending); proceed to fallback query
+        }
+      }
+
+      // 2. Fallback direct update query
+      let query = supabase.from("products").select("id, stock, owner_id");
+      if (validOwnerUuid) {
+        query = query.or(`owner_id.eq.${validOwnerUuid},shop_id.eq.${userId}`);
+      } else if (userId && userId !== "default_shop") {
+        query = query.eq("shop_id", userId);
+      }
+
       if (item.productId) {
         query = query.eq("id", item.productId);
       } else if (item.productName) {
@@ -144,10 +222,29 @@ export async function deductProductStock(
         await supabase
           .from("products")
           .update({ stock: newStock, updated_at: new Date().toISOString() })
-          .eq("id", prodRow.id)
-          .eq("owner_id", userId);
+          .eq("id", prodRow.id);
       }
     }
+
+    // 3. Synchronize clientStore state so UI and offline tools reflect deducted stock immediately
+    try {
+      const localState = getState();
+      if (localState && Array.isArray(localState.products)) {
+        const updated = localState.products.map((p) => {
+          const matchedItem = items.find(
+            (it) => (it.productId && it.productId === p.id) || (it.productName && it.productName === p.name)
+          );
+          if (matchedItem) {
+            return { ...p, stock: Math.max(0, (p.stock || 0) - (Number(matchedItem.quantity) || 1)) };
+          }
+          return p;
+        });
+        setClientProducts(updated);
+      }
+    } catch {
+      // ignore
+    }
+
     return true;
   } catch (err) {
     console.warn("[productService] Exception deducting product stock in DB:", err);

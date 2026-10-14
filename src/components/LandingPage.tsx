@@ -10,7 +10,8 @@ import {
   ChevronRight,
   X,
   Store,
-  LogOut
+  LogOut,
+  Menu
 } from "lucide-react";
 
 type LandingPageProps = {
@@ -33,6 +34,7 @@ export function LandingPage({
   const [emailInput, setEmailInput] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +118,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onDashboard || onGetStarted}
-                  className="bg-black hover:bg-stone-900 text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98] flex items-center gap-2"
+                  className="bg-[#0A1B2A] hover:bg-[#1E293B] text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98] flex items-center gap-2"
                 >
                   <User className="w-3.5 h-3.5" />
                   <span>Dashboard →</span>
@@ -125,7 +127,7 @@ export function LandingPage({
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="border border-stone-200 hover:border-stone-400 bg-white hover:bg-stone-100 text-stone-700 hover:text-stone-900 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    className="border border-[#E2E8F0] hover:border-stone-400 bg-white hover:bg-stone-100 text-stone-700 hover:text-[#0A1B2A] px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     title="Sign Out"
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -138,7 +140,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={handleLoginClick}
-                  className="text-stone-600 hover:text-stone-950 transition text-xs font-medium cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-stone-100"
+                  className="text-stone-600 hover:text-[#0A1B2A] transition text-xs font-medium cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-stone-100"
                 >
                   <User className="w-4 h-4 stroke-[1.75]" />
                   <span>Sign In</span>
@@ -146,14 +148,60 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onGetStarted}
-                  className="bg-black hover:bg-stone-900 text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98]"
+                  className="bg-[#0A1B2A] hover:bg-[#1E293B] text-white px-5 sm:px-6 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition duration-200 cursor-pointer shadow-xs active:scale-[0.98]"
                 >
                   Get Started
                 </button>
               </>
             )}
+
+            {/* Mobile Hamburger Menu Toggle */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              className="md:hidden p-2 rounded-xl text-stone-600 hover:text-[#0A1B2A] hover:bg-stone-100 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0069FF]"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-stone-200/80 bg-[#FAF8F5] px-6 py-4 space-y-3 animate-fadeIn">
+            <nav className="flex flex-col gap-2.5 text-sm font-medium text-stone-700">
+              <a
+                href="#capabilities"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-stone-100 transition"
+              >
+                Capabilities
+              </a>
+              <a
+                href="#philosophy"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-stone-100 transition"
+              >
+                Philosophy
+              </a>
+              <a
+                href="#workflows"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-stone-100 transition"
+              >
+                Workflows
+              </a>
+              <a
+                href="#about"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-stone-100 transition"
+              >
+                About
+              </a>
+            </nav>
+          </div>
+        )}
       </header>
 
       <main>
@@ -190,46 +238,109 @@ export function LandingPage({
 
             {/* Right Curated Visual Frame */}
             <div className="lg:col-span-6">
-              <div className="relative rounded-[32px] overflow-hidden shadow-sm aspect-[4/5] bg-stone-100 border border-stone-200/60 group">
-                <img
-                  src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80"
-                  alt="Curated merchant sanctuary with artisanal goods"
-                  className="w-full h-full object-cover object-center transition duration-700 group-hover:scale-[1.02]"
-                />
-
-                {/* Subtle Floating Cozy Storefront Badge */}
-                <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-sm border border-stone-200/80 rounded-full px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
-                  <Store className="w-3.5 h-3.5 text-stone-700" />
-                  <span className="text-xs font-medium text-stone-800 tracking-wide">
-                    Telegram &amp; Web Storefront
-                  </span>
+              <div className="rounded-[32px] bg-white border border-stone-200/90 shadow-sm p-5 sm:p-7 space-y-4 sm:space-y-5">
+                {/* Header Bar */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-stone-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-stone-100 border border-stone-200/80 flex items-center justify-center text-stone-900 font-serif font-semibold text-base shadow-2xs">
+                      SB
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-serif text-sm font-medium text-stone-900">
+                          Candy · Sales Concierge
+                        </h3>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Live on Telegram &amp; Web
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 mt-0.5">
+                        Township couriers, real-time stock &amp; instant settlement
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Bottom Verified Slip Card */}
-                <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md border border-stone-200/80 rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold tracking-wider uppercase text-stone-900">
-                      Automated Checkout
-                    </span>
-                    <span className="text-xs font-mono text-stone-400">
-                      INV-2026-7821
-                    </span>
+                {/* Simulated Live Customer Interaction */}
+                <div className="space-y-3 text-xs">
+                  {/* Customer bubble */}
+                  <div className="flex justify-end">
+                    <div className="max-w-[85%] bg-stone-900 text-white rounded-2xl rounded-tr-xs px-4 py-2.5 shadow-2xs">
+                      <p className="leading-relaxed">
+                        Hello! Is the Ceramic Pour-Over in stock? Can you deliver to Kamayut Township?
+                      </p>
+                      <span className="text-[10px] text-stone-400 mt-1 block text-right font-mono">10:42 AM</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-serif font-medium text-stone-900">
-                        Ceramic Pour-Over &amp; Linen Tote
+
+                  {/* Assistant bubble */}
+                  <div className="flex justify-start">
+                    <div className="max-w-[90%] bg-[#FAF8F5] border border-stone-200 text-stone-800 rounded-2xl rounded-tl-xs px-4 py-3 shadow-2xs space-y-2">
+                      <p className="leading-relaxed">
+                        Mingalabar! Yes, we have 4 units available at <strong>45,000 MMK</strong>. Doorstep delivery to <strong>Kamayut Township</strong> is <strong>2,500 MMK</strong> with arrival in 1–2 days.
                       </p>
-                      <p className="text-xs text-stone-500 mt-0.5">
-                        Matched to Kamayut Delivery · 2,500 MMK
-                      </p>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-[11px] font-medium text-stone-700">
+                          Stock: 4 Available
+                        </span>
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-[11px] font-medium text-stone-700">
+                          Delivery: 2,500 MMK
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        <Check className="w-3 h-3 stroke-[2.5]" />
-                        <span>Slip Verified</span>
-                      </span>
+                  </div>
+
+                  {/* Live Order Confirmation Card */}
+                  <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-stone-100 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold text-stone-900 uppercase tracking-wider">
+                          INV-2026-7821
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Check className="w-2.5 h-2.5 stroke-[2.5]" />
+                          Confirmed Order
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-stone-400">10:43 AM</span>
                     </div>
+
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="flex justify-between text-stone-700">
+                        <span className="font-serif">Ceramic Pour-Over &amp; Linen Tote × 1</span>
+                        <span className="font-mono font-medium">45,000 MMK</span>
+                      </div>
+                      <div className="flex justify-between text-stone-500">
+                        <span>Township Courier (Kamayut)</span>
+                        <span className="font-mono">+2,500 MMK</span>
+                      </div>
+                      <div className="flex justify-between text-stone-900 font-semibold pt-1 border-t border-stone-100">
+                        <span>Total Bill</span>
+                        <span className="font-mono text-xs">47,500 MMK</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 flex items-center justify-between text-[10px] text-stone-500 border-t border-stone-100/80">
+                      <span>Payment: Cash on Delivery / Mobile Wallet</span>
+                      <span className="text-stone-700 font-medium">Dispatched to Courier</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trust & Automation Capabilities Footer */}
+                <div className="pt-2 border-t border-stone-100 grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-xl bg-stone-50 border border-stone-100">
+                    <p className="text-[10px] text-stone-400 font-mono uppercase">Response</p>
+                    <p className="text-xs font-semibold text-stone-900 mt-0.5">&lt; 2s Instant</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-stone-50 border border-stone-100">
+                    <p className="text-[10px] text-stone-400 font-mono uppercase">Delivery</p>
+                    <p className="text-xs font-semibold text-stone-900 mt-0.5">Township Rates</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-stone-50 border border-stone-100">
+                    <p className="text-[10px] text-stone-400 font-mono uppercase">Settlement</p>
+                    <p className="text-xs font-semibold text-stone-900 mt-0.5">OCR Slip Audit</p>
                   </div>
                 </div>
               </div>
@@ -257,11 +368,12 @@ export function LandingPage({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10">
             {/* Category 1 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group"
+              className="cursor-pointer group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-xl p-2 transition"
             >
               <h3 className="font-serif text-xl sm:text-2xl text-stone-900 group-hover:text-[#0069FF] transition">
                 Conversational AI
@@ -269,12 +381,13 @@ export function LandingPage({
               <p className="text-xs text-stone-500 mt-1 font-normal">
                 24/7 sales agent
               </p>
-            </div>
+            </button>
 
             {/* Category 2 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group"
+              className="cursor-pointer group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-xl p-2 transition"
             >
               <h3 className="font-serif text-xl sm:text-2xl text-stone-900 group-hover:text-[#0069FF] transition">
                 Slip Verification
@@ -282,12 +395,13 @@ export function LandingPage({
               <p className="text-xs text-stone-500 mt-1 font-normal">
                 Instant OCR audit
               </p>
-            </div>
+            </button>
 
             {/* Category 3 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group"
+              className="cursor-pointer group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-xl p-2 transition"
             >
               <h3 className="font-serif text-xl sm:text-2xl text-stone-900 group-hover:text-[#0069FF] transition">
                 Delivery Matrix
@@ -295,12 +409,13 @@ export function LandingPage({
               <p className="text-xs text-stone-500 mt-1 font-normal">
                 Township rates
               </p>
-            </div>
+            </button>
 
             {/* Category 4 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group"
+              className="cursor-pointer group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-xl p-2 transition"
             >
               <h3 className="font-serif text-xl sm:text-2xl text-stone-900 group-hover:text-[#0069FF] transition">
                 Live VIP Support
@@ -308,7 +423,7 @@ export function LandingPage({
               <p className="text-xs text-stone-500 mt-1 font-normal">
                 1-click takeover
               </p>
-            </div>
+            </button>
           </div>
         </section>
 
@@ -349,11 +464,12 @@ export function LandingPage({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Card 1 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group flex flex-col"
+              className="cursor-pointer group flex flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-2xl p-1 transition"
             >
-              <div className="aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
+              <div className="w-full aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
                 <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#0069FF] shadow-xs mb-4">
                   <Bot className="w-6 h-6 stroke-[1.5]" />
                 </div>
@@ -371,14 +487,15 @@ export function LandingPage({
                 <p className="text-xs text-stone-500 mt-0.5">Conversational AI</p>
                 <p className="text-xs font-semibold text-stone-800 mt-2">24/7 Autopilot</p>
               </div>
-            </div>
+            </button>
 
             {/* Card 2 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group flex flex-col"
+              className="cursor-pointer group flex flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-2xl p-1 transition"
             >
-              <div className="aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
+              <div className="w-full aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
                 <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#0069FF] shadow-xs mb-4">
                   <ShieldCheck className="w-6 h-6 stroke-[1.5]" />
                 </div>
@@ -396,14 +513,15 @@ export function LandingPage({
                 <p className="text-xs text-stone-500 mt-0.5">Fraud Prevention</p>
                 <p className="text-xs font-semibold text-stone-800 mt-2">Zero-Risk Prepay</p>
               </div>
-            </div>
+            </button>
 
             {/* Card 3 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group flex flex-col"
+              className="cursor-pointer group flex flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-2xl p-1 transition"
             >
-              <div className="aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
+              <div className="w-full aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
                 <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#0069FF] shadow-xs mb-4">
                   <Truck className="w-6 h-6 stroke-[1.5]" />
                 </div>
@@ -421,14 +539,15 @@ export function LandingPage({
                 <p className="text-xs text-stone-500 mt-0.5">Automated Rates</p>
                 <p className="text-xs font-semibold text-stone-800 mt-2">Dynamic Rates</p>
               </div>
-            </div>
+            </button>
 
             {/* Card 4 */}
-            <div
+            <button
+              type="button"
               onClick={onGetStarted}
-              className="cursor-pointer group flex flex-col"
+              className="cursor-pointer group flex flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069FF] rounded-2xl p-1 transition"
             >
-              <div className="aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
+              <div className="w-full aspect-square bg-white rounded-2xl flex flex-col items-center justify-center p-8 border border-stone-200/80 transition duration-300 group-hover:border-[#0069FF]/40 shadow-xs">
                 <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#0069FF] shadow-xs mb-4">
                   <Headphones className="w-6 h-6 stroke-[1.5]" />
                 </div>
@@ -446,7 +565,7 @@ export function LandingPage({
                 <p className="text-xs text-stone-500 mt-0.5">Human-in-the-Loop</p>
                 <p className="text-xs font-semibold text-stone-800 mt-2">1-Click Takeover</p>
               </div>
-            </div>
+            </button>
           </div>
         </section>
 

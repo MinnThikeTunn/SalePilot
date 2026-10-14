@@ -345,7 +345,7 @@ export function SmartMarketing({ state }: SmartMarketingProps) {
     ctx.fillStyle = "#000000"; ctx.font = "bold 12px system-ui, sans-serif";
     ctx.textAlign = "center"; ctx.fillText(posterDiscount, 80, 431);
 
-    ctx.fillStyle = "#cbd5e1"; ctx.font = "bold 10px monospace";
+    ctx.fillStyle = "#E2E8F0"; ctx.font = "bold 10px monospace";
     ctx.textAlign = "right";
     ctx.fillText(`@${state.config.telegramBotUsername || "SmeBot"}`, width - 30, 420);
     ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.font = "9px system-ui, sans-serif";
@@ -455,7 +455,6 @@ export function SmartMarketing({ state }: SmartMarketingProps) {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-
       {/* ─── STEPPER ─────────────────────────────────────────────────────────── */}
       <div className="bg-white border border-[#E7E5E4] rounded-2xl p-4 shadow-2xs">
         <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
