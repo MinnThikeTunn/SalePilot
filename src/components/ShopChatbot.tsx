@@ -69,6 +69,10 @@ interface ShopChatbotProps {
   onLanguageChange?: (lang: "en") => void;
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ─── Copy Dictionary ──────────────────────────────────────────────────────────
 
 const COPY = {
@@ -268,8 +272,17 @@ Feel free to explore our collection! No need to specify your location now — yo
   // Product name match
   for (const p of products) {
     const pLower = p.name.toLowerCase().trim();
-    const words = pLower.split(/\s+/).filter((w) => w.length >= 3);
-    const matches = t.includes(pLower) || words.some((w) => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, "i").test(t));
+    if (!pLower) continue;
+    const words = pLower.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+    const matches =
+      t.includes(pLower) ||
+      words.some((w) => {
+        try {
+          return new RegExp(`(^|[^a-z0-9])${escapeRegex(w)}([^a-z0-9]|$)`, "i").test(t);
+        } catch {
+          return false;
+        }
+      });
     if (matches) {
       const stockNote = p.stock > 0 ? `In stock (${p.stock} units available).` : `Currently sold out. [STATE:terminate_notify]`;
       return `${p.name} — ${p.price.toLocaleString()} MMK. ${p.description ? `${p.description} ` : ""}${stockNote} Would you like to add it to your basket? [STATE:will_it_buy][PREF:LIKE, ID:${p.id}]`;
@@ -1020,10 +1033,14 @@ Candy:`,
       const pName = p.name.toLowerCase().trim();
       if (!pName) return false;
       if (lower.includes(pName)) return true;
-      const words = pName.split(/\s+/).filter((w) => w.length >= 3);
+      const words = pName.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
       for (const w of words) {
-        const re = new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, "i");
-        if (re.test(lower)) return true;
+        try {
+          const re = new RegExp(`(^|[^a-z0-9])${escapeRegex(w)}([^a-z0-9]|$)`, "i");
+          if (re.test(lower)) return true;
+        } catch {
+          continue;
+        }
       }
       return false;
     });
